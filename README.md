@@ -50,7 +50,7 @@ depend: [NpcApi]
 # Or optional dependency (soft dependency)
 soft-depend: [NpcApi]
 ```
-
+---
 
 ### Method 2: Shaded Dependency
 
@@ -89,13 +89,10 @@ dependencyResolutionManagement {
 dependencies {
     implementation 'com.github.Eisi05:NpcApi:1.0'
 }
+```
 
-## Quick Start
-
-### Plugin Setup
-
-Initialize the NpcAPI in your plugin's main class:
-
+#### Plugin Configuration
+To enabled/disable the NpcApi add this to your Plugin Main class:
 ```java
 
 @Override
@@ -112,6 +109,7 @@ public void onDisable()
     NpcApi.disable();
 }
 ```
+---
 
 ## Usage Examples
 
