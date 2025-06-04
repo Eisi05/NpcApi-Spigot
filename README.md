@@ -1,3 +1,5 @@
+[![](https://jitpack.io/v/Eisi05/NpcApi.svg)](https://jitpack.io/#Eisi05/NpcApi)
+
 # NpcAPI
 
 A powerful and easy-to-use NPC (Non-Player Character) API for Minecraft Spigot plugins that allows you to create, manage, and customize NPCs with
@@ -169,5 +171,3 @@ NPC npc = NpcManager.fromUUID(npcUuid);
 - Java 17+
 - Spigot 1.17+ (compatible with newer versions)
 - Minecraft server with NPC support
-
-[![](https://jitpack.io/v/Eisi05/NpcApi.svg)](https://jitpack.io/#Eisi05/NpcApi)
