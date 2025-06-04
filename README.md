@@ -18,28 +18,65 @@ advanced features.
 - 🔍 Comprehensive NPC management system
 
 ## Installation
+Choose your preferred installation method based on your project needs:
 
-### Maven
+### Method 1: Plugin Dependency (Recommended)
 
-Add the following repository and dependency to your `pom.xml`:
+This method requires [NpcApi](https://www.spigotmc.org/resources/npc-plugin-1-17.87761/) to be installed as a separate plugin on the server.
 
+#### Maven
 ```xml
-<repository>
-    <id>jitpack.io</id>
-    <url>https://jitpack.io</url>
-</repository>
-
 <dependency>
     <groupId>com.github.Eisi05</groupId>
     <artifactId>NpcApi</artifactId>
     <version>1.0</version>
+    <scope>provided</scope>
 </dependency>
 ```
 
-### Gradle
+#### Gradle
+```gradle
+dependencies {
+    compileOnly 'com.github.Eisi05:NpcApi:1.0'
+}
+```
 
+#### Plugin Configuration
+Add NpcApi as a dependency in your `plugin.yml`:
+```yaml
+# Required dependency (hard dependency)
+depend: [NpcApi]
+
+# Or optional dependency (soft dependency)
+soft-depend: [NpcApi]
+```
+
+
+### Method 2: Shaded Dependency
+
+This method bundles NpcApi directly into your plugin JAR file.
+
+#### Maven
+Add the repository and dependency to your `pom.xml`:
+```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>com.github.Eisi05</groupId>
+        <artifactId>NpcApi</artifactId>
+        <version>1.0</version>
+    </dependency>
+</dependencies>
+```
+
+#### Gradle
 Add the following to your `build.gradle`:
-
 ```gradle
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -50,9 +87,8 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    implementation 'com.github.Eisi05:NpcApi:Tag'
+    implementation 'com.github.Eisi05:NpcApi:1.0'
 }
-```
 
 ## Quick Start
 
