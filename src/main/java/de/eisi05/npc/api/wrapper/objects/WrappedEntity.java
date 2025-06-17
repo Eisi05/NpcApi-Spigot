@@ -93,7 +93,7 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         setWrappedFieldValue(ImmutableList.copyOf(Arrays.stream(entities).map(wrappedEntity -> wrappedEntity.handle).toList()));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_6), path = "cX")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_6), path = "ai")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_5), path = "cU")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "cN")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_4), path = "cK")
