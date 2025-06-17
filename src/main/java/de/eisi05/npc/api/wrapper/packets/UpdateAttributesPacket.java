@@ -6,7 +6,7 @@ import de.eisi05.npc.api.wrapper.objects.WrappedAttributeInstance;
 
 import java.util.List;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_5),
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_6),
         path = "net.minecraft.network.protocol.game.PacketPlayOutUpdateAttributes")
 public class UpdateAttributesPacket extends PacketWrapper
 {

@@ -6,7 +6,7 @@ import de.eisi05.npc.api.wrapper.Wrapper;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "net.minecraft.commands.CommandListenerWrapper")
+@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "net.minecraft.commands.CommandListenerWrapper")
 public class WrappedCommandSourceStack extends Wrapper
 {
     public WrappedCommandSourceStack(Object handle)
@@ -14,19 +14,19 @@ public class WrappedCommandSourceStack extends Wrapper
         super(handle);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "getBukkitSender")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "getBukkitSender")
     public CommandSender getBukkitSender()
     {
         return invokeWrappedMethod();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "a")
     public @NotNull WrappedCommandSourceStack withMaximumPermission()
     {
         return new WrappedCommandSourceStack(invokeWrappedMethod(4));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "a")
     public @NotNull WrappedCommandSourceStack withSuppressedOutput()
     {
         return new WrappedCommandSourceStack(invokeWrappedMethod());

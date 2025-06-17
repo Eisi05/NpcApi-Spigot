@@ -5,29 +5,32 @@ import de.eisi05.npc.api.wrapper.Mapping;
 import de.eisi05.npc.api.wrapper.Wrapper;
 import org.jetbrains.annotations.NotNull;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "net.minecraft.world.entity.EnumItemSlot")
+@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "net.minecraft.world.entity.EnumItemSlot")
 public enum EquipmentSlot implements Wrapper.EnumWrapper
 {
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "a")
     MAINHAND,
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "b")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "b")
     OFFHAND,
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "c")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "c")
     FEET,
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "d")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "d")
     LEGS,
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "e")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "e")
     CHEST,
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "f")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "f")
     HEAD,
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_5), path = "g")
-    BODY;
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_6), path = "g")
+    BODY,
+
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_6), path = "h")
+    SADDLE;
 
     @Override
     public @NotNull Object getHandle()
