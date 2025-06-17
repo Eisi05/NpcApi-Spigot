@@ -26,6 +26,13 @@ This method requires [NpcApi](https://www.spigotmc.org/resources/npc-plugin-1-17
 
 #### Maven
 ```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+
 <dependency>
     <groupId>com.github.Eisi05</groupId>
     <artifactId>NpcApi</artifactId>
@@ -36,6 +43,14 @@ This method requires [NpcApi](https://www.spigotmc.org/resources/npc-plugin-1-17
 
 #### Gradle
 ```gradle
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+
 dependencies {
     compileOnly 'com.github.Eisi05:NpcApi:1.0'
 }
