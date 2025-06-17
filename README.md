@@ -26,18 +26,33 @@ This method requires [NpcApi](https://www.spigotmc.org/resources/npc-plugin-1-17
 
 #### Maven
 ```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+
 <dependency>
     <groupId>com.github.Eisi05</groupId>
     <artifactId>NpcApi</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 #### Gradle
 ```gradle
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+
 dependencies {
-    compileOnly 'com.github.Eisi05:NpcApi:1.0'
+    compileOnly 'com.github.Eisi05:NpcApi:1.1'
 }
 ```
 
@@ -70,7 +85,7 @@ Add the repository and dependency to your `pom.xml`:
     <dependency>
         <groupId>com.github.Eisi05</groupId>
         <artifactId>NpcApi</artifactId>
-        <version>1.0</version>
+        <version>1.1</version>
     </dependency>
 </dependencies>
 ```
@@ -87,7 +102,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    implementation 'com.github.Eisi05:NpcApi:1.0'
+    implementation 'com.github.Eisi05:NpcApi:1.1'
 }
 ```
 
