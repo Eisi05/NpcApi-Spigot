@@ -4,9 +4,13 @@ import com.mojang.authlib.GameProfile;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.wrapper.Mapping;
 import de.eisi05.npc.api.wrapper.Wrapper;
+import de.eisi05.npc.api.wrapper.enums.ConnectionProtocol;
 import de.eisi05.npc.api.wrapper.packets.PacketWrapper;
 import io.netty.channel.Channel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.AttributeKey;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_6), path = "net.minecraft.server.network.PlayerConnection")
 @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "net.minecraft.network.PlayerConnection")
@@ -51,7 +55,18 @@ public class WrappedConnection extends Wrapper
 
         public static @NotNull WrappedNetworkManager create(@NotNull PacketFlow packetFlow)
         {
-            return createWrappedInstance(WrappedNetworkManager.class, packetFlow);
+            WrappedNetworkManager networkManager = new WrappedNetworkManager(createInstance(WrappedNetworkManager.class, packetFlow));
+
+            if(Versions.getVersion() != Versions.V1_20_2 && Versions.getVersion() != Versions.V1_20_4)
+                return networkManager;
+
+            NioSocketChannel socketChannel = new NioSocketChannel();
+            socketChannel.attr(AttributeKey.valueOf("serverbound_protocol")).set(ConnectionProtocol.PLAY.codecData(PacketFlow.SERVERBOUND));
+            socketChannel.attr(AttributeKey.valueOf("clientbound_protocol")).set(ConnectionProtocol.PLAY.codecData(PacketFlow.SERVERBOUND));
+
+            networkManager.setChannel(socketChannel);
+
+            return networkManager;
         }
 
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_2, to = Versions.V1_21_6), path = "n")
@@ -60,6 +75,14 @@ public class WrappedConnection extends Wrapper
         public @NotNull Channel channel()
         {
             return getWrappedFieldValue();
+        }
+
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_2, to = Versions.V1_21_6), path = "n")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_18_2, to = Versions.V1_20), path = "m")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_18), path = "k")
+        public void setChannel(@Nullable Channel channel)
+        {
+            setWrappedFieldValue(channel);
         }
 
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_2, to = Versions.V1_21_6),

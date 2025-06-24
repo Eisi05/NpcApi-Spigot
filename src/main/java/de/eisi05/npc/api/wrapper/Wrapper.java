@@ -150,6 +150,7 @@ public abstract class Wrapper implements HandleHolder
             throw new VersionNotFound(wrapperClass);
         } catch(Exception e)
         {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -167,6 +168,7 @@ public abstract class Wrapper implements HandleHolder
                     return cons;
                 } catch(Exception e)
                 {
+                    e.printStackTrace();
                     throw new RuntimeException(e);
                 }
             });
@@ -174,6 +176,7 @@ public abstract class Wrapper implements HandleHolder
             return wrapperClass.cast(cached.newInstance(createInstance(wrapperClass, args)));
         } catch(Exception e)
         {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -292,6 +295,7 @@ public abstract class Wrapper implements HandleHolder
                         return lookup.unreflect(method);
                     } catch(Exception e)
                     {
+                        e.printStackTrace();
                         throw new RuntimeException(e);
                     }
                 });
@@ -302,6 +306,7 @@ public abstract class Wrapper implements HandleHolder
             throw new VersionNotFound(callingMethod);
         } catch(Throwable e)
         {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -386,6 +391,7 @@ public abstract class Wrapper implements HandleHolder
                         return lookup.unreflect(method);
                     } catch(Exception e)
                     {
+                        e.printStackTrace();
                         throw new RuntimeException(e);
                     }
                 });
@@ -397,6 +403,7 @@ public abstract class Wrapper implements HandleHolder
             throw new VersionNotFound(callingMethod);
         } catch(Throwable e)
         {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -460,6 +467,7 @@ public abstract class Wrapper implements HandleHolder
                         return lookup.findGetter(f.getDeclaringClass(), fieldName, f.getType());
                     } catch(NoSuchFieldException | IllegalAccessException e)
                     {
+                        e.printStackTrace();
                         throw new RuntimeException(e);
                     }
                 });
@@ -470,6 +478,7 @@ public abstract class Wrapper implements HandleHolder
             throw new VersionNotFound(callingMethod);
         } catch(Throwable e)
         {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -532,6 +541,7 @@ public abstract class Wrapper implements HandleHolder
                         return lookup.findSetter(getHandle().getClass(), fieldName, f.getType());
                     } catch(NoSuchFieldException | IllegalAccessException e)
                     {
+                        e.printStackTrace();
                         throw new RuntimeException(e);
                     }
                 });
@@ -543,6 +553,7 @@ public abstract class Wrapper implements HandleHolder
             throw new VersionNotFound(callingMethod);
         } catch(Throwable e)
         {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -613,6 +624,21 @@ public abstract class Wrapper implements HandleHolder
             {
                 throw new RuntimeException(e);
             }
+        }
+
+        default String getPath()
+        {
+            String callingMethodName = CallerUtils.getCallerMethodName();
+
+            Method callingMethod = Arrays.stream(getClass().getMethods())
+                    .filter(m -> m.getName().equals(callingMethodName))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException(callingMethodName + " -> " + getClass()));
+
+            Mapping[] annotations = callingMethod.getAnnotationsByType(Mapping.class);
+
+            return Arrays.stream(annotations).filter(Versions::containsCurrentVersion).findFirst()
+                    .orElseThrow(() -> new VersionNotFound(callingMethod)).path();
         }
     }
 }

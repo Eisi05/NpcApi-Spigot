@@ -67,7 +67,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
                         WrappedClientInformation.createDefault().getHandle());
 
                 serverPlayer.setConnection(new WrappedConnection(WrappedMinecraftServer.INSTANCE,
-                        WrappedConnection.WrappedNetworkManager.create(WrappedConnection.WrappedNetworkManager.PacketFlow.CLIENTBOUND),
+                        WrappedConnection.WrappedNetworkManager.create(WrappedConnection.WrappedNetworkManager.PacketFlow.SERVERBOUND),
                         serverPlayer, new WrappedConnection.CommonListenerCookie(gameProfile, 0, true)));
 
                 yield serverPlayer;
