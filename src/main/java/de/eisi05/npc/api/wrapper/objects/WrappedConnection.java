@@ -85,7 +85,15 @@ public class WrappedConnection extends Wrapper
     {
         public CommonListenerCookie(@NotNull GameProfile profile, int latency, boolean transferred)
         {
-            super(createInstance(CommonListenerCookie.class, profile, latency, WrappedClientInformation.createDefault(), transferred));
+            super(create(profile, latency, transferred));
+        }
+
+        private static @NotNull Object create(@NotNull GameProfile profile, int latency, boolean transferred)
+        {
+            if(Versions.isCurrentVersionSmallerThan(Versions.V1_20_6))
+                return createInstance(CommonListenerCookie.class, profile, latency, WrappedClientInformation.createDefault());
+            else
+                return createInstance(CommonListenerCookie.class, profile, latency, WrappedClientInformation.createDefault(), transferred);
         }
     }
 }
