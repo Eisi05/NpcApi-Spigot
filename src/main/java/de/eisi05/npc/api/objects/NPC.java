@@ -362,10 +362,11 @@ public class NPC extends NpcHolder
 
         packets.add(serverPlayer.getAddEntityPacket());
 
+        boolean modified = WrappedPlayerTeam.exists(player, getServerPlayer().getName());
         WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, getServerPlayer().getName());
         wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.NEVER);
 
-        packets.add(SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, true));
+        packets.add(SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified));
         packets.add(SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, getServerPlayer().getName(), SetPlayerTeamPacket.Action.ADD));
 
         packets.add(new RotateHeadPacket(serverPlayer, (byte) ((location.getYaw() % 360) * 256 / 360)));
@@ -410,6 +411,12 @@ public class NPC extends NpcHolder
         WrappedServerPlayer wrappedServerPlayer = WrappedServerPlayer.fromPlayer(player);
         wrappedServerPlayer.sendPacket(new RemoveEntityPacket(serverPlayer.getId()));
         wrappedServerPlayer.sendPacket(new RemoveEntityPacket(serverPlayer.getNameTag().getId()));
+
+        if(WrappedPlayerTeam.exists(player, getServerPlayer().getName()))
+        {
+            WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, getServerPlayer().getName());
+            wrappedServerPlayer.sendPacket(SetPlayerTeamPacket.createRemovePacket(wrappedPlayerTeam));
+        }
 
         toDeleteEntities.forEach(integer -> wrappedServerPlayer.sendPacket(new RemoveEntityPacket(integer)));
 
