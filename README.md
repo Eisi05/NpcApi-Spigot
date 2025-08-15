@@ -2,7 +2,7 @@
 
 [NPC Plugin on SpigotMC](https://www.spigotmc.org/resources/npc-plugin-1-17.87761/)
 
-[NpcApi for PaperMc](https://github.com/Eisi05/NpcApi-Paper)
+[NpcApi for PaperMC](https://github.com/Eisi05/NpcApi-Paper)
 
 # NpcAPI
 
