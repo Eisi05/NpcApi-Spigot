@@ -2,6 +2,8 @@
 
 [NPC Plugin on SpigotMC](https://www.spigotmc.org/resources/npc-plugin-1-17.87761/)
 
+[NpcApi for PaperMc](https://github.com/Eisi05/NpcApi-Paper)
+
 # NpcAPI
 
 A powerful and easy-to-use NPC (Non-Player Character) API for Minecraft Spigot plugins that allows you to create, manage, and customize NPCs with
