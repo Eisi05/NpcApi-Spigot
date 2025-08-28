@@ -13,9 +13,9 @@ import java.util.List;
 public class SetEntityDataPacket extends PacketWrapper
 {
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_19_1), path = "")
-    private SetEntityDataPacket(int id, @NotNull WrappedEntityData data, boolean dirty)
+    private SetEntityDataPacket(int id, @NotNull WrappedEntityData data, boolean nonDefaults)
     {
-        super(SetEntityDataPacket.class, id, data, dirty);
+        super(SetEntityDataPacket.class, id, data, nonDefaults);
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_6), path = "")
@@ -24,13 +24,13 @@ public class SetEntityDataPacket extends PacketWrapper
         super(SetEntityDataPacket.class, id, data);
     }
 
-    public static SetEntityDataPacket create(int id, @NotNull WrappedEntityData data, boolean nonDefaults)
+    public static SetEntityDataPacket create(int id, @NotNull WrappedEntityData data)
     {
         if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_3))
-            return new SetEntityDataPacket(id, data, nonDefaults);
+            return new SetEntityDataPacket(id, data, true);
         else
         {
-            List<?> dataList = nonDefaults ? data.getAll() : data.packDirty();
+            List<?> dataList = data.getAll();
             return new SetEntityDataPacket(id, dataList == null ? new ArrayList<>() : dataList);
         }
     }

@@ -127,7 +127,7 @@ public class NpcOption<T, S extends Serializable>
             {
                 WrappedEntityData data = npc.getServerPlayer().getNameTag().getEntityData();
                 data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), !hide);
-                return SetEntityDataPacket.create(npc.getServerPlayer().getNameTag().getId(), data, false);
+                return SetEntityDataPacket.create(npc.getServerPlayer().getNameTag().getId(), data);
             });
 
     /**
@@ -153,7 +153,7 @@ public class NpcOption<T, S extends Serializable>
                 else
                     data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x01);
 
-                return SetEntityDataPacket.create(npc.getServerPlayer().getId(), data, false);
+                return SetEntityDataPacket.create(npc.getServerPlayer().getId(), data);
             });
 
     /**
@@ -193,7 +193,7 @@ public class NpcOption<T, S extends Serializable>
                 WrappedEntityData data = npc.getServerPlayer().getEntityData();
                 data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(17),
                         (byte) Arrays.stream(skinParts).mapToInt(SkinParts::getValue).sum());
-                return SetEntityDataPacket.create(npc.getServerPlayer().getId(), data, true);
+                return SetEntityDataPacket.create(npc.getServerPlayer().getId(), data);
             });
 
     /**
@@ -217,7 +217,7 @@ public class NpcOption<T, S extends Serializable>
                 {
                     WrappedEntityData entityData = npc.getServerPlayer().getEntityData();
                     entityData.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0);
-                    return SetEntityDataPacket.create(npc.getServerPlayer().getId(), entityData, false);
+                    return SetEntityDataPacket.create(npc.getServerPlayer().getId(), entityData);
                 }
 
                 String teamName = npc.getServerPlayer().getName();
@@ -231,7 +231,7 @@ public class NpcOption<T, S extends Serializable>
                 WrappedEntityData entityData = npc.getServerPlayer().getEntityData();
                 entityData.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0x40);
 
-                return new BundlePacket(teamPacket, SetEntityDataPacket.create(npc.getServerPlayer().getId(), entityData, true));
+                return new BundlePacket(teamPacket, SetEntityDataPacket.create(npc.getServerPlayer().getId(), entityData));
             });
 
     /**
@@ -277,7 +277,7 @@ public class NpcOption<T, S extends Serializable>
 
                 npc.toDeleteEntities.add(armorStand.getId());
 
-                return new BundlePacket(addPacket, SetEntityDataPacket.create(armorStand.getId(), data, true));
+                return new BundlePacket(addPacket, SetEntityDataPacket.create(armorStand.getId(), data));
             });
 
     private final String path;

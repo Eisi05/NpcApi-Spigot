@@ -17,10 +17,11 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Serial;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -38,6 +39,7 @@ public class NPC extends NpcHolder
     private Location location;
     private NpcClickAction clickEvent;
     private Instant createdAt = Instant.now();
+    private final Path npcPath;
 
     /**
      * Creates an NPC at the specified location with a random UUID and default name.
@@ -88,6 +90,8 @@ public class NPC extends NpcHolder
         this.serverPlayer = WrappedServerPlayer.create(location, uuid, name);
         serverPlayer.moveTo(location);
 
+        npcPath = NpcApi.plugin.getDataFolder().toPath().resolve("NPC").resolve(uuid + ".npc");
+
         this.options = new HashMap<>();
         for(NpcOption<?, ?> value : NpcOption.values())
             setOption(value, Var.unsafeCast(value.getDefaultValue()));
@@ -130,7 +134,7 @@ public class NPC extends NpcHolder
      */
     public boolean isSaved()
     {
-        return new File(NpcApi.plugin.getDataFolder(), "NPC\\" + getUUID() + ".npc").exists();
+        return Files.exists(npcPath);
     }
 
     /**
@@ -142,9 +146,8 @@ public class NPC extends NpcHolder
     @Override
     public void save() throws IOException
     {
-        new File(NpcApi.plugin.getDataFolder(), "NPC").mkdirs();
-        new ObjectSaver(new File(NpcApi.plugin.getDataFolder(), "NPC\\" + getUUID() + ".npc")).write(SerializedNPC.serializedNPC(this),
-                false);
+        npcPath.toFile().getParentFile().mkdirs();
+        new ObjectSaver(npcPath.toFile()).write(SerializedNPC.serializedNPC(this), false);
         super.save();
     }
 
@@ -383,7 +386,7 @@ public class NPC extends NpcHolder
 
         packets.add(serverPlayer.getNameTag().getAddEntityPacket());
         packets.add(
-                SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), WrappedArmorStand.applyData(serverPlayer.getNameTag(), name), true));
+                SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), WrappedArmorStand.applyData(serverPlayer.getNameTag(), name)));
 
         if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21))
             packets.add(new SetPassengerPacket(serverPlayer));
@@ -432,15 +435,14 @@ public class NPC extends NpcHolder
      * Deletes the NPC.
      * This hides the NPC from all players, removes it from the NPC manager, and deletes its saved data file.
      */
-    public void delete()
+    public void delete() throws IOException
     {
         hideNpcFromAllPlayers();
         NpcManager.removeNPC(this);
 
-        new File(NpcApi.plugin.getDataFolder(), "NPC").mkdirs();
-        File file = new File(NpcApi.plugin.getDataFolder(), "NPC\\" + getUUID() + ".npc");
-        if(file.exists())
-            file.delete();
+        npcPath.toFile().getParentFile().mkdirs();
+
+        Files.deleteIfExists(npcPath);
     }
 
     /**
