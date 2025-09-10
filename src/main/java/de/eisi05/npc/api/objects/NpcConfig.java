@@ -18,7 +18,7 @@ public class NpcConfig
      * If true, command validation will be skipped.
      * Useful for allowing proxy commands like BungeeCord.
      */
-    private boolean avoidCommandCheck = false;
+    private boolean avoidCommandCheck = true;
 
     /**
      * Sets the duration an NPC will look at a player after an interaction.

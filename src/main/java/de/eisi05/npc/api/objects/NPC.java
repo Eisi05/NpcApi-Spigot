@@ -6,10 +6,7 @@ import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.utils.ObjectSaver;
 import de.eisi05.npc.api.utils.Var;
 import de.eisi05.npc.api.utils.Versions;
-import de.eisi05.npc.api.wrapper.objects.WrappedArmorStand;
-import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
-import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
-import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
+import de.eisi05.npc.api.wrapper.objects.*;
 import de.eisi05.npc.api.wrapper.packets.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -374,6 +371,11 @@ public class NPC extends NpcHolder
 
         packets.add(new RotateHeadPacket(serverPlayer, (byte) ((location.getYaw() % 360) * 256 / 360)));
         packets.add(new MoveEntityPacket.Rot(serverPlayer.getId(), (byte) location.getYaw(), (byte) location.getPitch(), serverPlayer.isOnGround()));
+
+        WrappedEntityData data = serverPlayer.getEntityData();
+        data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2), Optional.of(WrappedComponent.create("NPC").getHandle()));
+        data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), false);
+        packets.add(SetEntityDataPacket.create(serverPlayer.getId(), data));
 
         Arrays.stream(NpcOption.values()).filter(npcOption -> !npcOption.equals(NpcOption.ENABLED))
                 .forEach(npcOption -> npcOption.getPacket(getOption(npcOption), this, player).ifPresent(packets::add));
