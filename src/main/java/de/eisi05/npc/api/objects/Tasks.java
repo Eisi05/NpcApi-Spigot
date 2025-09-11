@@ -4,6 +4,7 @@ import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.manager.NpcManager;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 /**
  * The {@link Tasks} class manages and starts various recurring tasks
@@ -12,6 +13,8 @@ import org.bukkit.scheduler.BukkitRunnable;
  */
 public class Tasks
 {
+    private static BukkitTask task;
+
     /**
      * Starts all defined NPC-related tasks.
      * This method should be called when the plugin is enabled to ensure
@@ -22,6 +25,12 @@ public class Tasks
         lookAtTask();
     }
 
+    public static void stop()
+    {
+        if(task != null && !task.isCancelled())
+            task.cancel();
+    }
+
     /**
      * Implements a recurring task that makes NPCs look at nearby players.
      * The task runs on a timer defined by {@code NpcApi.config.getLookAtTimer()}.
@@ -30,7 +39,7 @@ public class Tasks
      */
     private static void lookAtTask()
     {
-        new BukkitRunnable()
+        task = new BukkitRunnable()
         {
             @Override
             public void run()

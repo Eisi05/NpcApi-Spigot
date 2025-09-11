@@ -1,7 +1,6 @@
 package de.eisi05.npc.api.wrapper.objects;
 
 import com.mojang.authlib.GameProfile;
-import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.Var;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.utils.exceptions.VersionNotFound;
@@ -17,12 +16,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "net.minecraft.server.level.EntityPlayer")
 public class WrappedServerPlayer extends WrappedEntity<Player>
 {
-    private WrappedArmorStand armorStand;
+    private static final Map<UUID, WrappedServerPlayer> map = new HashMap<>();
+
+    private WrappedNameTag<?> nameDisplay;
 
     WrappedServerPlayer(Object serverPlayer)
     {
@@ -36,6 +39,9 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
 
     public static @NotNull WrappedServerPlayer create(@NotNull Location location, @NotNull UUID uuid, @NotNull WrappedComponent name)
     {
+        if(map.containsKey(uuid))
+            return map.get(uuid);
+
         Object mcServer = WrappedMinecraftServer.INSTANCE.getHandle();
         Object serverLevel = Var.getNmsLevel(location.getWorld());
 
@@ -75,11 +81,21 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
             case NONE -> throw new VersionNotFound();
         };
 
-        WrappedArmorStand armorStand = WrappedArmorStand.create(location.getWorld());
-        armorStand.moveTo(location.clone().add(0, 0.2, 0));
-        wrappedServerPlayer.setNameTag(armorStand);
+        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
+        {
+            WrappedArmorStand armorStand = WrappedArmorStand.create(location.getWorld());
+            armorStand.moveTo(location.clone().add(0, 0.2, 0));
+            wrappedServerPlayer.setNameTag(armorStand);
+        }
+        else
+        {
+            WrappedTextDisplay textDisplay = WrappedTextDisplay.create(location.getWorld());
+            textDisplay.moveTo(location.clone().add(0, 0.2, 0));
+            wrappedServerPlayer.setNameTag(textDisplay);
+        }
 
         wrappedServerPlayer.setListName(name);
+        map.put(uuid, wrappedServerPlayer);
         return wrappedServerPlayer;
     }
 
@@ -191,11 +207,6 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         return getGameProfile().getName();
     }
 
-    public void setName(@NotNull String name)
-    {
-        Reflections.setField(getGameProfile(), "name", name);
-    }
-
     public @NotNull UUID getUUID()
     {
         return getGameProfile().getId();
@@ -214,14 +225,14 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
             playerConnection().sendPacket(packet);
     }
 
-    public WrappedArmorStand getNameTag()
+    public WrappedNameTag<?> getNameTag()
     {
-        return armorStand;
+        return nameDisplay;
     }
 
-    public void setNameTag(WrappedArmorStand armorStand)
+    public void setNameTag(WrappedNameTag<?> nameDisplay)
     {
-        setPassengers(armorStand);
-        this.armorStand = armorStand;
+        setPassengers(nameDisplay);
+        this.nameDisplay = nameDisplay;
     }
 }

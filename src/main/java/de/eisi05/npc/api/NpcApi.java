@@ -8,6 +8,7 @@ import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcConfig;
 import de.eisi05.npc.api.objects.Tasks;
 import de.eisi05.npc.api.utils.PacketReader;
+import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -95,6 +96,8 @@ public final class NpcApi
         NpcManager.getList().forEach(NPC::hideNpcFromAllPlayers);
         NpcManager.clear();
         PacketReader.uninjectAll();
+        Tasks.stop();
+        WrappedPlayerTeam.clear();
 
         npcApi = null;
         plugin = null;

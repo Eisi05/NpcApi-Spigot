@@ -6,6 +6,7 @@ import de.eisi05.npc.api.wrapper.Wrapper;
 import de.eisi05.npc.api.wrapper.enums.Pose;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 
 import java.util.List;
 import java.util.Optional;
@@ -262,7 +263,7 @@ public class WrappedEntityData extends Wrapper
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_6), path = "H")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_4), path = "D")
         @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_20_4), path = "A")
-        public static final EntityDataSerializer<?> VECTOR3 = new EntityDataSerializer<>(
+        public static final EntityDataSerializer<Vector3f> VECTOR3 = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("VECTOR3").orElse(null));
 
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_6), path = "I")

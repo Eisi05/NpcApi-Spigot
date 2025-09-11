@@ -125,8 +125,19 @@ public class NpcOption<T, S extends Serializable>
             aBoolean -> aBoolean, aBoolean -> aBoolean,
             (hide, npc, player) ->
             {
+                WrappedEntity<?> nameTag = npc.getServerPlayer().getNameTag();
+
                 WrappedEntityData data = npc.getServerPlayer().getNameTag().getEntityData();
-                data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), !hide);
+                if(nameTag instanceof WrappedArmorStand)
+                    data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), !hide);
+                else if(nameTag instanceof WrappedTextDisplay)
+                {
+                    if(!hide)
+                        return null;
+
+                    return new RemoveEntityPacket(npc.getServerPlayer().getNameTag().getId());
+                }
+
                 return SetEntityDataPacket.create(npc.getServerPlayer().getNameTag().getId(), data);
             });
 

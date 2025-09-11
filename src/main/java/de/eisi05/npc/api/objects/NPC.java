@@ -6,7 +6,10 @@ import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.utils.ObjectSaver;
 import de.eisi05.npc.api.utils.Var;
 import de.eisi05.npc.api.utils.Versions;
-import de.eisi05.npc.api.wrapper.objects.*;
+import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
+import de.eisi05.npc.api.wrapper.objects.WrappedEntityData;
+import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
+import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import de.eisi05.npc.api.wrapper.packets.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -32,11 +35,11 @@ public class NPC extends NpcHolder
     private final WrappedServerPlayer serverPlayer;
     private final List<UUID> viewers = new ArrayList<>();
     private final Map<NpcOption<?, ?>, Object> options;
+    private final Path npcPath;
     private WrappedComponent name;
     private Location location;
     private NpcClickAction clickEvent;
     private Instant createdAt = Instant.now();
-    private final Path npcPath;
 
     /**
      * Creates an NPC at the specified location with a random UUID and default name.
@@ -251,6 +254,7 @@ public class NPC extends NpcHolder
     {
         final List<UUID> viewers = new ArrayList<>(this.viewers);
         hideNpcFromAllPlayers();
+        WrappedPlayerTeam.clear(getServerPlayer().getName());
         viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> showNPCToPlayer(Bukkit.getPlayer(uuid)));
     }
 
@@ -305,8 +309,10 @@ public class NPC extends NpcHolder
     public void setName(@NotNull WrappedComponent name)
     {
         this.name = name;
-        serverPlayer.setName(name.toLegacyNoColor());
         serverPlayer.setListName(name);
+
+        viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> WrappedServerPlayer.fromPlayer(Bukkit.getPlayer(uuid))
+                .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(name))));
     }
 
     /**
@@ -377,21 +383,24 @@ public class NPC extends NpcHolder
         data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), false);
         packets.add(SetEntityDataPacket.create(serverPlayer.getId(), data));
 
+        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || !getOption(NpcOption.HIDE_NAMETAG))
+        {
+            if(Versions.isCurrentVersionSmallerThan(Versions.V1_21))
+                serverPlayer.getNameTag()
+                        .moveTo(getLocation().clone().add(0, (serverPlayer.getBoundingBox().getYSize() * getOption(NpcOption.SCALE)), 0));
+
+            packets.add(serverPlayer.getNameTag().getAddEntityPacket());
+
+            packets.add(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(name)));
+
+            if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
+                packets.add(new SetPassengerPacket(serverPlayer));
+        }
+
         Arrays.stream(NpcOption.values()).filter(npcOption -> !npcOption.equals(NpcOption.ENABLED))
                 .forEach(npcOption -> npcOption.getPacket(getOption(npcOption), this, player).ifPresent(packets::add));
 
         NpcOption.ENABLED.getPacket(isEnabled(), this, player).ifPresent(packets::add);
-
-        if(Versions.isCurrentVersionSmallerThan(Versions.V1_21))
-            serverPlayer.getNameTag()
-                    .moveTo(getLocation().clone().add(0, (serverPlayer.getBoundingBox().getYSize() * getOption(NpcOption.SCALE)), 0));
-
-        packets.add(serverPlayer.getNameTag().getAddEntityPacket());
-        packets.add(
-                SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), WrappedArmorStand.applyData(serverPlayer.getNameTag(), name)));
-
-        if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21))
-            packets.add(new SetPassengerPacket(serverPlayer));
 
         WrappedServerPlayer wrappedServerPlayer = WrappedServerPlayer.fromPlayer(player);
         packets.forEach(wrappedServerPlayer::sendPacket);
@@ -420,6 +429,8 @@ public class NPC extends NpcHolder
         if(WrappedPlayerTeam.exists(player, getServerPlayer().getName()))
         {
             WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, getServerPlayer().getName());
+            wrappedServerPlayer.sendPacket(
+                    SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, getServerPlayer().getName(), SetPlayerTeamPacket.Action.REMOVE));
             wrappedServerPlayer.sendPacket(SetPlayerTeamPacket.createRemovePacket(wrappedPlayerTeam));
         }
 
@@ -443,7 +454,6 @@ public class NPC extends NpcHolder
         NpcManager.removeNPC(this);
 
         npcPath.toFile().getParentFile().mkdirs();
-
         Files.deleteIfExists(npcPath);
     }
 

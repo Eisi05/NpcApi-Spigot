@@ -159,6 +159,15 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_18_2), path = "c")
         public static final Object ARMOR_STAND = getStaticWrappedFieldValue("ARMOR_STAND").orElse(null);
 
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_6), path = "bx")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_5), path = "bw")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_4), path = "bu")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_2), path = "bv")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "bb")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_4), path = "aY")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_20_2), path = "aX")
+        public static final Object TEXT_DISPLAY = getStaticWrappedFieldValue("TEXT_DISPLAY").orElse(null);
+
         private EntityTypes()
         {
             super(null);
@@ -178,5 +187,15 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         {
             return invokeWrappedMethod();
         }
+    }
+
+    public abstract static class WrappedNameTag<T extends Entity> extends WrappedEntity<T>
+    {
+        protected WrappedNameTag(Object handle)
+        {
+            super(handle);
+        }
+
+        public abstract WrappedEntityData applyData(WrappedComponent component);
     }
 }

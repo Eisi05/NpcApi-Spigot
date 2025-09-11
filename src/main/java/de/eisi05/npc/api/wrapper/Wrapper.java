@@ -1,6 +1,7 @@
 package de.eisi05.npc.api.wrapper;
 
 import com.google.common.primitives.Primitives;
+import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.utils.CallerUtils;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.utils.exceptions.VersionNotFound;
@@ -150,7 +151,8 @@ public abstract class Wrapper implements HandleHolder
             throw new VersionNotFound(wrapperClass);
         } catch(Exception e)
         {
-            e.printStackTrace();
+            if(NpcApi.config.debug())
+                e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -168,7 +170,8 @@ public abstract class Wrapper implements HandleHolder
                     return cons;
                 } catch(Exception e)
                 {
-                    e.printStackTrace();
+                    if(NpcApi.config.debug())
+                        e.printStackTrace();
                     throw new RuntimeException(e);
                 }
             });
@@ -176,7 +179,8 @@ public abstract class Wrapper implements HandleHolder
             return wrapperClass.cast(cached.newInstance(createInstance(wrapperClass, args)));
         } catch(Exception e)
         {
-            e.printStackTrace();
+            if(NpcApi.config.debug())
+                e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -295,7 +299,8 @@ public abstract class Wrapper implements HandleHolder
                         return lookup.unreflect(method);
                     } catch(Exception e)
                     {
-                        e.printStackTrace();
+                        if(NpcApi.config.debug())
+                            e.printStackTrace();
                         throw new RuntimeException(e);
                     }
                 });
@@ -306,7 +311,8 @@ public abstract class Wrapper implements HandleHolder
             throw new VersionNotFound(callingMethod);
         } catch(Throwable e)
         {
-            e.printStackTrace();
+            if(NpcApi.config.debug())
+                e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -391,7 +397,8 @@ public abstract class Wrapper implements HandleHolder
                         return lookup.unreflect(method);
                     } catch(Exception e)
                     {
-                        e.printStackTrace();
+                        if(NpcApi.config.debug())
+                            e.printStackTrace();
                         throw new RuntimeException(e);
                     }
                 });
@@ -403,7 +410,8 @@ public abstract class Wrapper implements HandleHolder
             throw new VersionNotFound(callingMethod);
         } catch(Throwable e)
         {
-            e.printStackTrace();
+            if(NpcApi.config.debug())
+                e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -467,7 +475,8 @@ public abstract class Wrapper implements HandleHolder
                         return lookup.findGetter(f.getDeclaringClass(), fieldName, f.getType());
                     } catch(NoSuchFieldException | IllegalAccessException e)
                     {
-                        e.printStackTrace();
+                        if(NpcApi.config.debug())
+                            e.printStackTrace();
                         throw new RuntimeException(e);
                     }
                 });
@@ -478,7 +487,8 @@ public abstract class Wrapper implements HandleHolder
             throw new VersionNotFound(callingMethod);
         } catch(Throwable e)
         {
-            e.printStackTrace();
+            if(NpcApi.config.debug())
+                e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -541,7 +551,8 @@ public abstract class Wrapper implements HandleHolder
                         return lookup.findSetter(getHandle().getClass(), fieldName, f.getType());
                     } catch(NoSuchFieldException | IllegalAccessException e)
                     {
-                        e.printStackTrace();
+                        if(NpcApi.config.debug())
+                            e.printStackTrace();
                         throw new RuntimeException(e);
                     }
                 });
@@ -553,8 +564,9 @@ public abstract class Wrapper implements HandleHolder
             throw new VersionNotFound(callingMethod);
         } catch(Throwable e)
         {
-            e.printStackTrace();
-            throw new RuntimeException(e);
+            if(NpcApi.config.debug())
+                e.printStackTrace();
+            //throw new RuntimeException(e);
         }
     }
 
