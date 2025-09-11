@@ -110,19 +110,19 @@ public class WrappedComponent extends Wrapper
         return new WrappedComponent(invokeWrappedMethod());
     }
 
-    public @NotNull String toLegacy()
+    public @NotNull String toLegacy(boolean withLineBreak)
     {
-        return Var.toString(this);
+        return withLineBreak ? Var.toString(this) : Var.toString(this).replace("\n", "\\n");
     }
 
-    public @NotNull String toLegacyNoColor()
+    public @NotNull String toLegacyNoColor(boolean withLineBreak)
     {
-        return ChatColor.stripColor(toLegacy());
+        return ChatColor.stripColor(toLegacy(withLineBreak));
     }
 
     public @NotNull SerializedComponent serialize()
     {
-        return new SerializedComponent(toLegacy());
+        return new SerializedComponent(toLegacy(true));
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_6), path = "net.minecraft.network.chat.CommonComponents")

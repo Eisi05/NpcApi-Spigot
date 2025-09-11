@@ -56,7 +56,7 @@ public class Var
     {
         return WrappedComponent.fromHandle(
                 Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".util.CraftChatMessage",
-                        "fromStringOrNull", text).get());
+                        "fromStringOrNull", text, true).get());
     }
 
     /**
