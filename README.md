@@ -24,7 +24,7 @@ Choose your preferred installation method based on your project needs:
 
 ### Method 1: Plugin Dependency (Recommended)
 
-This method requires [NpcApi](https://www.spigotmc.org/resources/npc-plugin-1-17.87761/) to be installed as a separate plugin on the server.
+This method requires [NpcPlugin](https://www.spigotmc.org/resources/npc-plugin-1-17.87761/) to be installed as a separate plugin on the server.
 
 #### Maven
 ```xml
