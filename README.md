@@ -59,13 +59,13 @@ dependencies {
 ```
 
 #### Plugin Configuration
-Add NpcApi as a dependency in your `plugin.yml`:
+Add NpcPlugin as a dependency in your `plugin.yml`:
 ```yaml
 # Required dependency (hard dependency)
-depend: [NpcApi]
+depend: [NpcPlugin]
 
 # Or optional dependency (soft dependency)
-soft-depend: [NpcApi]
+soft-depend: [NpcPlugin]
 ```
 ---
 
