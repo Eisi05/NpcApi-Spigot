@@ -81,7 +81,7 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
      * @return A {@link Skin} object if the skin is successfully fetched or found in cache, otherwise {@code null}.
      * @throws VersionNotFound If the API does not support the current server version (though this check might be redundant here).
      */
-    private static @Nullable Skin fetchSkin(@NotNull UUID uuid)
+    public static @Nullable Skin fetchSkin(@NotNull UUID uuid)
     {
 
         if(skinCache.containsKey(uuid))
@@ -130,7 +130,7 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
      * @param name The username of the player whose skin is to be fetched. Must not be {@code null}.
      * @return A {@link Skin} object if the skin is successfully fetched, otherwise {@code null}.
      */
-    private static Skin fetchSkin(@NotNull String name)
+    public static Skin fetchSkin(@NotNull String name)
     {
         try
         {

@@ -219,6 +219,19 @@ public class NPC extends NpcHolder
             options.remove(option);
         else
             options.put(option, value);
+
+        if(NpcApi.config.autoUpdate())
+        {
+            option.getPacket(value, this, null).ifPresent(packetWrapper ->
+                    viewers.forEach(uuid ->
+                    {
+                        Player player = Bukkit.getPlayer(uuid);
+                        if(player == null)
+                            return;
+
+                        WrappedServerPlayer.fromPlayer(player).sendPacket(packetWrapper);
+                    }));
+        }
     }
 
     /**
@@ -312,7 +325,9 @@ public class NPC extends NpcHolder
         serverPlayer.setListName(name);
 
         viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> WrappedServerPlayer.fromPlayer(Bukkit.getPlayer(uuid))
-                .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(name))));
+                .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(),
+                        serverPlayer.getNameTag().applyData(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name :
+                                WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(Bukkit.getPlayer(uuid))).append(name)))));
     }
 
     /**
@@ -391,7 +406,10 @@ public class NPC extends NpcHolder
 
             packets.add(serverPlayer.getNameTag().getAddEntityPacket());
 
-            packets.add(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(name)));
+            packets.add(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
+                    Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name :
+                            WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
+                                    .append(WrappedComponent.create("\n").append(name)))));
 
             if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
                 packets.add(new SetPassengerPacket(serverPlayer));

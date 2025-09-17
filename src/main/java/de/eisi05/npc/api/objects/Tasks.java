@@ -25,6 +25,9 @@ public class Tasks
         lookAtTask();
     }
 
+    /**
+     * Stops all defined NPC-related tasks.
+     */
     public static void stop()
     {
         if(task != null && !task.isCancelled())
@@ -56,6 +59,6 @@ public class Tasks
                             .forEach(entity -> npc.lookAtPlayer((Player) entity));
                 });
             }
-        }.runTaskTimer(NpcApi.plugin, 0, NpcApi.config.getLookAtTimer());
+        }.runTaskTimer(NpcApi.plugin, 0, NpcApi.config.lookAtTimer());
     }
 }

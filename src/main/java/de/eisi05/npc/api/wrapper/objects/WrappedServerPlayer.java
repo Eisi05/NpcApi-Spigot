@@ -157,6 +157,12 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         setListName(WrappedComponent.create(name));
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_21_6), path = "listOrder")
+    public void setListOrder(int order)
+    {
+        setWrappedFieldValue(order);
+    }
+
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_20), path = "f")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_19_4), path = "e")
     public void setLatency(int i)

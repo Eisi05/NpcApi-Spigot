@@ -260,6 +260,25 @@ public class NpcOption<T, S extends Serializable>
             }).since(Versions.V1_20_6);
 
     /**
+     * NPC option to control the position of the NPC in the TAB list.
+     * <p>
+     * Only works on versions older than 1.21.2.
+     * On 1.21.2 and newer, this option has no effect.
+     * </p>
+     */
+    public static final NpcOption<Integer, Integer> LIST_ORDER = new NpcOption<>("list-order", 0,
+            aInt -> aInt, aInt -> aInt,
+            (order, npc, player) ->
+            {
+                if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_2))
+                    return null;
+
+                npc.getServerPlayer().setListOrder(order);
+
+                return new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, npc.getServerPlayer());
+            }).since(Versions.V1_21_2);
+
+    /**
      * NPC option to control if the NPC is enabled (visible and interactable).
      * If false, a "DISABLED" marker may be shown.
      * This is an internal option, typically not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
@@ -268,6 +287,9 @@ public class NpcOption<T, S extends Serializable>
             aBoolean -> aBoolean, aBoolean -> aBoolean,
             (enabled, npc, player) ->
             {
+                if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
+                    return null;
+
                 if(enabled)
                     return null;
 
@@ -281,7 +303,7 @@ public class NpcOption<T, S extends Serializable>
 
                 data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0x20);
                 data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2),
-                        Optional.of(WrappedComponent.create("DISABLED").setFormats(ChatFormat.RED).getHandle()));
+                        Optional.of(WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player)).getHandle()));
                 data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), true);
                 data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(4), true);
                 data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(15), (byte) 0x10);
