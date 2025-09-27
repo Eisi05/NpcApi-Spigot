@@ -38,7 +38,7 @@ This method requires [NpcPlugin](https://www.spigotmc.org/resources/npc-plugin-1
 <dependency>
     <groupId>com.github.Eisi05</groupId>
     <artifactId>NpcApi</artifactId>
-    <version>1.1.5</version>
+    <version>1.1.6</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -54,7 +54,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    compileOnly 'com.github.Eisi05:NpcApi:1.1.5'
+    compileOnly 'com.github.Eisi05:NpcApi:1.1.6'
 }
 ```
 
@@ -87,7 +87,7 @@ Add the repository and dependency to your `pom.xml`:
     <dependency>
         <groupId>com.github.Eisi05</groupId>
         <artifactId>NpcApi</artifactId>
-        <version>1.1.5</version>
+        <version>1.1.6</version>
     </dependency>
 </dependencies>
 ```
@@ -104,7 +104,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    implementation 'com.github.Eisi05:NpcApi:1.1.5'
+    implementation 'com.github.Eisi05:NpcApi:1.1.6'
 }
 ```
 
@@ -181,6 +181,7 @@ npc.showNPCToPlayer(player);
 npc.hideNpcFromPlayer(player);
 npc.lookAtPlayer(player);
 npc.delete();
+npc.walkTo(path, player, walkSpeed, changeRealLocation);
 ```
 
 ## NPC Management
@@ -204,20 +205,21 @@ NPC npc = NpcManager.fromUUID(npcUuid);
 
 ### NPC Class
 
-| Method                                | Description                              |
-|---------------------------------------|------------------------------------------|
-| `setOption(NpcOption, Object)`        | Set NPC options like glowing, skin, etc. |
-| `setClickEvent(Consumer<ClickEvent>)` | Set the click event handler              |
-| `setEnabled(boolean)`                 | Enable/disable NPC visibility            |
-| `save()`                              | Save NPC to persistent storage           |
-| `reload()`                            | Reload NPC data                          |
-| `setName(WrappedComponent)`           | Update NPC display name                  |
-| `setLocation(Location)`               | Move NPC to new location                 |
-| `playAnimation(...)`                  | Play NPC animation                       |
-| `showNPCToPlayer(Player)`             | Show NPC to specific player              |
-| `hideNpcFromPlayer(Player)`           | Hide NPC from specific player            |
-| `lookAtPlayer(Player)`                | Make NPC look at player                  |
-| `delete()`                            | Remove NPC permanently                   |
+| Method                                  | Description                                                                 |
+|-----------------------------------------|-----------------------------------------------------------------------------|
+| `setOption(NpcOption, Object)`          | Set NPC options like glowing, skin, etc.                                    |
+| `setClickEvent(Consumer<ClickEvent>)`   | Set the click event handler                                                 |
+| `setEnabled(boolean)`                   | Enable/disable NPC visibility                                               |
+| `save()`                                | Save NPC to persistent storage                                              |
+| `reload()`                              | Reload NPC data                                                             |
+| `setName(WrappedComponent)`             | Update NPC display name                                                     |
+| `setLocation(Location)`                 | Move NPC to new location                                                    |
+| `playAnimation(...)`                    | Play NPC animation                                                          |
+| `showNPCToPlayer(Player)`               | Show NPC to specific player                                                 |
+| `hideNpcFromPlayer(Player)`             | Hide NPC from specific player                                               |
+| `lookAtPlayer(Player)`                  | Make NPC look at player                                                     |
+| `delete()`                              | Remove NPC permanently                                                      |
+| `walkTo(Path, player, double, boolean)` | Let the NPC walk along a path (can be created with PathfindingUtils class)  |
 
 ## Requirements
 
