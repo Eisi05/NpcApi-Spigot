@@ -16,6 +16,7 @@ import java.util.Optional;
 @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_21_6), path = "net.minecraft.world.entity.Display$TextDisplay")
 public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
 {
+    private static final boolean flag = Versions.isCurrentVersionSmallerThan(Versions.V1_20_2);
     private final Map<WrappedEntityData.EntityDataAccessor<?>, Object> dataMap = new LinkedHashMap<>();
 
     protected WrappedTextDisplay(Object handle)
@@ -44,7 +45,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay translation(Vector vector)
     {
-        return set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(11),
+        return set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(flag ? 10 : 11),
                 new Vector3f(vector.getBlockX(), vector.getBlockY(), vector.getBlockZ()));
     }
 
@@ -57,7 +58,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay scale(Vector vector)
     {
-        return set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(12),
+        return set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(flag ? 11 : 12),
                 new Vector3f(vector.getBlockX(), vector.getBlockY(), vector.getBlockZ()));
     }
 
@@ -70,7 +71,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay billboardConstraints(BillboardConstraints constraints)
     {
-        return set(WrappedEntityData.EntityDataSerializers.BYTE.create(15), (byte) constraints.ordinal());
+        return set(WrappedEntityData.EntityDataSerializers.BYTE.create(flag ? 14 : 15), (byte) constraints.ordinal());
     }
 
     /**
@@ -82,7 +83,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay brightnessOverride(int brightness)
     {
-        return set(WrappedEntityData.EntityDataSerializers.INT.create(16), brightness);
+        return set(WrappedEntityData.EntityDataSerializers.INT.create(flag ? 15 : 16), brightness);
     }
 
     /**
@@ -94,7 +95,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay viewRange(float range)
     {
-        return set(WrappedEntityData.EntityDataSerializers.FLOAT.create(17), range);
+        return set(WrappedEntityData.EntityDataSerializers.FLOAT.create(flag ? 16 : 17), range);
     }
 
     /**
@@ -106,7 +107,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay shadowRadius(float radius)
     {
-        return set(WrappedEntityData.EntityDataSerializers.FLOAT.create(18), radius);
+        return set(WrappedEntityData.EntityDataSerializers.FLOAT.create(flag ? 17 : 18), radius);
     }
 
     /**
@@ -118,7 +119,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay shadowStrength(float strength)
     {
-        return set(WrappedEntityData.EntityDataSerializers.FLOAT.create(19), strength);
+        return set(WrappedEntityData.EntityDataSerializers.FLOAT.create(flag ? 18 : 19), strength);
     }
 
     /**
@@ -130,7 +131,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay width(float width)
     {
-        return set(WrappedEntityData.EntityDataSerializers.FLOAT.create(20), width);
+        return set(WrappedEntityData.EntityDataSerializers.FLOAT.create(flag ? 19 : 20), width);
     }
 
     /**
@@ -142,7 +143,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay height(float height)
     {
-        return set(WrappedEntityData.EntityDataSerializers.FLOAT.create(21), height);
+        return set(WrappedEntityData.EntityDataSerializers.FLOAT.create(flag ? 20 : 21), height);
     }
 
     /**
@@ -154,7 +155,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay glowColorOverride(int color)
     {
-        return set(WrappedEntityData.EntityDataSerializers.INT.create(22), color);
+        return set(WrappedEntityData.EntityDataSerializers.INT.create(flag ? 21 : 22), color);
     }
 
     /**
@@ -166,7 +167,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay lineWidth(int width)
     {
-        return set(WrappedEntityData.EntityDataSerializers.INT.create(24), width);
+        return set(WrappedEntityData.EntityDataSerializers.INT.create(flag ? 23 : 24), width);
     }
 
     /**
@@ -178,7 +179,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay backgroundColor(int color)
     {
-        return set(WrappedEntityData.EntityDataSerializers.INT.create(25), color);
+        return set(WrappedEntityData.EntityDataSerializers.INT.create(flag ? 24 : 25), color);
     }
 
     /**
@@ -190,7 +191,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay textOpacity(byte opacity)
     {
-        return set(WrappedEntityData.EntityDataSerializers.BYTE.create(26), opacity);
+        return set(WrappedEntityData.EntityDataSerializers.BYTE.create(flag ? 25 : 26), opacity);
     }
 
     /**
@@ -202,7 +203,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
      */
     public WrappedTextDisplay flags(TextDisplayFlags... flags)
     {
-        return set(WrappedEntityData.EntityDataSerializers.BYTE.create(27), TextDisplayFlags.combineFlags(flags));
+        return set(WrappedEntityData.EntityDataSerializers.BYTE.create(flag ? 26 : 27), TextDisplayFlags.combineFlags(flags));
     }
 
     /**
@@ -216,9 +217,11 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
         WrappedEntityData data = getEntityData();
         data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2), Optional.of(component.getHandle()));
         data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(4), true);
-        data.set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(11), new Vector3f(0, 0.25f, 0));
-        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(15), (byte) 3);
-        data.set(WrappedEntityData.EntityDataSerializers.CHAT_COMPONENT.create(23), Var.unsafeCast(component.getHandle()));
+
+        translation(new Vector(0, flag ? 1f : 0.25f, 0));
+        billboardConstraints(BillboardConstraints.CENTER);
+
+        data.set(WrappedEntityData.EntityDataSerializers.CHAT_COMPONENT.create(flag ? 22 : 23), Var.unsafeCast(component.getHandle()));
 
         dataMap.forEach((accessor, value) -> data.set(accessor, Var.unsafeCast(value)));
 

@@ -6,7 +6,7 @@ import de.eisi05.npc.api.listeners.NpcInteractListener;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcConfig;
-import de.eisi05.npc.api.objects.Tasks;
+import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.PacketReader;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import org.bukkit.Bukkit;

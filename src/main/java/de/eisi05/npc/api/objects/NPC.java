@@ -11,9 +11,10 @@ import de.eisi05.npc.api.wrapper.objects.WrappedEntityData;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import de.eisi05.npc.api.wrapper.packets.*;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -204,6 +205,30 @@ public class NPC extends NpcHolder
     {
         setOption(NpcOption.ENABLED, enabled);
         reload();
+    }
+
+    /**
+     * Checks if this NPC is marked as editable through the {@code NpcPlugin}.
+     * <p>
+     * The default state is {@code false}.
+     *
+     * @return {@code true} if the NPC is editable, {@code false} otherwise
+     */
+    public boolean isEditable()
+    {
+        return getOption(NpcOption.EDITABLE);
+    }
+
+    /**
+     * Sets whether this NPC can be edited through the {@code NpcPlugin}.
+     * <p>
+     * By default, an NPC is <b>not</b> editable ({@code false}).
+     *
+     * @param editable {@code true} if the NPC should be editable, {@code false} otherwise
+     */
+    public void setEditable(boolean editable)
+    {
+        setOption(NpcOption.EDITABLE, editable);
     }
 
     /**
@@ -505,6 +530,254 @@ public class NPC extends NpcHolder
 
         player.sendPacket(new RotateHeadPacket(serverPlayer, yawByte));
         player.sendPacket(new MoveEntityPacket.Rot(serverPlayer.getId(), yawByte, pitchByte, serverPlayer.isOnGround()));
+    }
+
+    /**
+     * Moves the NPC along a precomputed {@link de.eisi05.npc.api.pathfinding.Path}, simulating walking, jumping, and gravity.
+     * The NPC's position and rotation are updated each tick and sent to the specified player(s).
+     *
+     * @param path               The {@link de.eisi05.npc.api.pathfinding.Path} containing the ordered waypoints the NPC should follow.
+     * @param player             The player who should see the NPC move. If null, updates all viewers in the `viewers` set.
+     * @param walkSpeed          The walking speed of the NPC (clamped between 0.1 and 1).
+     * @param changeRealLocation If true, the NPC's actual server-side location will be updated; otherwise only packets are sent.
+     */
+    public void walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, @Nullable Player player, double walkSpeed, boolean changeRealLocation)
+    {
+        final double speed = Math.max(Math.min(walkSpeed, 1), 0.1);
+
+        final double gravity = -0.08;
+        final double jumpVelocity = 0.5;
+        final double terminal = -0.5;
+        final double stepHeight = 0.6;
+
+        new BukkitRunnable()
+        {
+            final List<Location> pathPoints = path.asLocations();
+            int index = 0;
+            Vector current = location.toVector();
+            double yVel = 0.0;
+            float previousYaw = location.getYaw();
+            Vector previousMovement = location.getDirection();
+
+            @Override
+            public void run()
+            {
+                if(index >= pathPoints.size())
+                {
+                    Location last = pathPoints.get(pathPoints.size() - 1);
+
+                    Vector lastVector = last.toVector();
+                    Vector lastMovement = lastVector.clone().subtract(current);
+
+                    RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(serverPlayer, (byte) (last.getYaw() * 256 / 360));
+                    TeleportEntityPacket teleportEntityPacket = new TeleportEntityPacket(serverPlayer,
+                            new TeleportEntityPacket.PositionMoveRotation(lastVector, lastMovement, last.getYaw(), last.getPitch()), Set.of(), true);
+
+                    TeleportEntityPacket teleportNameTagPacket = null;
+                    if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
+                    {
+                        Vector nameTagVector = lastVector.clone()
+                                .add(new Vector(0, (serverPlayer.getBoundingBox().getYSize() * getOption(NpcOption.SCALE)), 0));
+                        teleportNameTagPacket = new TeleportEntityPacket(serverPlayer.getNameTag(),
+                                new TeleportEntityPacket.PositionMoveRotation(nameTagVector, lastMovement, 0, 0), Set.of(), false);
+                    }
+
+                    sendNpcMovePackets(player, teleportEntityPacket, rotateHeadPacket, teleportNameTagPacket);
+
+                    if(changeRealLocation)
+                    {
+                        setLocation(last);
+                        if(player != null)
+                        {
+                            for(UUID uuid : viewers)
+                            {
+                                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
+                                if(!offlinePlayer.isOnline() || uuid.equals(player.getUniqueId()))
+                                    continue;
+
+                                hideNpcFromPlayer(offlinePlayer.getPlayer());
+                                showNPCToPlayer(offlinePlayer.getPlayer());
+                            }
+                        }
+                    }
+
+                    cancel();
+                    return;
+                }
+
+                Vector target = pathPoints.get(index).toVector();
+                Vector toTarget = target.clone().subtract(current);
+
+                if(toTarget.lengthSquared() < 0.04 && Math.abs(toTarget.getY()) < 0.2)
+                {
+                    index++;
+                    return;
+                }
+
+                Vector horizontal = new Vector(toTarget.getX(), 0, toTarget.getZ());
+                Vector horizontalMove = (horizontal.lengthSquared() > 1e-6) ? horizontal.clone().normalize().multiply(speed) : new Vector(0, 0, 0);
+
+                double nextDist = target.clone().subtract(current.clone().add(horizontalMove)).lengthSquared();
+                if(nextDist > toTarget.lengthSquared())
+                {
+                    current = target;
+                    index++;
+                    return;
+                }
+
+                World world = location.getWorld();
+                int bx = (int) Math.floor(current.getX());
+                int bz = (int) Math.floor(current.getZ());
+                int searchStart = (int) Math.floor(current.getY());
+                int groundBlockY = Integer.MIN_VALUE;
+
+                for(int y = searchStart; y >= searchStart - 3; y--)
+                {
+                    Material mt = world.getBlockAt(bx, y - 1, bz).getType();
+                    if(!(mt == Material.AIR || mt == Material.CAVE_AIR || mt == Material.VOID_AIR))
+                    {
+                        groundBlockY = y - 1;
+                        break;
+                    }
+                }
+                if(groundBlockY == Integer.MIN_VALUE)
+                    groundBlockY = world.getHighestBlockYAt(bx, bz) - 1;
+                double groundY = groundBlockY + 1.0;
+                boolean onGround = current.getY() <= groundY + 1e-5;
+
+                if(onGround)
+                {
+                    if(toTarget.getY() > 0 && toTarget.getY() <= stepHeight && horizontal.lengthSquared() > 1e-6)
+                    {
+                        current = current.clone().add(new Vector(0, Math.min(toTarget.getY(), stepHeight), 0));
+                        yVel = 0;
+                        onGround = true;
+                    }
+                    else if(toTarget.getY() > 0.5)
+                    {
+                        yVel = jumpVelocity;
+                        onGround = false;
+                    }
+                    else
+                    {
+                        yVel = 0;
+                        current = new Vector(current.getX(), groundY, current.getZ());
+                    }
+                }
+
+                double yDelta = 0;
+                if(!onGround)
+                {
+                    yVel += gravity;
+                    if(yVel < terminal)
+                        yVel = terminal;
+                    yDelta = yVel;
+
+                    if(current.getY() + yDelta <= groundY)
+                    {
+                        yDelta = groundY - current.getY();
+                        yVel = 0;
+                        onGround = true;
+                    }
+                }
+
+                Vector movement = new Vector(horizontalMove.getX(), yDelta, horizontalMove.getZ());
+                current = current.clone().add(movement);
+
+                Vector lookDir;
+                if(index + 1 < pathPoints.size())
+                {
+                    Vector currentTarget = pathPoints.get(index).toVector().clone();
+                    Vector nextTarget = pathPoints.get(index + 1).toVector().clone();
+
+                    lookDir = currentTarget.clone().add(nextTarget).multiply(0.5).subtract(current);
+                }
+                else
+                    lookDir = pathPoints.get(index).toVector().clone().subtract(current);
+
+                Vector horizontalVec = new Vector(lookDir.getX(), 0, lookDir.getZ());
+                if(horizontalVec.lengthSquared() < 1e-6)
+                    horizontalVec = previousMovement.clone();
+
+                float targetYaw = (float) (Math.atan2(horizontalVec.getZ(), horizontalVec.getX()) * 180 / Math.PI - 90);
+
+                while(targetYaw > 180)
+                    targetYaw -= 360;
+                while(targetYaw < -180)
+                    targetYaw += 360;
+
+                float diff = targetYaw - previousYaw;
+                if(diff > 180)
+                    diff -= 360;
+                if(diff < -180)
+                    diff += 360;
+
+                float maxTurn = 15f;
+                diff = Math.max(-maxTurn, Math.min(maxTurn, diff));
+
+                float yaw = previousYaw + diff;
+                previousYaw = yaw;
+
+                previousMovement = horizontalVec.clone();
+
+                Vector targetVec = pathPoints.get(Math.min(index + 1, pathPoints.size() - 1)).toVector().clone().subtract(current);
+                double horizontalLen = Math.sqrt(targetVec.getX() * targetVec.getX() + targetVec.getZ() * targetVec.getZ());
+                float pitch = (float) (-Math.atan2(targetVec.getY(), horizontalLen) * 180 / Math.PI) / 1.5f;
+
+                RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(serverPlayer, (byte) (yaw * 256 / 360));
+                TeleportEntityPacket teleportEntityPacket = new TeleportEntityPacket(serverPlayer,
+                        new TeleportEntityPacket.PositionMoveRotation(current, movement, yaw, pitch), Set.of(), onGround);
+
+                TeleportEntityPacket teleportNameTagPacket = null;
+                if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
+                {
+                    Vector nameTagVector = current.clone()
+                            .add(new Vector(0, (serverPlayer.getBoundingBox().getYSize() * getOption(NpcOption.SCALE)), 0));
+                    teleportNameTagPacket = new TeleportEntityPacket(serverPlayer.getNameTag(),
+                            new TeleportEntityPacket.PositionMoveRotation(nameTagVector, movement, 0, 0), Set.of(), false);
+                }
+
+                sendNpcMovePackets(player, teleportEntityPacket, rotateHeadPacket, teleportNameTagPacket);
+            }
+        }.runTaskTimer(NpcApi.plugin, 1L, 1L);
+    }
+
+    /**
+     * Sends NPC movement and rotation packets to a specific player or all viewers.
+     *
+     * @param player                The player to send packets to. If null, packets are sent to all viewers.
+     * @param teleportEntityPacket  The packet containing the NPC's teleport/move data. Must not be null.
+     * @param rotateHeadPacket      The packet containing the NPC's head rotation data. Must not be null.
+     * @param teleportNameTagPacket Optional packet for teleporting the NPC's name tag. Can be null.
+     */
+    private void sendNpcMovePackets(@Nullable Player player, @NotNull TeleportEntityPacket teleportEntityPacket,
+            @NotNull RotateHeadPacket rotateHeadPacket, @Nullable TeleportEntityPacket teleportNameTagPacket)
+    {
+        if(player != null)
+        {
+            WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(player);
+            serverPlayer1.sendPacket(teleportEntityPacket);
+            serverPlayer1.sendPacket(rotateHeadPacket);
+
+            if(teleportNameTagPacket != null)
+                serverPlayer1.sendPacket(teleportNameTagPacket);
+        }
+        else
+        {
+            for(UUID uuid : viewers)
+            {
+                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
+                if(!offlinePlayer.isOnline())
+                    continue;
+
+                WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(offlinePlayer.getPlayer());
+                serverPlayer1.sendPacket(teleportEntityPacket);
+                serverPlayer1.sendPacket(rotateHeadPacket);
+
+                if(teleportNameTagPacket != null)
+                    serverPlayer1.sendPacket(teleportNameTagPacket);
+            }
+        }
     }
 
     /**

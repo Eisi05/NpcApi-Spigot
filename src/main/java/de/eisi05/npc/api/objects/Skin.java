@@ -8,20 +8,26 @@ import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.utils.exceptions.VersionNotFound;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.util.Timeout;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.InputStream;
-import java.io.Serial;
-import java.io.Serializable;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -73,19 +79,15 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
     }
 
     /**
-     * Fetches a player's skin from Mojang's session server using their UUID.
-     * This method first checks the local cache (`skinCache`) before making an HTTP request.
-     * The fetched skin is added to the cache for future use.
+     * Fetches a {@link Skin} from Mojang by UUID.
      *
-     * @param uuid The UUID of the player whose skin is to be fetched. Must not be {@code null}.
-     * @return A {@link Skin} object if the skin is successfully fetched or found in cache, otherwise {@code null}.
-     * @throws VersionNotFound If the API does not support the current server version (though this check might be redundant here).
+     * @param uuid the UUID of the player.
+     * @return an {@link Optional} containing the skin if found, otherwise empty.
      */
-    public static @Nullable Skin fetchSkin(@NotNull UUID uuid)
+    public static @Nullable Optional<Skin> fetchSkin(@NotNull UUID uuid)
     {
-
         if(skinCache.containsKey(uuid))
-            return skinCache.get(uuid);
+            return Optional.of(skinCache.get(uuid));
 
         try
         {
@@ -111,26 +113,24 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
 
                     Skin skin = new Skin(name, value, signature);
                     skinCache.put(uuid, skin);
-                    return skin;
+                    return Optional.of(skin);
                 }
 
-                return null;
+                return Optional.empty();
             }
-        } catch(Exception e)
+        } catch(IOException e)
         {
-            return null;
+            return Optional.empty();
         }
     }
 
     /**
-     * Fetches a player's skin by their username.
-     * This method first calls Mojang's API to get the player's UUID from their name
-     * and then uses the UUID to fetch the skin data.
+     * Fetches a {@link Skin} by player name.
      *
-     * @param name The username of the player whose skin is to be fetched. Must not be {@code null}.
-     * @return A {@link Skin} object if the skin is successfully fetched, otherwise {@code null}.
+     * @param name the player username.
+     * @return an {@link Optional} containing the skin if found, otherwise empty.
      */
-    public static Skin fetchSkin(@NotNull String name)
+    public static Optional<Skin> fetchSkin(@NotNull String name)
     {
         try
         {
@@ -147,35 +147,96 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
                         "(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})",
                         "$1-$2-$3-$4-$5")));
             }
-        } catch(Exception e)
+        } catch(IOException e)
         {
-            return null;
+            return Optional.empty();
         }
     }
 
     /**
-     * Asynchronously fetches a player's skin using their UUID.
-     * This method wraps the synchronous {@link #fetchSkin(UUID)} call in a {@link CompletableFuture}
-     * to prevent blocking the main thread.
+     * Uploads a skin file to MineSkin and retrieves the resulting {@link Skin}.
      *
-     * @param uuid The UUID of the player whose skin is to be fetched. Must not be {@code null}.
-     * @return A {@link CompletableFuture} that will complete with the {@link Skin} object, or {@code null} if fetching fails.
+     * @param skinFile the PNG file of the skin to upload.
+     * @return an {@link Optional} containing the skin if successful, otherwise empty.
+     * @throws IllegalArgumentException if the file does not exist.
      */
-    public static CompletableFuture<Skin> fetchSkinAsync(@NotNull UUID uuid)
+    public static Optional<Skin> fetchSkin(@NotNull File skinFile)
+    {
+        if(!skinFile.exists())
+            throw new IllegalArgumentException("File does not exist");
+
+        ConnectionConfig connectionConfig = ConnectionConfig.custom()
+                .setConnectTimeout(Timeout.ofSeconds(10))
+                .build();
+
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setResponseTimeout(Timeout.ofSeconds(10))
+                .build();
+
+        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
+        connManager.setDefaultConnectionConfig(connectionConfig);
+
+        try(CloseableHttpClient httpClient = HttpClients.custom().setConnectionManager(connManager).setDefaultRequestConfig(requestConfig).build())
+        {
+            HttpPost upload = new HttpPost("https://api.mineskin.org/generate/upload");
+
+            upload.setConfig(requestConfig);
+
+            HttpEntity multipart = MultipartEntityBuilder.create()
+                    .addBinaryBody("file", skinFile, ContentType.IMAGE_PNG, skinFile.getName())
+                    .build();
+
+            upload.setEntity(multipart);
+
+            return httpClient.execute(upload, response ->
+            {
+                HttpEntity responseEntity = response.getEntity();
+                String json = EntityUtils.toString(responseEntity);
+
+                JsonObject obj = new JsonParser().parse(json).getAsJsonObject();
+                JsonObject texture = obj.getAsJsonObject("data").getAsJsonObject("texture");
+
+                String value = texture.get("value").getAsString();
+                String signature = texture.get("signature").getAsString();
+
+                return Optional.of(new Skin(null, value, signature));
+            });
+        } catch(IOException e)
+        {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Asynchronously fetches a skin by the player's UUID.
+     *
+     * @param uuid the UUID of the player
+     * @return a CompletableFuture containing an Optional of the Skin
+     */
+    public static CompletableFuture<Optional<Skin>> fetchSkinAsync(@NotNull UUID uuid)
     {
         return CompletableFuture.supplyAsync(() -> fetchSkin(uuid));
     }
 
     /**
-     * Asynchronously fetches a player's skin using their username.
-     * This method wraps the synchronous {@link #fetchSkin(String)} call in a {@link CompletableFuture}
-     * to prevent blocking the main thread.
+     * Asynchronously fetches a skin by the player's name.
      *
-     * @param name The username of the player whose skin is to be fetched. Must not be {@code null}.
-     * @return A {@link CompletableFuture} that will complete with the {@link Skin} object, or {@code null} if fetching fails.
+     * @param name the name of the player
+     * @return a CompletableFuture containing an Optional of the Skin
      */
-    public static CompletableFuture<Skin> fetchSkinAsync(@NotNull String name)
+    public static CompletableFuture<Optional<Skin>> fetchSkinAsync(@NotNull String name)
     {
         return CompletableFuture.supplyAsync(() -> fetchSkin(name));
+    }
+
+    /**
+     * Asynchronously fetches a skin from a local file.
+     *
+     * @param skinFile the PNG file containing the skin
+     * @return a CompletableFuture containing an Optional of the Skin
+     */
+    public static CompletableFuture<Optional<Skin>> fetchSkinAsync(@NotNull File skinFile)
+    {
+        return CompletableFuture.supplyAsync(() -> fetchSkin(skinFile));
     }
 }

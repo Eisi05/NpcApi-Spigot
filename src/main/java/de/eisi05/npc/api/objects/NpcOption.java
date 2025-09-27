@@ -4,6 +4,7 @@ import com.mojang.authlib.properties.Property;
 import com.mojang.datafixers.util.Pair;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.enums.SkinParts;
+import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.ItemSerializer;
 import de.eisi05.npc.api.utils.TriFunction;
 import de.eisi05.npc.api.utils.Var;
@@ -295,7 +296,7 @@ public class NpcOption<T, S extends Serializable>
 
                 WrappedArmorStand armorStand = WrappedArmorStand.create(npc.getLocation().getWorld());
                 armorStand.moveTo(
-                        npc.getLocation().clone().add(0, (npc.getServerPlayer().getBoundingBox().getYSize() * npc.getOption(SCALE)) + 0.3, 0));
+                        npc.getLocation().clone().add(0, (npc.getServerPlayer().getBoundingBox().getYSize() * npc.getOption(SCALE)), 0));
 
                 PacketWrapper addPacket = armorStand.getAddEntityPacket();
 
@@ -312,6 +313,15 @@ public class NpcOption<T, S extends Serializable>
 
                 return new BundlePacket(addPacket, SetEntityDataPacket.create(armorStand.getId(), data));
             });
+
+    /**
+     * NPC option to control if the NPC is enabled (visible and interactable).
+     * If false, a "DISABLED" marker may be shown.
+     * This is an internal option, typically not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
+     */
+    static final NpcOption<Boolean, Boolean> EDITABLE = new NpcOption<>("editable", false,
+            aBoolean -> aBoolean, aBoolean -> aBoolean,
+            (enabled, npc, player) -> null);
 
     private final String path;
     private final T defaultValue;

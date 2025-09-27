@@ -9,6 +9,7 @@ import de.eisi05.npc.api.wrapper.enums.Pose;
 import de.eisi05.npc.api.wrapper.packets.BundlePacket;
 import de.eisi05.npc.api.wrapper.packets.ChatPacket;
 import de.eisi05.npc.api.wrapper.packets.PacketWrapper;
+import de.eisi05.npc.api.wrapper.packets.SetEntityDataPacket;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
