@@ -39,7 +39,7 @@ This method requires [NpcPlugin](https://www.spigotmc.org/resources/npc-plugin-1
 <dependency>
     <groupId>com.github.Eisi05</groupId>
     <artifactId>NpcApi</artifactId>
-    <version>1.1.6</version>
+    <version>1.1.5</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -55,7 +55,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    compileOnly 'com.github.Eisi05:NpcApi:1.1.6'
+    compileOnly 'com.github.Eisi05:NpcApi:1.1.5'
 }
 ```
 
