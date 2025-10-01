@@ -25,11 +25,13 @@ public class WrappedEntityTrackerEntry extends Wrapper
             return createInstance(WrappedEntityTrackerEntry.class, entity.getServer(), entity, 0, false, (Consumer<Object>) o ->
             {
             }, Set.of());
-        else
+        else if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_9))
             return createInstance(WrappedEntityTrackerEntry.class, entity.getServer(), entity, 0, false, (Consumer<Object>) o ->
             {
             }, (BiConsumer<Object, List<UUID>>) (o, uuids) ->
             {
             }, Set.of());
+        else
+            return createInstance(WrappedEntityTrackerEntry.class, entity.getServer(), entity, 0, false, null, Set.of());
     }
 }

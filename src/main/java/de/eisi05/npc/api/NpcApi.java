@@ -6,10 +6,13 @@ import de.eisi05.npc.api.listeners.NpcInteractListener;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcConfig;
+import de.eisi05.npc.api.pathfinding.Path;
 import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.PacketReader;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -30,7 +33,7 @@ public final class NpcApi
      */
     public static Plugin plugin;
 
-    public static Function<Player, String> DISABLED_MESSAGE_PROVIDER = player -> "&cDISABLED";
+    public static Function<Player, String> DISABLED_MESSAGE_PROVIDER = player -> ChatColor.RED + "DISABLED";
 
     /**
      * The configuration object for the NPC API, containing various settings
@@ -56,6 +59,8 @@ public final class NpcApi
         Bukkit.getPluginManager().registerEvents(new ChangeWorldListener(), plugin);
         Bukkit.getPluginManager().registerEvents(new ConnectionListener(), plugin);
         Bukkit.getPluginManager().registerEvents(new NpcInteractListener(), plugin);
+
+        ConfigurationSerialization.registerClass(Path.class);
 
         NpcManager.loadNPCs();
         PacketReader.injectAll();
@@ -115,6 +120,7 @@ public final class NpcApi
         PacketReader.uninjectAll();
         Tasks.stop();
         WrappedPlayerTeam.clear();
+        ConfigurationSerialization.unregisterClass(Path.class);
 
         npcApi = null;
         plugin = null;

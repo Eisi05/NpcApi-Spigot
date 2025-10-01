@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "net.minecraft.network.protocol.game.PacketPlayOutAnimation")
+@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "net.minecraft.network.protocol.game.PacketPlayOutAnimation")
 public class AnimatePacket extends PacketWrapper
 {
     protected AnimatePacket(@NotNull WrappedServerPlayer player, int animationId)
@@ -33,7 +33,7 @@ public class AnimatePacket extends PacketWrapper
         MAGIC_CRITICAL_HIT
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_21_6),
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_21_9),
             path = "net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket")
     public static class HurtAnimationPacket extends PacketWrapper
     {

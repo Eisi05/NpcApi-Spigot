@@ -8,17 +8,14 @@ import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.utils.exceptions.VersionNotFound;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.config.ConnectionConfig;
-import org.apache.hc.client5.http.config.RequestConfig;
-import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
-import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.HttpEntity;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.util.Timeout;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -165,26 +162,20 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
         if(!skinFile.exists())
             throw new IllegalArgumentException("File does not exist");
 
-        ConnectionConfig connectionConfig = ConnectionConfig.custom()
-                .setConnectTimeout(Timeout.ofSeconds(10))
-                .build();
-
         RequestConfig requestConfig = RequestConfig.custom()
-                .setResponseTimeout(Timeout.ofSeconds(10))
+                .setConnectTimeout(10_000)
+                .setSocketTimeout(10_000)
                 .build();
 
-        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
-        connManager.setDefaultConnectionConfig(connectionConfig);
-
-        try(CloseableHttpClient httpClient = HttpClients.custom().setConnectionManager(connManager).setDefaultRequestConfig(requestConfig).build())
+        try(CloseableHttpClient httpClient = HttpClients.custom()
+                .setDefaultRequestConfig(requestConfig)
+                .build())
         {
             HttpPost upload = new HttpPost("https://api.mineskin.org/generate/upload");
 
-            upload.setConfig(requestConfig);
-
-            HttpEntity multipart = MultipartEntityBuilder.create()
-                    .addBinaryBody("file", skinFile, ContentType.IMAGE_PNG, skinFile.getName())
-                    .build();
+            MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+            builder.addBinaryBody("file", skinFile, ContentType.create("image/png"), skinFile.getName());
+            HttpEntity multipart = builder.build();
 
             upload.setEntity(multipart);
 
@@ -201,6 +192,7 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
 
                 return Optional.of(new Skin(null, value, signature));
             });
+
         } catch(IOException e)
         {
             return Optional.empty();

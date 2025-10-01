@@ -2,21 +2,26 @@ package de.eisi05.npc.api.pathfinding;
 
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 
 /**
  * Represents a path in the world, providing both {@link Location} and {@link Vector} representations
  * of the path's waypoints. The lists returned are unmodifiable to ensure immutability.
  */
-public class Path
+public class Path implements ConfigurationSerializable
 {
     private final List<Vector> vectors;
     private final List<Location> locations;
+    private final List<Location> waypoints;
 
     /**
      * Constructs a Path from a list of Bukkit {@link Location} objects.
@@ -24,10 +29,11 @@ public class Path
      *
      * @param nodes the ordered list of {@link Location} waypoints
      */
-    public Path(@NotNull List<Location> nodes)
+    public Path(@NotNull List<Location> nodes, @Nullable List<Location> waypoints)
     {
         this.locations = Collections.unmodifiableList(nodes);
         this.vectors = nodes.stream().map(Location::toVector).toList();
+        this.waypoints = Collections.unmodifiableList(waypoints);
     }
 
     /**
@@ -37,10 +43,17 @@ public class Path
      * @param nodes the ordered list of {@link Vector} waypoints
      * @param world the Bukkit {@link World} where the locations reside
      */
-    public Path(@NotNull List<Vector> nodes, @NotNull World world)
+    public Path(@NotNull List<Vector> nodes, @NotNull World world, @Nullable List<Location> waypoints)
     {
         this.vectors = Collections.unmodifiableList(nodes);
         this.locations = nodes.stream().map(vector -> new Location(world, vector.getX(), vector.getY(), vector.getZ())).toList();
+        this.waypoints = Collections.unmodifiableList(waypoints);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Path deserialize(Map<String, Object> map)
+    {
+        return new Path((List<Location>) map.get("locations"), (List<Location>) map.get("waypoints"));
     }
 
     /**
@@ -66,11 +79,48 @@ public class Path
     @Override
     public String toString()
     {
+        if(locations.isEmpty())
+            return "Empty path";
+
         Vector start = vectors.get(0);
         Vector end = vectors.get(vectors.size() - 1);
 
         return String.format("Start: [%.2f, %.2f, %.2f] -> End: [%.2f, %.2f, %.2f]",
                 start.getX(), start.getY(), start.getZ(),
                 end.getX(), end.getY(), end.getZ());
+    }
+
+    /**
+     * Returns th waypoints with which the path was calculated.
+     *
+     * @return an unmodifiable list of {@link Location} objects
+     */
+    public @NotNull List<Location> getWaypoints()
+    {
+        return waypoints == null ? new ArrayList<>() : waypoints;
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if(this == obj)
+            return true;
+
+        if(!(obj instanceof Path other))
+            return false;
+
+        return locations.equals(other.locations);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return locations.hashCode();
+    }
+
+    @Override
+    public @NotNull Map<String, Object> serialize()
+    {
+        return Map.of("locations", new ArrayList<>(locations), "waypoints", new ArrayList<>(waypoints));
     }
 }

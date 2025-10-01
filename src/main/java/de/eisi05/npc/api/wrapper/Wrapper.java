@@ -6,6 +6,7 @@ import de.eisi05.npc.api.utils.CallerUtils;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.utils.exceptions.VersionNotFound;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -39,6 +40,21 @@ public abstract class Wrapper implements HandleHolder
         return Arrays.stream(args)
                 .map(arg -> (arg instanceof HandleHolder h) ? h.getHandle() : arg)
                 .toArray();
+    }
+
+    public static @Nullable Class<?> getWrappedClass(@NotNull Class<?> wrapperClass)
+    {
+        Mapping[] annotations = wrapperClass.getAnnotationsByType(Mapping.class);
+
+        for(Mapping mapping : annotations)
+        {
+            if(!Versions.containsCurrentVersion(mapping))
+                continue;
+
+            return getTargetClass(mapping);
+        }
+
+        throw new VersionNotFound(wrapperClass);
     }
 
     protected static Class<?> getTargetClass(Mapping mapping)

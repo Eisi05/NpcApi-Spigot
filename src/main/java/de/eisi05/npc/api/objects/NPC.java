@@ -1,6 +1,7 @@
 package de.eisi05.npc.api.objects;
 
 import de.eisi05.npc.api.NpcApi;
+import de.eisi05.npc.api.enums.Result;
 import de.eisi05.npc.api.interfaces.NpcClickAction;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.utils.ObjectSaver;
@@ -14,6 +15,8 @@ import de.eisi05.npc.api.wrapper.packets.*;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Consumer;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -540,8 +543,11 @@ public class NPC extends NpcHolder
      * @param player             The player who should see the NPC move. If null, updates all viewers in the `viewers` set.
      * @param walkSpeed          The walking speed of the NPC (clamped between 0.1 and 1).
      * @param changeRealLocation If true, the NPC's actual server-side location will be updated; otherwise only packets are sent.
+     * @param onEnd              A {@link Runnable} to be executed when the NPC reaches the end of the path.
+     * @return The {@link BukkitTask} representing the movement task.
      */
-    public void walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, @Nullable Player player, double walkSpeed, boolean changeRealLocation)
+    public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, @Nullable Player player, double walkSpeed,
+            boolean changeRealLocation, @Nullable Consumer<Result> onEnd)
     {
         final double speed = Math.max(Math.min(walkSpeed, 1), 0.1);
 
@@ -550,7 +556,7 @@ public class NPC extends NpcHolder
         final double terminal = -0.5;
         final double stepHeight = 0.6;
 
-        new BukkitRunnable()
+        return new BukkitRunnable()
         {
             final List<Location> pathPoints = path.asLocations();
             int index = 0;
@@ -600,6 +606,9 @@ public class NPC extends NpcHolder
                             }
                         }
                     }
+
+                    if(onEnd != null)
+                        onEnd.accept(Result.SUCCESS);
 
                     cancel();
                     return;
@@ -738,6 +747,14 @@ public class NPC extends NpcHolder
                 }
 
                 sendNpcMovePackets(player, teleportEntityPacket, rotateHeadPacket, teleportNameTagPacket);
+            }
+
+            @Override
+            public synchronized void cancel() throws IllegalStateException
+            {
+                super.cancel();
+                if(onEnd != null)
+                    onEnd.accept(Result.CANCELLED);
             }
         }.runTaskTimer(NpcApi.plugin, 1L, 1L);
     }

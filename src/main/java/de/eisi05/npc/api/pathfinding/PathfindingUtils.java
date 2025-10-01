@@ -77,6 +77,6 @@ public class PathfindingUtils
         return new Path(futures.stream()
                 .map(CompletableFuture::join)
                 .flatMap(List::stream)
-                .toList());
+                .toList(), waypoints);
     }
 }
