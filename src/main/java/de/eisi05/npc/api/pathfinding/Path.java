@@ -1,5 +1,6 @@
 package de.eisi05.npc.api.pathfinding;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
@@ -7,10 +8,9 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.io.Serial;
+import java.io.Serializable;
+import java.util.*;
 
 
 /**
@@ -22,6 +22,8 @@ public class Path implements ConfigurationSerializable
     private final List<Vector> vectors;
     private final List<Location> locations;
     private final List<Location> waypoints;
+
+    private String name;
 
     /**
      * Constructs a Path from a list of Bukkit {@link Location} objects.
@@ -48,6 +50,17 @@ public class Path implements ConfigurationSerializable
         this.vectors = Collections.unmodifiableList(nodes);
         this.locations = nodes.stream().map(vector -> new Location(world, vector.getX(), vector.getY(), vector.getZ())).toList();
         this.waypoints = Collections.unmodifiableList(waypoints);
+    }
+
+    public @NotNull Path setName(@Nullable String name)
+    {
+        this.name = name;
+        return this;
+    }
+
+    public @Nullable String getName()
+    {
+        return name;
     }
 
     @SuppressWarnings("unchecked")
@@ -122,5 +135,62 @@ public class Path implements ConfigurationSerializable
     public @NotNull Map<String, Object> serialize()
     {
         return Map.of("locations", new ArrayList<>(locations), "waypoints", new ArrayList<>(waypoints));
+    }
+
+    public SerializablePath toSerializablePath()
+    {
+        return new SerializablePath(this);
+    }
+
+    public static class SerializablePath implements Serializable
+    {
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        private final List<SerializableLocation> locations;
+        private final List<SerializableLocation> waypoints;
+
+        private final String name;
+
+        private SerializablePath(@NotNull Path path)
+        {
+            locations = new ArrayList<>(path.locations.stream().map(SerializableLocation::new).toList());
+            waypoints = new ArrayList<>(path.waypoints.stream().map(SerializableLocation::new).toList());
+            name = path.getName();
+        }
+
+        public @NotNull Path toPath()
+        {
+            return new Path(locations.stream().map(SerializableLocation::toLocation).toList(),
+                    waypoints.stream().map(SerializableLocation::toLocation).toList()).setName(name);
+        }
+
+        private static class SerializableLocation implements Serializable
+        {
+            @Serial
+            private static final long serialVersionUID = 1L;
+
+            private final double x;
+            private final double y;
+            private final double z;
+            private final float pitch;
+            private final float yaw;
+            private final UUID world;
+
+            public SerializableLocation(@NotNull Location location)
+            {
+                this.x = location.getX();
+                this.y = location.getY();
+                this.z = location.getZ();
+                this.pitch = location.getPitch();
+                this.yaw = location.getYaw();
+                this.world = location.getWorld().getUID();
+            }
+
+            public @NotNull Location toLocation()
+            {
+                return new Location(Bukkit.getWorld(world), x, y, z, yaw, pitch);
+            }
+        }
     }
 }

@@ -202,7 +202,7 @@ public abstract class Wrapper implements HandleHolder
     }
 
     @SuppressWarnings("unchecked")
-    protected static <T> Optional<T> getStaticWrappedFieldValue(String fieldName)
+    public static <T> Optional<T> getStaticWrappedFieldValue(String fieldName)
     {
         try
         {

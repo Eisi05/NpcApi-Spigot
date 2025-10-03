@@ -1,6 +1,7 @@
 package de.eisi05.npc.api.wrapper.objects;
 
 import com.mojang.authlib.GameProfile;
+import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.Var;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.utils.exceptions.VersionNotFound;
@@ -9,7 +10,6 @@ import de.eisi05.npc.api.wrapper.enums.Pose;
 import de.eisi05.npc.api.wrapper.packets.BundlePacket;
 import de.eisi05.npc.api.wrapper.packets.ChatPacket;
 import de.eisi05.npc.api.wrapper.packets.PacketWrapper;
-import de.eisi05.npc.api.wrapper.packets.SetEntityDataPacket;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -38,7 +38,8 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         return fromEntity(player, WrappedServerPlayer.class);
     }
 
-    public static @NotNull WrappedServerPlayer create(@NotNull Location location, @NotNull UUID uuid, @NotNull WrappedComponent name)
+    public static @NotNull WrappedServerPlayer create(@NotNull Location location, @NotNull UUID uuid, @NotNull GameProfile gameProfile,
+            @NotNull WrappedComponent name)
     {
         if(map.containsKey(uuid))
             return map.get(uuid);
@@ -46,20 +47,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         Object mcServer = WrappedMinecraftServer.INSTANCE.getHandle();
         Object serverLevel = Var.getNmsLevel(location.getWorld());
 
-        GameProfile gameProfile = new GameProfile(uuid, "NPC" + uuid.toString().substring(0, 13));
-
-        Mapping[] annotations = WrappedServerPlayer.class.getAnnotationsByType(Mapping.class);
-
-        Class<?> targetClass = null;
-        for(Mapping mapping : annotations)
-        {
-            if(!Versions.containsCurrentVersion(mapping))
-                continue;
-
-            targetClass = getTargetClass(mapping);
-            break;
-        }
-
+        Class<?> targetClass = PacketWrapper.getWrappedClass(WrappedServerPlayer.class);
         if(targetClass == null)
             throw new VersionNotFound(targetClass);
 
@@ -95,9 +83,15 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
             wrappedServerPlayer.setNameTag(textDisplay);
         }
 
+        wrappedServerPlayer.moveTo(location);
         wrappedServerPlayer.setListName(name);
         map.put(uuid, wrappedServerPlayer);
         return wrappedServerPlayer;
+    }
+
+    public static @NotNull WrappedServerPlayer create(@NotNull Location location, @NotNull UUID uuid, @NotNull WrappedComponent name)
+    {
+        return create(location, uuid, new GameProfile(uuid, "NPC" + uuid.toString().substring(0, 13)), name);
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_9), path = "h")
@@ -213,12 +207,12 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
 
     public @NotNull String getName()
     {
-        return getGameProfile().getName();
+        return (String) Reflections.getField(getGameProfile(), "name").get();
     }
 
     public @NotNull UUID getUUID()
     {
-        return getGameProfile().getId();
+        return (UUID) Reflections.getField(getGameProfile(), "id").get();
     }
 
     public boolean isOnGround()
@@ -228,6 +222,9 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
 
     public void sendPacket(@NotNull PacketWrapper packet)
     {
+        //if(packet instanceof SetEntityDataPacket dataPacket)
+        //    System.out.println(dataPacket.data);
+
         if(packet instanceof BundlePacket bundlePacket)
             Arrays.stream(bundlePacket.getPackets()).forEach(this::sendPacket);
         else

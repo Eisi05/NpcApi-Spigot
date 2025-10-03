@@ -6,7 +6,6 @@ import de.eisi05.npc.api.wrapper.Wrapper;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Constructor;
-import java.util.Arrays;
 
 public abstract class PacketWrapper extends Wrapper
 {
@@ -20,7 +19,7 @@ public abstract class PacketWrapper extends Wrapper
         super(createInstance(clazz, args));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_6), path = "net.minecraft.network.protocol.Packet")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "net.minecraft.network.protocol.Packet")
     public static abstract class PacketHolder extends PacketWrapper
     {
         public PacketHolder(Object handle)
@@ -30,11 +29,8 @@ public abstract class PacketWrapper extends Wrapper
 
         public static boolean is(@NotNull Object packet, @NotNull Class<? extends PacketHolder> clazz)
         {
-            return Arrays.stream(clazz.getAnnotationsByType(Mapping.class))
-                    .filter(Versions::containsCurrentVersion)
-                    .findFirst()
-                    .filter(data -> getTargetClass(data) != null)
-                    .map(data -> getTargetClass(data).isAssignableFrom(packet.getClass())).orElse(false);
+            Class<?> wrapperClass = Wrapper.getWrappedClass(clazz);
+            return wrapperClass != null && wrapperClass.isAssignableFrom(packet.getClass());
         }
 
         public static <T extends PacketHolder> @NotNull T wrap(@NotNull Object packet, @NotNull Class<T> clazz)

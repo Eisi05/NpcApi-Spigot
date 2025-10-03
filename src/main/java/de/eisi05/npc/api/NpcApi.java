@@ -39,7 +39,7 @@ public final class NpcApi
      * The configuration object for the NPC API, containing various settings
      * like the look-at timer.
      */
-    public static NpcConfig config;
+    public static NpcConfig config = new NpcConfig();
 
     private static NpcApi npcApi;
 

@@ -12,6 +12,8 @@ import java.util.List;
         ".PacketPlayOutEntityMetadata")
 public class SetEntityDataPacket extends PacketWrapper
 {
+    public List<?> data;
+
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_19_1), path = "")
     private SetEntityDataPacket(int id, @NotNull WrappedEntityData data, boolean nonDefaults)
     {
@@ -22,6 +24,7 @@ public class SetEntityDataPacket extends PacketWrapper
     private SetEntityDataPacket(int id, @NotNull List<?> data)
     {
         super(SetEntityDataPacket.class, id, data);
+        this.data = data;
     }
 
     public static SetEntityDataPacket create(int id, @NotNull WrappedEntityData data)

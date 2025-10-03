@@ -1,14 +1,14 @@
 package de.eisi05.npc.api.objects;
 
+import com.google.common.collect.Multimaps;
+import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.datafixers.util.Pair;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.enums.SkinParts;
 import de.eisi05.npc.api.scheduler.Tasks;
-import de.eisi05.npc.api.utils.ItemSerializer;
-import de.eisi05.npc.api.utils.TriFunction;
-import de.eisi05.npc.api.utils.Var;
-import de.eisi05.npc.api.utils.Versions;
+import de.eisi05.npc.api.utils.*;
 import de.eisi05.npc.api.wrapper.enums.ChatFormat;
 import de.eisi05.npc.api.wrapper.objects.*;
 import de.eisi05.npc.api.wrapper.packets.*;
@@ -48,6 +48,30 @@ public class NpcOption<T, S extends Serializable>
                 if(!skin)
                     return null;
 
+                if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_9))
+                {
+                    var textureProperties = ((PropertyMap) Reflections.getField(WrappedServerPlayer.fromPlayer(player).getGameProfile(), "properties")
+                            .get()).get("textures").iterator();
+
+                    var npcTextureProperties = ((PropertyMap) Reflections.getField(npc.getServerPlayer().getGameProfile(), "properties")
+                            .get()).get("textures").iterator();
+
+                    Property property = textureProperties.hasNext() ? textureProperties.next() : null;
+                    Property npcProperty = npcTextureProperties.hasNext() ? npcTextureProperties.next() : null;
+
+                    if((property == null && npcProperty == null) || (property != null && npcProperty != null &&
+                            Reflections.getField(property, "value").get().equals(Reflections.getField(npcProperty, "value").get())))
+                        return null;
+
+                    UUID newUUID = UUID.randomUUID();
+                    GameProfile profile = Reflections.getInstance(GameProfile.class, newUUID, "NPC" + newUUID.toString().substring(0, 13),
+                            Reflections.getInstance(PropertyMap.class, Multimaps.forMap(property == null ? Map.of() : Map.of("textures", property)))
+                                    .orElseThrow()).orElseThrow();
+
+                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), newUUID, profile, npc.getName());
+                    return null;
+                }
+
                 var textureProperties = WrappedServerPlayer.fromPlayer(player).getGameProfile().getProperties().get("textures").iterator();
                 npc.getServerPlayer().getGameProfile().getProperties().removeAll("textures");
 
@@ -57,18 +81,42 @@ public class NpcOption<T, S extends Serializable>
                 var textureProperty = textureProperties.next();
                 npc.getServerPlayer().getGameProfile().getProperties().put("textures", textureProperty);
                 return null;
-            });
+            }).loadBefore(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_9));
 
     /**
      * NPC option to set a specific skin using a value and signature.
      * This is ignored if {@link #USE_PLAYER_SKIN} is true.
      */
-    public static final NpcOption<Skin, Skin> SKIN = new NpcOption<>("skin", null,
+    public static final NpcOption<Skin, Skin> SKIN = new NpcOption<Skin, Skin>("skin", null,
             skin -> skin, skin -> skin,
             (skin, npc, player) ->
             {
                 if(npc.getOption(USE_PLAYER_SKIN))
                     return null;
+
+                if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_9))
+                {
+                    var npcTextureProperties = ((PropertyMap) Reflections.getField(npc.getServerPlayer().getGameProfile(), "properties")
+                            .get()).get("textures").iterator();
+
+                    Property npcProperty = npcTextureProperties.hasNext() ? npcTextureProperties.next() : null;
+
+                    if((skin == null && npcProperty == null) ||
+                            (npcProperty != null && skin.value().equals(Reflections.getField(npcProperty, "value").get())))
+                        return null;
+
+                    UUID newUUID = UUID.randomUUID();
+
+                    PropertyMap propertyMap = Reflections.getInstance(PropertyMap.class,
+                            Multimaps.forMap(skin == null ? Map.of() : Map.of("textures", new Property("textures", skin.value(),
+                                    skin.signature())))).orElseThrow();
+
+                    GameProfile profile = Reflections.getInstance(GameProfile.class, newUUID, "NPC" + newUUID.toString().substring(0, 13),
+                            propertyMap).orElseThrow();
+
+                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), newUUID, profile, npc.getName());
+                    return null;
+                }
 
                 npc.getServerPlayer().getGameProfile().getProperties().removeAll("textures");
 
@@ -78,7 +126,7 @@ public class NpcOption<T, S extends Serializable>
                 npc.getServerPlayer().getGameProfile().getProperties()
                         .put("textures", new Property("textures", skin.value(), skin.signature()));
                 return null;
-            });
+            }).loadBefore(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_9));
 
     /**
      * NPC option to control whether the NPC is shown in the player tab list.
@@ -203,7 +251,7 @@ public class NpcOption<T, S extends Serializable>
             (skinParts, npc, player) ->
             {
                 WrappedEntityData data = npc.getServerPlayer().getEntityData();
-                data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(17),
+                data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(Versions.isCurrentVersionSmallerThan(Versions.V1_21_9) ? 17 : 16),
                         (byte) Arrays.stream(skinParts).mapToInt(SkinParts::getValue).sum());
                 return SetEntityDataPacket.create(npc.getServerPlayer().getId(), data);
             });
@@ -329,6 +377,7 @@ public class NpcOption<T, S extends Serializable>
     private final Function<S, T> deserializer;
     private final TriFunction<T, NPC, Player, PacketWrapper> packet;
     private Versions since = Versions.V1_17;
+    private boolean loadBefore = false;
 
     /**
      * Private constructor to create a new NpcOption.
@@ -395,6 +444,17 @@ public class NpcOption<T, S extends Serializable>
     {
         this.since = since;
         return this;
+    }
+
+    public @NotNull NpcOption<T, S> loadBefore(boolean loadBefore)
+    {
+        this.loadBefore = loadBefore;
+        return this;
+    }
+
+    public boolean loadBefore()
+    {
+        return loadBefore;
     }
 
     /**

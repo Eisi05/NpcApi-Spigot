@@ -58,9 +58,31 @@ public class Reflections
             Class<?>[] argTypes = Arrays.stream(newArgs)
                     .map(Object::getClass)
                     .toArray(Class[]::new);
-            Constructor<?> ctor = clazz.getDeclaredConstructor(argTypes);
-            ctor.setAccessible(true);
-            return Optional.of((T) ctor.newInstance(newArgs));
+
+            for(Constructor<?> ctor : clazz.getDeclaredConstructors())
+            {
+                Class<?>[] paramTypes = ctor.getParameterTypes();
+                if(paramTypes.length != argTypes.length)
+                    continue;
+
+                boolean match = true;
+                for(int i = 0; i < paramTypes.length; i++)
+                {
+                    if(!paramTypes[i].isAssignableFrom(argTypes[i]))
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if(match)
+                {
+                    ctor.setAccessible(true);
+                    return Optional.of((T) ctor.newInstance(newArgs));
+                }
+            }
+
+            return Optional.empty();
         } catch(Exception e)
         {
             return Optional.empty();

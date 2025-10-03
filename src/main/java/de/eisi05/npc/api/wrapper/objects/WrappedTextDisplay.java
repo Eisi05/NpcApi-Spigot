@@ -6,7 +6,6 @@ import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.wrapper.Mapping;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
-import org.bukkit.util.Vector;
 import org.joml.Vector3f;
 
 import java.util.LinkedHashMap;
@@ -38,28 +37,32 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
 
     /**
      * Sets the translation offset of the nametag.
+     * <p>
      * Default: (0.0, 0.25, 0.0)
      *
-     * @param vector Translation vector.
-     * @return This instance for chaining.
+     * @param x the X offset
+     * @param y the Y offset
+     * @param z the Z offset
+     * @return this instance for chaining
      */
-    public WrappedTextDisplay translation(Vector vector)
+    public WrappedTextDisplay translation(float x, float y, float z)
     {
-        return set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(flag ? 10 : 11),
-                new Vector3f(vector.getBlockX(), vector.getBlockY(), vector.getBlockZ()));
+        return set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(flag ? 10 : 11), new Vector3f(x, y, z));
     }
 
     /**
      * Sets the scale of the nametag.
+     * <p>
      * Default: (1.0, 1.0, 1.0)
      *
-     * @param vector Scale vector.
-     * @return This instance for chaining.
+     * @param x the X scale
+     * @param y the Y scale
+     * @param z the Z scale
+     * @return this instance for chaining
      */
-    public WrappedTextDisplay scale(Vector vector)
+    public WrappedTextDisplay scale(float x, float y, float z)
     {
-        return set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(flag ? 11 : 12),
-                new Vector3f(vector.getBlockX(), vector.getBlockY(), vector.getBlockZ()));
+        return set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(flag ? 11 : 12), new Vector3f(x, y, z));
     }
 
     /**
@@ -218,7 +221,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
         data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2), Optional.of(component.getHandle()));
         data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(4), true);
 
-        translation(new Vector(0, flag ? 1f : 0.25f, 0));
+        translation(0, 0.25f, 0);
         billboardConstraints(BillboardConstraints.CENTER);
 
         data.set(WrappedEntityData.EntityDataSerializers.CHAT_COMPONENT.create(flag ? 22 : 23), Var.unsafeCast(component.getHandle()));

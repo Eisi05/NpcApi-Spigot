@@ -36,10 +36,10 @@ import java.util.stream.Collectors;
 public class NPC extends NpcHolder
 {
     final List<Integer> toDeleteEntities = new ArrayList<>();
-    private final WrappedServerPlayer serverPlayer;
     private final List<UUID> viewers = new ArrayList<>();
     private final Map<NpcOption<?, ?>, Object> options;
     private final Path npcPath;
+    WrappedServerPlayer serverPlayer;
     private WrappedComponent name;
     private Location location;
     private NpcClickAction clickEvent;
@@ -92,7 +92,6 @@ public class NPC extends NpcHolder
         this.name = name;
         this.location = location;
         this.serverPlayer = WrappedServerPlayer.create(location, uuid, name);
-        serverPlayer.moveTo(location);
 
         npcPath = NpcApi.plugin.getDataFolder().toPath().resolve("NPC").resolve(uuid + ".npc");
 
@@ -363,7 +362,7 @@ public class NPC extends NpcHolder
      *
      * @return the {@link Instant} of creation. Will not be null.
      */
-    public Instant getCreatedAt()
+    public @NotNull Instant getCreatedAt()
     {
         return createdAt;
     }
@@ -399,6 +398,9 @@ public class NPC extends NpcHolder
             viewers.add(player.getUniqueId());
 
         List<PacketWrapper> packets = new ArrayList<>();
+
+        Arrays.stream(NpcOption.values()).filter(NpcOption::loadBefore)
+                .forEach(npcOption -> npcOption.getPacket(getOption(npcOption), this, player).ifPresent(packets::add));
 
         packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.ADD_PLAYER, serverPlayer));
         packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, serverPlayer));
@@ -443,7 +445,7 @@ public class NPC extends NpcHolder
                 packets.add(new SetPassengerPacket(serverPlayer));
         }
 
-        Arrays.stream(NpcOption.values()).filter(npcOption -> !npcOption.equals(NpcOption.ENABLED))
+        Arrays.stream(NpcOption.values()).filter(npcOption -> !npcOption.equals(NpcOption.ENABLED) && !npcOption.loadBefore())
                 .forEach(npcOption -> npcOption.getPacket(getOption(npcOption), this, player).ifPresent(packets::add));
 
         NpcOption.ENABLED.getPacket(isEnabled(), this, player).ifPresent(packets::add);

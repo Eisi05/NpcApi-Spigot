@@ -11,8 +11,7 @@ import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -24,6 +23,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -167,17 +167,35 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
                 .setSocketTimeout(10_000)
                 .build();
 
+        String boundary = "----MineSkinBoundary" + System.currentTimeMillis();
+
         try(CloseableHttpClient httpClient = HttpClients.custom()
                 .setDefaultRequestConfig(requestConfig)
-                .build())
+                .build();
+                FileInputStream fis = new FileInputStream(skinFile))
         {
             HttpPost upload = new HttpPost("https://api.mineskin.org/generate/upload");
+            upload.setHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
 
-            MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-            builder.addBinaryBody("file", skinFile, ContentType.create("image/png"), skinFile.getName());
-            HttpEntity multipart = builder.build();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(baos, StandardCharsets.UTF_8), true);
 
-            upload.setEntity(multipart);
+            writer.append("--").append(boundary).append("\r\n");
+            writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"")
+                    .append(skinFile.getName()).append("\"\r\n");
+            writer.append("Content-Type: image/png\r\n\r\n");
+            writer.flush();
+
+            byte[] buffer = new byte[4096];
+            int len;
+            while((len = fis.read(buffer)) != -1)
+                baos.write(buffer, 0, len);
+            baos.flush();
+
+            writer.append("\r\n--").append(boundary).append("--\r\n");
+            writer.flush();
+
+            upload.setEntity(new ByteArrayEntity(baos.toByteArray()));
 
             return httpClient.execute(upload, response ->
             {
@@ -192,7 +210,6 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
 
                 return Optional.of(new Skin(null, value, signature));
             });
-
         } catch(IOException e)
         {
             return Optional.empty();
