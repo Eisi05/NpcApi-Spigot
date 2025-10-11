@@ -205,6 +205,15 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
             invokeWrappedMethod(component);
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_9), path = "a")
+    public void remove()
+    {
+        map.remove(getUUID());
+
+        Object nmsLevel = Var.getNmsLevel(getWorld());
+        Reflections.invokeMethod(nmsLevel, getPath(), getHandle(), RemovalReason.DISCARDED.getHandle());
+    }
+
     public @NotNull String getName()
     {
         return (String) Reflections.getField(getGameProfile(), "name").get();
@@ -240,5 +249,18 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
     {
         setPassengers(nameDisplay);
         this.nameDisplay = nameDisplay;
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_9), path = "net.minecraft.world.entity.Entity$RemovalReason")
+    private enum RemovalReason implements EnumWrapper
+    {
+        @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_9), path = "b")
+        DISCARDED;
+
+        @Override
+        public @NotNull Object getHandle()
+        {
+            return cast(this);
+        }
     }
 }

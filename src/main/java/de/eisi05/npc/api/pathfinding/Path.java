@@ -35,7 +35,7 @@ public class Path implements ConfigurationSerializable
     {
         this.locations = Collections.unmodifiableList(nodes);
         this.vectors = nodes.stream().map(Location::toVector).toList();
-        this.waypoints = Collections.unmodifiableList(waypoints);
+        this.waypoints = waypoints == null ? null : Collections.unmodifiableList(waypoints);
     }
 
     /**
@@ -49,7 +49,7 @@ public class Path implements ConfigurationSerializable
     {
         this.vectors = Collections.unmodifiableList(nodes);
         this.locations = nodes.stream().map(vector -> new Location(world, vector.getX(), vector.getY(), vector.getZ())).toList();
-        this.waypoints = Collections.unmodifiableList(waypoints);
+        this.waypoints = waypoints == null ? null : Collections.unmodifiableList(waypoints);
     }
 
     public @NotNull Path setName(@Nullable String name)
@@ -155,14 +155,14 @@ public class Path implements ConfigurationSerializable
         private SerializablePath(@NotNull Path path)
         {
             locations = new ArrayList<>(path.locations.stream().map(SerializableLocation::new).toList());
-            waypoints = new ArrayList<>(path.waypoints.stream().map(SerializableLocation::new).toList());
+            waypoints = path.waypoints == null ? null : new ArrayList<>(path.waypoints.stream().map(SerializableLocation::new).toList());
             name = path.getName();
         }
 
         public @NotNull Path toPath()
         {
             return new Path(locations.stream().map(SerializableLocation::toLocation).toList(),
-                    waypoints.stream().map(SerializableLocation::toLocation).toList()).setName(name);
+                    waypoints == null ? null : waypoints.stream().map(SerializableLocation::toLocation).toList()).setName(name);
         }
 
         private static class SerializableLocation implements Serializable

@@ -29,19 +29,25 @@ public class WrappedVec3D extends Wrapper
         return new WrappedVec3D(handle);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "c")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "g")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_6), path = "d")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21), path = "c")
     public double getX()
     {
         return getWrappedFieldValue();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "d")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "h")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_6), path = "e")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21), path = "d")
     public double getY()
     {
         return getWrappedFieldValue();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "e")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "i")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_6), path = "f")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21), path = "e")
     public double getZ()
     {
         return getWrappedFieldValue();

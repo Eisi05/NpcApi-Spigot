@@ -12,7 +12,11 @@ import de.eisi05.npc.api.wrapper.objects.WrappedEntityData;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import de.eisi05.npc.api.wrapper.packets.*;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -38,7 +42,7 @@ public class NPC extends NpcHolder
     final List<Integer> toDeleteEntities = new ArrayList<>();
     private final List<UUID> viewers = new ArrayList<>();
     private final Map<NpcOption<?, ?>, Object> options;
-    private final Path npcPath;
+    private Path npcPath;
     WrappedServerPlayer serverPlayer;
     private WrappedComponent name;
     private Location location;
@@ -349,7 +353,7 @@ public class NPC extends NpcHolder
     public void setName(@NotNull WrappedComponent name)
     {
         this.name = name;
-        serverPlayer.setListName(name);
+        serverPlayer.setListName(WrappedComponent.parseFromLegacy(name.toLegacy(false).replace("\n", "\\n")));
 
         viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> WrappedServerPlayer.fromPlayer(Bukkit.getPlayer(uuid))
                 .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(),
@@ -393,6 +397,9 @@ public class NPC extends NpcHolder
             hideNpcFromPlayer(player);
             return;
         }
+
+        if(!serverPlayer.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4))
+            return;
 
         if(!viewers.contains(player.getUniqueId()))
             viewers.add(player.getUniqueId());
@@ -500,6 +507,10 @@ public class NPC extends NpcHolder
     {
         hideNpcFromAllPlayers();
         NpcManager.removeNPC(this);
+
+        serverPlayer.getBukkitPlayer().remove();
+        serverPlayer.remove();
+        serverPlayer = null;
 
         npcPath.toFile().getParentFile().mkdirs();
         Files.deleteIfExists(npcPath);
@@ -644,8 +655,8 @@ public class NPC extends NpcHolder
 
                 for(int y = searchStart; y >= searchStart - 3; y--)
                 {
-                    Material mt = world.getBlockAt(bx, y - 1, bz).getType();
-                    if(!(mt == Material.AIR || mt == Material.CAVE_AIR || mt == Material.VOID_AIR))
+                    Block block = world.getBlockAt(bx, y - 1, bz);
+                    if(block.getType().isSolid() && !block.getType().isAir() && !block.isPassable())
                     {
                         groundBlockY = y - 1;
                         break;
@@ -796,6 +807,19 @@ public class NPC extends NpcHolder
                 if(teleportNameTagPacket != null)
                     serverPlayer1.sendPacket(teleportNameTagPacket);
             }
+        }
+    }
+
+    void changeUUID(@NotNull UUID newUUID)
+    {
+        try
+        {
+            Files.deleteIfExists(npcPath);
+            npcPath = NpcApi.plugin.getDataFolder().toPath().resolve("NPC").resolve(newUUID + ".npc");
+            save();
+        } catch(IOException e)
+        {
+            throw new RuntimeException(e);
         }
     }
 

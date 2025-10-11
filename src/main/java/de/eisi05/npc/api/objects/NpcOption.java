@@ -64,6 +64,8 @@ public class NpcOption<T, S extends Serializable>
                         return null;
 
                     UUID newUUID = UUID.randomUUID();
+                    npc.changeUUID(newUUID);
+
                     GameProfile profile = Reflections.getInstance(GameProfile.class, newUUID, "NPC" + newUUID.toString().substring(0, 13),
                             Reflections.getInstance(PropertyMap.class, Multimaps.forMap(property == null ? Map.of() : Map.of("textures", property)))
                                     .orElseThrow()).orElseThrow();
@@ -106,6 +108,7 @@ public class NpcOption<T, S extends Serializable>
                         return null;
 
                     UUID newUUID = UUID.randomUUID();
+                    npc.changeUUID(newUUID);
 
                     PropertyMap propertyMap = Reflections.getInstance(PropertyMap.class,
                             Multimaps.forMap(skin == null ? Map.of() : Map.of("textures", new Property("textures", skin.value(),

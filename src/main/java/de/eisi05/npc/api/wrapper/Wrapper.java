@@ -169,7 +169,8 @@ public abstract class Wrapper implements HandleHolder
         {
             if(NpcApi.config.debug())
                 e.printStackTrace();
-            throw new RuntimeException(e);
+
+            return null; //throw new RuntimeException(e);
         }
     }
 
@@ -197,7 +198,8 @@ public abstract class Wrapper implements HandleHolder
         {
             if(NpcApi.config.debug())
                 e.printStackTrace();
-            throw new RuntimeException(e);
+
+            return null; //throw new RuntimeException(e);
         }
     }
 
@@ -329,7 +331,8 @@ public abstract class Wrapper implements HandleHolder
         {
             if(NpcApi.config.debug())
                 e.printStackTrace();
-            throw new RuntimeException(e);
+
+            return null; //throw new RuntimeException(e);
         }
     }
 
@@ -428,7 +431,8 @@ public abstract class Wrapper implements HandleHolder
         {
             if(NpcApi.config.debug())
                 e.printStackTrace();
-            throw new RuntimeException(e);
+
+            return null;
         }
     }
 
@@ -505,7 +509,8 @@ public abstract class Wrapper implements HandleHolder
         {
             if(NpcApi.config.debug())
                 e.printStackTrace();
-            throw new RuntimeException(e);
+
+            return null; //throw new RuntimeException(e);
         }
     }
 
@@ -582,6 +587,7 @@ public abstract class Wrapper implements HandleHolder
         {
             if(NpcApi.config.debug())
                 e.printStackTrace();
+
             //throw new RuntimeException(e);
         }
     }

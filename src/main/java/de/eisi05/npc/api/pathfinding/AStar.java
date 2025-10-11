@@ -3,6 +3,7 @@ package de.eisi05.npc.api.pathfinding;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -341,6 +342,7 @@ public class AStar
          */
         public InvalidPathException(boolean s, boolean e)
         {
+            super(getErrorReason(s, e));
             this.s = s;
             this.e = e;
         }
@@ -350,12 +352,12 @@ public class AStar
          *
          * @return error reason string
          */
-        public String getErrorReason()
+        private static @NotNull String getErrorReason(boolean s, boolean e)
         {
             StringBuilder sb = new StringBuilder();
-            if(!this.s)
-                sb.append("Start Location was air. ");
-            if(!this.e)
+            if(!s)
+                sb.append("Start Location was air.");
+            if(!e)
                 sb.append("End Location was air.");
             return sb.toString();
         }
