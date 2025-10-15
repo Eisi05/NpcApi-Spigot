@@ -6,16 +6,18 @@ import de.eisi05.npc.api.utils.ObjectSaver;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Manages the collection and lifecycle of NPC instances.
  */
 public class NpcManager
 {
+    /**
+     * Map storing the file name and the exception that occurred during loading.
+     */
+    public static Map<String, Exception> loadExceptions = new HashMap<>();
+
     private static final List<NPC> listNPC = new ArrayList<>();
 
     /**
@@ -97,6 +99,7 @@ public class NpcManager
             {
                 failCounter++;
                 exception = e;
+                loadExceptions.put(file1.getName(), e);
             }
         }
 
