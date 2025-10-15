@@ -220,7 +220,7 @@ NPC npc = NpcManager.fromUUID(npcUuid);
 | `hideNpcFromPlayer(Player)`             | Hide NPC from specific player                                               |
 | `lookAtPlayer(Player)`                  | Make NPC look at player                                                     |
 | `delete()`                              | Remove NPC permanently                                                      |
-| `walkTo(Path, player, double, boolean)` | Let the NPC walk along a path (can be created with PathfindingUtils class)  |
+| `walkTo(Path, player, double, boolean, Consumer<Result>)` | Let the NPC walk along a path (can be created with PathfindingUtils class)  |
 
 ## Requirements
 
