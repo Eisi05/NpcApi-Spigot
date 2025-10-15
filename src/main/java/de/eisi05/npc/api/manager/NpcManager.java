@@ -82,6 +82,7 @@ public class NpcManager
         long failCounter = 0;
         long successCounter = 0;
 
+        Exception exception = null;
         for(File file1 : files)
         {
             if(!file1.getName().endsWith(".npc"))
@@ -95,6 +96,7 @@ public class NpcManager
             } catch(Exception e)
             {
                 failCounter++;
+                exception = e;
             }
         }
 
@@ -107,5 +109,8 @@ public class NpcManager
             NpcApi.plugin.getLogger().warning("Failed to load " + failCounter + " NPC");
         else if(failCounter > 1)
             NpcApi.plugin.getLogger().warning("Failed to load " + failCounter + " NPC's");
+
+        if(exception != null && NpcApi.config.debug())
+            exception.printStackTrace();
     }
 }

@@ -147,10 +147,10 @@ public class NpcOption<T, S extends Serializable>
                     @Override
                     public void run()
                     {
-                        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_3))
+                        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_3) && player != null)
                             WrappedServerPlayer.fromPlayer(player).sendPacket(
                                     new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.REMOVE_PLAYER, npc.getServerPlayer()));
-                        else
+                        else if(player != null)
                             WrappedServerPlayer.fromPlayer(player)
                                     .sendPacket(new PlayerInfoRemovePacket(List.of(npc.getUUID())));
                     }

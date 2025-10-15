@@ -253,15 +253,14 @@ public class NPC extends NpcHolder
 
         if(NpcApi.config.autoUpdate())
         {
-            option.getPacket(value, this, null).ifPresent(packetWrapper ->
-                    viewers.forEach(uuid ->
-                    {
-                        Player player = Bukkit.getPlayer(uuid);
-                        if(player == null)
-                            return;
+            viewers.forEach(uuid ->
+            {
+                Player player = Bukkit.getPlayer(uuid);
+                if(player == null)
+                    return;
 
-                        WrappedServerPlayer.fromPlayer(player).sendPacket(packetWrapper);
-                    }));
+                option.getPacket(value, this, player).ifPresent(packetWrapper -> WrappedServerPlayer.fromPlayer(player).sendPacket(packetWrapper));
+            });
         }
     }
 
