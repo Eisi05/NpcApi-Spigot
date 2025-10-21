@@ -504,10 +504,12 @@ public class NPC extends NpcHolder
      */
     public void delete() throws IOException
     {
+        if(serverPlayer == null)
+            return;
+
         hideNpcFromAllPlayers();
         NpcManager.removeNPC(this);
 
-        serverPlayer.getBukkitPlayer().remove();
         serverPlayer.remove();
         serverPlayer = null;
 
@@ -582,29 +584,34 @@ public class NPC extends NpcHolder
             {
                 if(index >= pathPoints.size())
                 {
-                    Location last = pathPoints.get(pathPoints.size() - 1);
-
-                    Vector lastVector = last.toVector();
-                    Vector lastMovement = lastVector.clone().subtract(current);
-
-                    RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(serverPlayer, (byte) (last.getYaw() * 256 / 360));
-                    TeleportEntityPacket teleportEntityPacket = new TeleportEntityPacket(serverPlayer,
-                            new TeleportEntityPacket.PositionMoveRotation(lastVector, lastMovement, last.getYaw(), last.getPitch()), Set.of(), true);
-
-                    TeleportEntityPacket teleportNameTagPacket = null;
-                    if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
+                    if(!path.getWaypoints().isEmpty())
                     {
-                        Vector nameTagVector = lastVector.clone()
-                                .add(new Vector(0, (serverPlayer.getBoundingBox().getYSize() * getOption(NpcOption.SCALE)), 0));
-                        teleportNameTagPacket = new TeleportEntityPacket(serverPlayer.getNameTag(),
-                                new TeleportEntityPacket.PositionMoveRotation(nameTagVector, lastMovement, 0, 0), Set.of(), false);
-                    }
+                        Location last = pathPoints.get(pathPoints.size() - 1);
 
-                    sendNpcMovePackets(player, teleportEntityPacket, rotateHeadPacket, teleportNameTagPacket);
+                        Vector lastVector = last.toVector();
+                        Vector lastMovement = lastVector.clone().subtract(current);
+
+                        RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(serverPlayer, (byte) (last.getYaw() * 256 / 360));
+                        TeleportEntityPacket teleportEntityPacket = new TeleportEntityPacket(serverPlayer,
+                                new TeleportEntityPacket.PositionMoveRotation(lastVector, lastMovement, last.getYaw(), last.getPitch()), Set.of(),
+                                true);
+
+                        TeleportEntityPacket teleportNameTagPacket = null;
+                        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
+                        {
+                            Vector nameTagVector = lastVector.clone()
+                                    .add(new Vector(0, (serverPlayer.getBoundingBox().getYSize() * getOption(NpcOption.SCALE)), 0));
+                            teleportNameTagPacket = new TeleportEntityPacket(serverPlayer.getNameTag(),
+                                    new TeleportEntityPacket.PositionMoveRotation(nameTagVector, lastMovement, 0, 0), Set.of(), false);
+                        }
+
+                        sendNpcMovePackets(player, teleportEntityPacket, rotateHeadPacket, teleportNameTagPacket);
+                    }
 
                     if(changeRealLocation)
                     {
-                        setLocation(last);
+                        setLocation(path.getWaypoints().isEmpty() ? pathPoints.get(pathPoints.size() - 1) :
+                                path.getWaypoints().get(path.getWaypoints().size() - 1));
                         if(player != null)
                         {
                             for(UUID uuid : viewers)
