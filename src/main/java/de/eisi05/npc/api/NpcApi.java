@@ -122,6 +122,7 @@ public final class NpcApi
         WrappedPlayerTeam.clear();
         ConfigurationSerialization.unregisterClass(Path.class);
 
+        NpcManager.loadExceptions.clear();
         npcApi = null;
         plugin = null;
     }
