@@ -44,7 +44,7 @@ public class NPC extends NpcHolder
     private final Map<NpcOption<?, ?>, Object> options;
     private Path npcPath;
     WrappedServerPlayer serverPlayer;
-    private WrappedComponent name;
+    private NpcName name;
     private Location location;
     private NpcClickAction clickEvent;
     private Instant createdAt = Instant.now();
@@ -66,7 +66,7 @@ public class NPC extends NpcHolder
      * @param location the location to spawn the NPC. Must not be null.
      * @param name     the display name of the NPC. Must not be null.
      */
-    public NPC(@NotNull Location location, @NotNull WrappedComponent name)
+    public NPC(@NotNull Location location, @NotNull NpcName name)
     {
         this(location, UUID.randomUUID(), name);
     }
@@ -80,7 +80,7 @@ public class NPC extends NpcHolder
      */
     public NPC(@NotNull Location location, @NotNull UUID uuid)
     {
-        this(location, uuid, WrappedComponent.create(null));
+        this(location, uuid, NpcName.of(WrappedComponent.create(null)));
     }
 
     /**
@@ -91,11 +91,11 @@ public class NPC extends NpcHolder
      * @param uuid     the UUID of the NPC. Must not be null.
      * @param name     the display name of the NPC. Must not be null.
      */
-    public NPC(@NotNull Location location, @NotNull UUID uuid, @NotNull WrappedComponent name)
+    public NPC(@NotNull Location location, @NotNull UUID uuid, @NotNull NpcName name)
     {
         this.name = name;
         this.location = location;
-        this.serverPlayer = WrappedServerPlayer.create(location, uuid, name);
+        this.serverPlayer = WrappedServerPlayer.create(location, uuid, name.isStatic() ? name.getName() : WrappedComponent.create(null));
 
         npcPath = NpcApi.plugin.getDataFolder().toPath().resolve("NPC").resolve(uuid + ".npc");
 
@@ -114,7 +114,7 @@ public class NPC extends NpcHolder
      * @param options    The options map for the NPC. Must not be null.
      * @param clickEvent The click event for the NPC. Can be null.
      */
-    private NPC(@NotNull Location location, @NotNull WrappedComponent name, @NotNull Map<NpcOption<?, ?>, Object> options,
+    private NPC(@NotNull Location location, @NotNull NpcName name, @NotNull Map<NpcOption<?, ?>, Object> options,
             @Nullable NpcClickAction clickEvent)
     {
         this(location, UUID.randomUUID(), name);
@@ -336,9 +336,9 @@ public class NPC extends NpcHolder
     /**
      * Gets the display name of this NPC.
      *
-     * @return the {@link WrappedComponent} representing the NPC's name. Will not be null.
+     * @return the {@link NpcName} representing the NPC's name. Will not be null.
      */
-    public @NotNull WrappedComponent getName()
+    public @NotNull NpcName getName()
     {
         return name;
     }
@@ -349,15 +349,28 @@ public class NPC extends NpcHolder
      *
      * @param name the new {@link WrappedComponent} name for the NPC. Must not be null.
      */
-    public void setName(@NotNull WrappedComponent name)
+    public void setName(@NotNull NpcName name)
     {
         this.name = name;
-        serverPlayer.setListName(WrappedComponent.parseFromLegacy(name.toLegacy(false).replace("\n", "\\n")));
+        serverPlayer.setListName(name.isStatic() ? WrappedComponent.parseFromLegacy(name.getName().toLegacy(false).replace("\n", "\\n")) :
+                WrappedComponent.create(null));
 
-        viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> WrappedServerPlayer.fromPlayer(Bukkit.getPlayer(uuid))
-                .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(),
-                        serverPlayer.getNameTag().applyData(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name :
-                                WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(Bukkit.getPlayer(uuid))).append(name)))));
+        viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> updateName(Bukkit.getPlayer(uuid)));
+    }
+
+    /**
+     * Updates the display name of the given player on the server.
+     * <p>
+     * Sends a packet to the player to modify their name tag, taking into account
+     * the server version and whether custom naming is enabled.
+     *
+     * @param player the player whose name will be updated; must not be null
+     */
+    public void updateName(@NotNull Player player)
+    {
+        WrappedServerPlayer.fromPlayer(player).sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag()
+                .applyData(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
+                        WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player)).append(name.getName(player)))));
     }
 
     /**
@@ -403,6 +416,9 @@ public class NPC extends NpcHolder
         if(!viewers.contains(player.getUniqueId()))
             viewers.add(player.getUniqueId());
 
+        if(!name.isStatic() && getOption(NpcOption.SHOW_TAB_LIST))
+            setOption(NpcOption.SHOW_TAB_LIST, false);
+
         List<PacketWrapper> packets = new ArrayList<>();
 
         Arrays.stream(NpcOption.values()).filter(NpcOption::loadBefore)
@@ -443,9 +459,9 @@ public class NPC extends NpcHolder
             packets.add(serverPlayer.getNameTag().getAddEntityPacket());
 
             packets.add(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
-                    Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name :
+                    Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
                             WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                                    .append(WrappedComponent.create("\n").append(name)))));
+                                    .append(WrappedComponent.create("\n").append(name.getName(player))))));
 
             if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
                 packets.add(new SetPassengerPacket(serverPlayer));
@@ -830,27 +846,54 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * A serializable representation of an NPC, used for saving and loading NPC data.
-     * This record stores all essential properties of an NPC that need to be persisted.
+     * Represents a fully serialized NPC, including its location, orientation,
+     * unique ID, name, additional options, click behavior, and creation time.
+     * <p>
+     * The {@code name} field now uses {@link NpcName.SerializableNpcName}, which supports
+     * both static and dynamic names. For backward compatibility, a secondary constructor
+     * allows creating a {@code SerializedNPC} from a legacy {@link WrappedComponent.SerializedComponent}.
      *
-     * @param world      The UUID of the world where the NPC is located.
-     * @param x          The x-coordinate of the NPC's location.
-     * @param y          The y-coordinate of the NPC's location.
-     * @param z          The z-coordinate of the NPC's location.
-     * @param yaw        The yaw (horizontal rotation) of the NPC.
-     * @param pitch      The pitch (vertical rotation) of the NPC.
-     * @param id         The unique identifier (UUID) of the NPC.
-     * @param name       The serialized representation of the NPC's display name.
-     * @param options    A map of NPC options, where keys are option paths (strings) and values are serializable option values.
-     * @param clickEvent The click action associated with the NPC. Can be null.
-     * @param createdAt  The timestamp when the NPC was originally created.
+     * @param world     the UUID of the world the NPC is in
+     * @param x         the X-coordinate of the NPC
+     * @param y         the Y-coordinate of the NPC
+     * @param z         the Z-coordinate of the NPC
+     * @param yaw       the yaw rotation of the NPC
+     * @param pitch     the pitch rotation of the NPC
+     * @param id        the unique UUID of the NPC
+     * @param name      the serializable NPC name (static or dynamic)
+     * @param options   additional serializable options associated with the NPC
+     * @param clickEvent optional click event behavior for the NPC
+     * @param createdAt the timestamp when the NPC was created
      */
     public record SerializedNPC(@NotNull UUID world, double x, double y, double z, float yaw, float pitch, @NotNull UUID id,
-                                @NotNull WrappedComponent.SerializedComponent name, @NotNull Map<String, ? extends Serializable> options,
+                                @NotNull NpcName.SerializableNpcName name, @NotNull Map<String, ? extends Serializable> options,
                                 @Nullable NpcClickAction clickEvent, @NotNull Instant createdAt) implements Serializable
     {
         @Serial
         private static final long serialVersionUID = 1L;
+
+        /**
+         * Backward-compatible constructor for creating a {@code SerializedNPC} from
+         * a legacy {@link WrappedComponent.SerializedComponent} name.
+         *
+         * @param world      the UUID of the world the NPC is in
+         * @param x          the X-coordinate of the NPC
+         * @param y          the Y-coordinate of the NPC
+         * @param z          the Z-coordinate of the NPC
+         * @param yaw        the yaw rotation of the NPC
+         * @param pitch      the pitch rotation of the NPC
+         * @param id         the unique UUID of the NPC
+         * @param name       the legacy serialized component representing the NPC's name
+         * @param options    additional serializable options associated with the NPC
+         * @param clickEvent optional click event behavior for the NPC
+         * @param createdAt  the timestamp when the NPC was created
+         */
+        private SerializedNPC(@NotNull UUID world, double x, double y, double z, float yaw, float pitch, @NotNull UUID id,
+                @NotNull WrappedComponent.SerializedComponent name, @NotNull Map<String, ? extends Serializable> options,
+                @Nullable NpcClickAction clickEvent, @NotNull Instant createdAt)
+        {
+            this(world, x, y, z, yaw, pitch, id, new NpcName.SerializableNpcName(name), options, clickEvent, createdAt);
+        }
 
         /**
          * Creates a {@link SerializedNPC} instance from an existing {@link NPC} object.
