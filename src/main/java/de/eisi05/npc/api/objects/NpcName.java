@@ -6,16 +6,24 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.ObjectStreamException;
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
  * Represents the name of an NPC, which can be either a fixed {@link WrappedComponent}
  * or dynamically generated based on a {@link Player}.
  */
-public class NpcName
+public class NpcName implements Serializable
 {
-    private final WrappedComponent nameComponent;
-    private final SerializableFunction<Player, WrappedComponent> nameFunction;
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    private final WrappedComponent.SerializedComponent nameComponentSerialized;
+    private final SerializableFunction<Player, WrappedComponent.SerializedComponent> nameFunctionSerialized;
+
+    private transient final WrappedComponent nameComponent;
+    private transient final SerializableFunction<Player, WrappedComponent> nameFunction;
 
     /**
      * Creates a static NPC name.
@@ -26,17 +34,27 @@ public class NpcName
     {
         this.nameComponent = nameComponent;
         this.nameFunction = null;
+
+        this.nameComponentSerialized = nameComponent.serialize();
+        this.nameFunctionSerialized = null;
     }
 
     /**
-     * Creates a dynamic NPC name.
+     * Creates a dynamic NPC name with a fallback static component.
+     * <p>
+     * The {@code nameFunction} generates the name for a player, but if needed,
+     * {@code fallback} will be used as a default static name.
      *
-     * @param nameFunction a function that returns a name component for a given player
+     * @param nameFunction the function producing the name for a given player
+     * @param fallback     the static fallback name component
      */
-    private NpcName(@NotNull SerializableFunction<Player, WrappedComponent> nameFunction)
+    private NpcName(@NotNull SerializableFunction<Player, WrappedComponent> nameFunction, @NotNull WrappedComponent fallback)
     {
-        this.nameComponent = null;
+        this.nameComponent = fallback;
         this.nameFunction = nameFunction;
+
+        this.nameComponentSerialized = fallback.serialize();
+        this.nameFunctionSerialized = player -> nameFunction.apply(player).serialize();
     }
 
     /**
@@ -51,14 +69,50 @@ public class NpcName
     }
 
     /**
-     * Creates a new {@link NpcName} with a dynamic name.
+     * Creates a new {@link NpcName} from a legacy text string.
+     * <p>
+     * The string is parsed using {@link WrappedComponent#parseFromLegacy(String)}
+     * to support Minecraft-style color codes and formatting.
      *
-     * @param nameFunction a function that returns a name component for a given player
+     * @param name the legacy text string to convert into an NPC name
+     * @return a new {@link NpcName} representing the given legacy text
+     */
+    public static @NotNull NpcName ofLegacy(@NotNull String name)
+    {
+        return new NpcName(WrappedComponent.parseFromLegacy(name));
+    }
+
+    /**
+     * Creates a new {@link NpcName} with a dynamic function and a fallback name.
+     *
+     * @param nameFunction the function producing the name for a given player
+     * @param fallback     the static fallback name component
      * @return a new NpcName instance
      */
-    public static @NotNull NpcName of(@NotNull SerializableFunction<Player, WrappedComponent> nameFunction)
+    public static @NotNull NpcName of(@NotNull SerializableFunction<Player, WrappedComponent> nameFunction, @NotNull WrappedComponent fallback)
     {
-        return new NpcName(nameFunction);
+        return new NpcName(nameFunction, fallback);
+    }
+
+    /**
+     * Creates an empty NPC name.
+     * <p>
+     * This returns an {@link NpcName} with a {@link WrappedComponent} containing no content.
+     *
+     * @return a new NpcName representing an empty name
+     */
+    public static @NotNull NpcName empty()
+    {
+        return NpcName.of(WrappedComponent.create(null));
+    }
+
+    @Serial
+    private Object readResolve() throws ObjectStreamException
+    {
+        if(nameFunctionSerialized == null)
+            return new NpcName(nameComponentSerialized.deserialize());
+
+        return new NpcName(player -> nameFunctionSerialized.apply(player).deserialize(), nameComponentSerialized.deserialize());
     }
 
     /**
@@ -68,7 +122,7 @@ public class NpcName
      */
     public boolean isStatic()
     {
-        return nameComponent != null;
+        return nameFunction == null;
     }
 
     /**
@@ -87,9 +141,9 @@ public class NpcName
      * @param player the player to generate the name for
      * @return the name component for the player, or null if this is a static name and no function is defined
      */
-    public @Nullable WrappedComponent getName(@NotNull Player player)
+    public @Nullable WrappedComponent getName(@Nullable Player player)
     {
-        if(nameFunction == null)
+        if(nameFunction == null || player == null)
             return nameComponent;
 
         return nameFunction.apply(player);
@@ -102,61 +156,12 @@ public class NpcName
      */
     public @NotNull NpcName copy()
     {
-        return isStatic() ? new NpcName(nameComponent) : new NpcName(nameFunction);
+        return isStatic() ? new NpcName(nameComponent) : new NpcName(nameFunction, nameComponent);
     }
 
-    /**
-     * Converts this NpcName into a serializable version where all WrappedComponents
-     * are converted to {@link WrappedComponent.SerializedComponent}.
-     *
-     * @return a {@link SerializableNpcName} instance
-     */
-    public @NotNull SerializableNpcName serialize()
+    @Override
+    public String toString()
     {
-        return isStatic() ? new SerializableNpcName(nameComponent.serialize()) :
-                new SerializableNpcName(player -> nameFunction.apply(player).serialize());
-    }
-
-    /**
-     * Serializable representation of an NPC name.
-     * Contains either a static {@link WrappedComponent.SerializedComponent} or a dynamic
-     * function producing serialized components for each player.
-     */
-    public static class SerializableNpcName implements Serializable
-    {
-        private final WrappedComponent.SerializedComponent nameComponent;
-        private final SerializableFunction<Player, WrappedComponent.SerializedComponent> nameFunction;
-
-        /**
-         * Creates a static serializable NPC name.
-         *
-         * @param nameComponent the fixed serialized component
-         */
-        SerializableNpcName(@NotNull WrappedComponent.SerializedComponent nameComponent)
-        {
-            this.nameComponent = nameComponent;
-            this.nameFunction = null;
-        }
-
-        /**
-         * Creates a dynamic serializable NPC name.
-         *
-         * @param nameFunction a function returning serialized components for each player
-         */
-        SerializableNpcName(@NotNull SerializableFunction<Player, WrappedComponent.SerializedComponent> nameFunction)
-        {
-            this.nameComponent = null;
-            this.nameFunction = nameFunction;
-        }
-
-        /**
-         * Converts this {@link SerializableNpcName} back into a regular {@link NpcName}.
-         *
-         * @return a new NpcName instance with the deserialized components
-         */
-        public @NotNull NpcName deserialize()
-        {
-            return nameComponent != null ? new NpcName(nameComponent.deserialize()) : new NpcName(player -> nameFunction.apply(player).deserialize());
-        }
+        return "{" + (isStatic() ? "static" : "dynamic") + " -> " + getName().toLegacy(false) + "}";
     }
 }

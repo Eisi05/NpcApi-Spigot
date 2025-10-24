@@ -26,6 +26,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.io.ObjectStreamException;
 import java.io.Serial;
 import java.io.Serializable;
 import java.nio.file.Files;
@@ -42,8 +43,8 @@ public class NPC extends NpcHolder
     final List<Integer> toDeleteEntities = new ArrayList<>();
     private final List<UUID> viewers = new ArrayList<>();
     private final Map<NpcOption<?, ?>, Object> options;
-    private Path npcPath;
     WrappedServerPlayer serverPlayer;
+    private Path npcPath;
     private NpcName name;
     private Location location;
     private NpcClickAction clickEvent;
@@ -849,51 +850,28 @@ public class NPC extends NpcHolder
      * Represents a fully serialized NPC, including its location, orientation,
      * unique ID, name, additional options, click behavior, and creation time.
      * <p>
-     * The {@code name} field now uses {@link NpcName.SerializableNpcName}, which supports
+     * The {@code name} field now uses {@link NpcName}, which supports
      * both static and dynamic names. For backward compatibility, a secondary constructor
      * allows creating a {@code SerializedNPC} from a legacy {@link WrappedComponent.SerializedComponent}.
      *
-     * @param world     the UUID of the world the NPC is in
-     * @param x         the X-coordinate of the NPC
-     * @param y         the Y-coordinate of the NPC
-     * @param z         the Z-coordinate of the NPC
-     * @param yaw       the yaw rotation of the NPC
-     * @param pitch     the pitch rotation of the NPC
-     * @param id        the unique UUID of the NPC
-     * @param name      the serializable NPC name (static or dynamic)
-     * @param options   additional serializable options associated with the NPC
+     * @param world      the UUID of the world the NPC is in
+     * @param x          the X-coordinate of the NPC
+     * @param y          the Y-coordinate of the NPC
+     * @param z          the Z-coordinate of the NPC
+     * @param yaw        the yaw rotation of the NPC
+     * @param pitch      the pitch rotation of the NPC
+     * @param id         the unique UUID of the NPC
+     * @param name       the serializable NPC name (static or dynamic)
+     * @param options    additional serializable options associated with the NPC
      * @param clickEvent optional click event behavior for the NPC
-     * @param createdAt the timestamp when the NPC was created
+     * @param createdAt  the timestamp when the NPC was created
      */
     public record SerializedNPC(@NotNull UUID world, double x, double y, double z, float yaw, float pitch, @NotNull UUID id,
-                                @NotNull NpcName.SerializableNpcName name, @NotNull Map<String, ? extends Serializable> options,
-                                @Nullable NpcClickAction clickEvent, @NotNull Instant createdAt) implements Serializable
+                                @NotNull Serializable name, @NotNull Map<String, ? extends Serializable> options, @Nullable NpcClickAction clickEvent,
+                                @NotNull Instant createdAt) implements Serializable
     {
         @Serial
         private static final long serialVersionUID = 1L;
-
-        /**
-         * Backward-compatible constructor for creating a {@code SerializedNPC} from
-         * a legacy {@link WrappedComponent.SerializedComponent} name.
-         *
-         * @param world      the UUID of the world the NPC is in
-         * @param x          the X-coordinate of the NPC
-         * @param y          the Y-coordinate of the NPC
-         * @param z          the Z-coordinate of the NPC
-         * @param yaw        the yaw rotation of the NPC
-         * @param pitch      the pitch rotation of the NPC
-         * @param id         the unique UUID of the NPC
-         * @param name       the legacy serialized component representing the NPC's name
-         * @param options    additional serializable options associated with the NPC
-         * @param clickEvent optional click event behavior for the NPC
-         * @param createdAt  the timestamp when the NPC was created
-         */
-        private SerializedNPC(@NotNull UUID world, double x, double y, double z, float yaw, float pitch, @NotNull UUID id,
-                @NotNull WrappedComponent.SerializedComponent name, @NotNull Map<String, ? extends Serializable> options,
-                @Nullable NpcClickAction clickEvent, @NotNull Instant createdAt)
-        {
-            this(world, x, y, z, yaw, pitch, id, new NpcName.SerializableNpcName(name), options, clickEvent, createdAt);
-        }
 
         /**
          * Creates a {@link SerializedNPC} instance from an existing {@link NPC} object.
@@ -905,9 +883,23 @@ public class NPC extends NpcHolder
         {
             return new SerializedNPC(npc.getLocation().getWorld().getUID(), npc.getLocation().getX(), npc.getLocation().getY(),
                     npc.getLocation().getZ(), npc.getLocation().getYaw(), npc.getLocation().getPitch(), npc.getUUID(),
-                    npc.getName().serialize(), npc.options.keySet().stream().collect(
+                    npc.getName(), npc.options.keySet().stream().collect(
                     Collectors.toMap(NpcOption::getPath, npcOption -> npcOption.serialize(npc.getOption((NpcOption<?, ?>) npcOption)))),
                     npc.clickEvent, npc.createdAt);
+        }
+
+        @Serial
+        private Object readResolve() throws ObjectStreamException
+        {
+            NpcName fixedName;
+            if(name instanceof NpcName sn)
+                fixedName = sn;
+            else if(name instanceof WrappedComponent.SerializedComponent oldName)
+                fixedName = NpcName.of(oldName.deserialize());
+            else
+                throw new IllegalStateException("Unexpected type for name field: " + name.getClass());
+
+            return new SerializedNPC(world, x, y, z, yaw, pitch, id, fixedName, options, clickEvent, createdAt);
         }
 
         /**
@@ -920,7 +912,7 @@ public class NPC extends NpcHolder
         @SuppressWarnings("unchecked")
         public <T, S extends Serializable> @NotNull NPC deserializedNPC()
         {
-            NPC npc = new NPC(new Location(Bukkit.getWorld(world), x, y, z, yaw, pitch), id, name.deserialize()).setClickEvent(
+            NPC npc = new NPC(new Location(Bukkit.getWorld(world), x, y, z, yaw, pitch), id, (NpcName) name).setClickEvent(
                     clickEvent == null ? clickEvent : clickEvent.initialize());
             options.forEach((string, serializable) -> NpcOption.getOption(string)
                     .ifPresent(npcOption -> npc.setOption((NpcOption<T, S>) npcOption, (T) npcOption.deserialize(Var.unsafeCast(serializable)))));
