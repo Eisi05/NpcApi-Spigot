@@ -37,7 +37,7 @@ import java.util.concurrent.CompletableFuture;
  * @param value     The base64 encoded string representing the skin data (texture URL, model, etc.).
  * @param signature The signature used to verify the authenticity of the skin data.
  */
-public record Skin(@Nullable String name, @NotNull String value, @NotNull String signature) implements Serializable
+public record Skin(@Nullable String name, @Nullable String value, @Nullable String signature) implements SkinData
 {
     @Serial
     private static final long serialVersionUID = 1L;
@@ -46,7 +46,9 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
      * A static cache to store fetched skins, mapping UUIDs to Skin objects.
      * This helps reduce redundant API calls to Mojang's servers.
      */
-    private static final Map<UUID, Skin> skinCache = new HashMap<>();
+    private static final Map<String, Skin> skinCacheName = new HashMap<>();
+    private static final Map<UUID, Skin> skinCacheUUID = new HashMap<>();
+    private static final Map<File, Skin> skinCacheFile = new HashMap<>();
 
     /**
      * Retrieves the skin data directly from a currently online Bukkit player.
@@ -83,8 +85,8 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
      */
     public static @Nullable Optional<Skin> fetchSkin(@NotNull UUID uuid)
     {
-        if(skinCache.containsKey(uuid))
-            return Optional.of(skinCache.get(uuid));
+        if(skinCacheUUID.containsKey(uuid))
+            return Optional.ofNullable(skinCacheUUID.get(uuid));
 
         try
         {
@@ -109,7 +111,8 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
                         throw new VersionNotFound();
 
                     Skin skin = new Skin(name, value, signature);
-                    skinCache.put(uuid, skin);
+                    skinCacheUUID.put(uuid, skin);
+                    skinCacheName.put(name, skin);
                     return Optional.of(skin);
                 }
 
@@ -117,6 +120,7 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
             }
         } catch(IOException e)
         {
+            skinCacheUUID.put(uuid, null);
             return Optional.empty();
         }
     }
@@ -129,6 +133,9 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
      */
     public static Optional<Skin> fetchSkin(@NotNull String name)
     {
+        if(skinCacheName.containsKey(name))
+            return Optional.ofNullable(skinCacheName.get(name));
+
         try
         {
             URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
@@ -146,6 +153,7 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
             }
         } catch(IOException e)
         {
+            skinCacheName.put(name, null);
             return Optional.empty();
         }
     }
@@ -161,6 +169,9 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
     {
         if(!skinFile.exists())
             throw new IllegalArgumentException("File does not exist");
+
+        if(skinCacheFile.containsKey(skinFile))
+            return Optional.ofNullable(skinCacheFile.get(skinFile));
 
         RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectTimeout(10_000)
@@ -208,7 +219,9 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
                 String value = texture.get("value").getAsString();
                 String signature = texture.get("signature").getAsString();
 
-                return Optional.of(new Skin(null, value, signature));
+                Skin skin = new Skin(null, value, signature);
+                skinCacheFile.put(skinFile, skin);
+                return Optional.of(skin);
             });
         } catch(IOException e)
         {
@@ -247,5 +260,27 @@ public record Skin(@Nullable String name, @NotNull String value, @NotNull String
     public static CompletableFuture<Optional<Skin>> fetchSkinAsync(@NotNull File skinFile)
     {
         return CompletableFuture.supplyAsync(() -> fetchSkin(skinFile));
+    }
+
+    /**
+     * Checks whether a skin for the given name has already been loaded and cached.
+     *
+     * @param name the player name.
+     * @return {@code true} if the skin is cached, {@code false} otherwise.
+     */
+    public static boolean isPreLoaded(@NotNull String name)
+    {
+        return skinCacheName.containsKey(name);
+    }
+
+    /**
+     * Checks whether a skin for the given UUID has already been loaded and cached.
+     *
+     * @param uuid the player UUID.
+     * @return {@code true} if the skin is cached, {@code false} otherwise.
+     */
+    public static boolean isPreLoaded(@NotNull UUID uuid)
+    {
+        return skinCacheUUID.containsKey(uuid);
     }
 }

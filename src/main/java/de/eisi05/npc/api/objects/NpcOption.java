@@ -88,11 +88,16 @@ public class NpcOption<T, S extends Serializable>
      * NPC option to set a specific skin using a value and signature.
      * This is ignored if {@link #USE_PLAYER_SKIN} is true.
      */
-    public static final NpcOption<Skin, Skin> SKIN = new NpcOption<Skin, Skin>("skin", null,
-            skin -> skin, skin -> skin,
-            (skin, npc, player) ->
+    public static final NpcOption<NpcSkin, SkinData> SKIN = new NpcOption<NpcSkin, SkinData>("skin", null,
+            skin -> skin, skin -> skin instanceof Skin skin1 ? NpcSkin.of(skin1) : (NpcSkin) skin,
+            (skinData, npc, player) ->
             {
-                if(npc.getOption(USE_PLAYER_SKIN))
+                if(npc.getOption(USE_PLAYER_SKIN) || skinData == null)
+                    return null;
+
+                Skin skin = skinData.getSkin(player, npc);
+
+                if(skin == null)
                     return null;
 
                 if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_9))
