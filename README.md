@@ -151,7 +151,7 @@ npc.setEnabled(true);
 npc.setOption(NpcOption.GLOWING, ChatColor.RED);
 
 // Set a custom skin from a player
-npc.setOption(NpcOption.SKIN, Skin.fromPlayer(player));
+npc.setOption(NpcOption.SKIN, NpcSkin.of(Skin.fromPlayer(player)));
 ```
 
 ### Handling Click Events
