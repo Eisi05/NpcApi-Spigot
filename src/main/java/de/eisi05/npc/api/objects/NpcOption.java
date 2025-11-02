@@ -68,7 +68,7 @@ public class NpcOption<T, S extends Serializable>
                             Reflections.getInstance(PropertyMap.class, Multimaps.forMap(property == null ? Map.of() : Map.of("textures", property)))
                                     .orElseThrow()).orElseThrow();
 
-                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), newUUID, profile, npc.getName().getName(player));
+                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), newUUID, profile, npc.getName(player));
                     npc.changeUUID(newUUID);
                     return null;
                 }
@@ -119,7 +119,7 @@ public class NpcOption<T, S extends Serializable>
                     GameProfile profile = Reflections.getInstance(GameProfile.class, newUUID, "NPC" + newUUID.toString().substring(0, 13),
                             propertyMap).orElseThrow();
 
-                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), newUUID, profile, npc.getName().getName(player));
+                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), newUUID, profile, npc.getName(player));
                     npc.changeUUID(newUUID);
                     return null;
                 }

@@ -48,7 +48,7 @@ public class NPC extends NpcHolder
     private final Map<NpcOption<?, ?>, Object> options;
     WrappedServerPlayer serverPlayer;
     private Path npcPath;
-    private NpcName name;
+    NpcName name;
     private Location location;
     private NpcClickAction clickEvent;
     private Instant createdAt = Instant.now();
@@ -342,9 +342,29 @@ public class NPC extends NpcHolder
      *
      * @return the {@link NpcName} representing the NPC's name. Will not be null.
      */
-    public @NotNull NpcName getName()
+    public @NotNull NpcName getNpcName()
     {
         return name;
+    }
+
+    /**
+     * Gets the display name of this NPC.
+     *
+     * @return the {@link WrappedComponent} representing the NPC's name. Will not be null.
+     */
+    public @NotNull WrappedComponent getName(@NotNull Player player)
+    {
+        return name.getName(player);
+    }
+
+    /**
+     * Gets the display name of this NPC.
+     *
+     * @return the {@link WrappedComponent} representing the NPC's name. Will not be null.
+     */
+    public @NotNull WrappedComponent getName()
+    {
+        return name.getName();
     }
 
     /**
@@ -393,7 +413,7 @@ public class NPC extends NpcHolder
             if(player == null)
                 continue;
 
-            String name = getName().getName(Bukkit.getPlayer(uuid)).toLegacy(false);
+            String name = getName(Bukkit.getPlayer(uuid)).toLegacy(false);
             if(nameCache.getOrDefault(uuid, "").equals(name))
                 continue;
 
@@ -937,7 +957,7 @@ public class NPC extends NpcHolder
         {
             return new SerializedNPC(npc.getLocation().getWorld().getUID(), npc.getLocation().getX(), npc.getLocation().getY(),
                     npc.getLocation().getZ(), npc.getLocation().getYaw(), npc.getLocation().getPitch(), npc.getUUID(),
-                    npc.getName(), npc.options.keySet().stream().collect(
+                    npc.getNpcName(), npc.options.keySet().stream().collect(
                     Collectors.toMap(NpcOption::getPath, npcOption -> npcOption.serialize(npc.getOption((NpcOption<?, ?>) npcOption)))),
                     npc.clickEvent, npc.createdAt);
         }
