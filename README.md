@@ -39,7 +39,7 @@ This method requires [NpcPlugin](https://www.spigotmc.org/resources/npc-plugin-1
 <dependency>
     <groupId>com.github.Eisi05</groupId>
     <artifactId>NpcApi</artifactId>
-    <version>1.2.4</version>
+    <version>1.2.5</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -55,7 +55,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    compileOnly 'com.github.Eisi05:NpcApi:1.2.4'
+    compileOnly 'com.github.Eisi05:NpcApi:1.2.5'
 }
 ```
 
@@ -88,7 +88,7 @@ Add the repository and dependency to your `pom.xml`:
     <dependency>
         <groupId>com.github.Eisi05</groupId>
         <artifactId>NpcApi</artifactId>
-        <version>1.2.4</version>
+        <version>1.2.5</version>
     </dependency>
 </dependencies>
 ```
@@ -105,7 +105,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    implementation 'com.github.Eisi05:NpcApi:1.2.4'
+    implementation 'com.github.Eisi05:NpcApi:1.2.5'
 }
 ```
 
@@ -151,7 +151,7 @@ npc.setEnabled(true);
 npc.setOption(NpcOption.GLOWING, ChatColor.RED);
 
 // Set a custom skin from a player
-npc.setOption(NpcOption.SKIN, Skin.fromPlayer(player));
+npc.setOption(NpcOption.SKIN, NpcSkin.of(Skin.fromPlayer(player)));
 ```
 
 ### Handling Click Events
