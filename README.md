@@ -39,7 +39,7 @@ This method requires [NpcPlugin](https://www.spigotmc.org/resources/npc-plugin-1
 <dependency>
     <groupId>com.github.Eisi05</groupId>
     <artifactId>NpcApi</artifactId>
-    <version>1.2.5</version>
+    <version>1.2.6</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -55,7 +55,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    compileOnly 'com.github.Eisi05:NpcApi:1.2.5'
+    compileOnly 'com.github.Eisi05:NpcApi:1.2.6'
 }
 ```
 
@@ -88,7 +88,7 @@ Add the repository and dependency to your `pom.xml`:
     <dependency>
         <groupId>com.github.Eisi05</groupId>
         <artifactId>NpcApi</artifactId>
-        <version>1.2.5</version>
+        <version>1.2.6</version>
     </dependency>
 </dependencies>
 ```
@@ -105,7 +105,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    implementation 'com.github.Eisi05:NpcApi:1.2.5'
+    implementation 'com.github.Eisi05:NpcApi:1.2.6'
 }
 ```
 
@@ -169,7 +169,7 @@ npc.setClickEvent(event -> {
 
 ```java
 npc.save();
-npc.setName(WrappedComponent.create("New Name"));
+npc.setName(NpcName.of(WrappedComponent.create("New Name")));
 npc.setLocation(newLocation);
 npc.reload();
 ```
@@ -213,7 +213,7 @@ NPC npc = NpcManager.fromUUID(npcUuid);
 | `setEnabled(boolean)`                   | Enable/disable NPC visibility                                               |
 | `save()`                                | Save NPC to persistent storage                                              |
 | `reload()`                              | Reload NPC data                                                             |
-| `setName(WrappedComponent)`             | Update NPC display name                                                     |
+| `setName(NpcName)`                      | Update NPC display name                                                     |
 | `setLocation(Location)`                 | Move NPC to new location                                                    |
 | `playAnimation(...)`                    | Play NPC animation                                                          |
 | `showNPCToPlayer(Player)`               | Show NPC to specific player                                                 |
