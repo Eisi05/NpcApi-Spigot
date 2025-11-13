@@ -242,8 +242,7 @@ public class NpcOption<T, S extends Serializable>
                 List<Pair<?, ?>> list = new ArrayList<>();
 
                 map.forEach((slot, item) -> list.add(
-                        new Pair<>(de.eisi05.npc.api.wrapper.enums.EquipmentSlot.values()[slot.ordinal()].getHandle(),
-                                Var.toNmsItemStack(item))));
+                        new Pair<>(de.eisi05.npc.api.wrapper.enums.EquipmentSlot.values()[slot.ordinal()].getHandle(), Var.toNmsItemStack(item))));
 
                 return new SetEquipmentPacket(npc.getServerPlayer().getId(), list);
             });
