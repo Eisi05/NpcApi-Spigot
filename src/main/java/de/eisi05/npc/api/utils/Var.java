@@ -1,6 +1,8 @@
 package de.eisi05.npc.api.utils;
 
 import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
+import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -88,5 +90,10 @@ public class Var
     public static <T> @Nullable T unsafeCast(@Nullable Object o)
     {
         return (T) o;
+    }
+
+    public static boolean isCarpet(@NotNull Material material)
+    {
+        return material.name().contains("CARPET");
     }
 }
