@@ -3,6 +3,7 @@ package de.eisi05.npc.api;
 import de.eisi05.npc.api.listeners.ChangeWorldListener;
 import de.eisi05.npc.api.listeners.ConnectionListener;
 import de.eisi05.npc.api.listeners.NpcInteractListener;
+import de.eisi05.npc.api.listeners.WorldLoadListener;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcConfig;
@@ -44,7 +45,8 @@ public final class NpcApi
      */
     public static NpcConfig config = new NpcConfig();
 
-    private static final List<Listener> listeners = List.of(new ChangeWorldListener(), new ConnectionListener(), new NpcInteractListener());
+    private static final List<Listener> listeners = List.of(new ChangeWorldListener(), new ConnectionListener(), new NpcInteractListener(),
+            new WorldLoadListener());
 
     private static NpcApi npcApi;
 

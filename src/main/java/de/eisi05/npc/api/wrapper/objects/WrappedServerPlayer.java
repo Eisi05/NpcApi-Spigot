@@ -39,9 +39,9 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
     }
 
     public static @NotNull WrappedServerPlayer create(@NotNull Location location, @NotNull UUID uuid, @NotNull GameProfile gameProfile,
-            @NotNull WrappedComponent name)
+            @NotNull WrappedComponent name, boolean forceNewPlayer)
     {
-        if(map.containsKey(uuid))
+        if(map.containsKey(uuid) && !forceNewPlayer)
             return map.get(uuid);
 
         Object mcServer = WrappedMinecraftServer.INSTANCE.getHandle();
@@ -89,9 +89,9 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         return wrappedServerPlayer;
     }
 
-    public static @NotNull WrappedServerPlayer create(@NotNull Location location, @NotNull UUID uuid, @NotNull WrappedComponent name)
+    public static @NotNull WrappedServerPlayer create(@NotNull Location location, @NotNull UUID uuid, @NotNull WrappedComponent name, boolean forceNewPlayer)
     {
-        return create(location, uuid, new GameProfile(uuid, "NPC" + uuid.toString().substring(0, 13)), name);
+        return create(location, uuid, new GameProfile(uuid, "NPC" + uuid.toString().substring(0, 13)), name, forceNewPlayer);
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_9), path = "h")

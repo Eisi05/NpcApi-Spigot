@@ -63,13 +63,11 @@ public class NpcOption<T, S extends Serializable>
                             Reflections.getField(property, "value").get().equals(Reflections.getField(npcProperty, "value").get())))
                         return null;
 
-                    UUID newUUID = UUID.randomUUID();
-                    GameProfile profile = Reflections.getInstance(GameProfile.class, newUUID, "NPC" + newUUID.toString().substring(0, 13),
+                    GameProfile profile = Reflections.getInstance(GameProfile.class, npc.getUUID(), "NPC" + npc.getUUID().toString().substring(0, 13),
                             Reflections.getInstance(PropertyMap.class, Multimaps.forMap(property == null ? Map.of() : Map.of("textures", property)))
                                     .orElseThrow()).orElseThrow();
 
-                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), newUUID, profile, npc.getName(player));
-                    npc.changeUUID(newUUID);
+                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player), true);
                     return null;
                 }
 
@@ -111,16 +109,14 @@ public class NpcOption<T, S extends Serializable>
                             (npcProperty != null && skin.value().equals(Reflections.getField(npcProperty, "value").get())))
                         return null;
 
-                    UUID newUUID = UUID.randomUUID();
                     PropertyMap propertyMap = Reflections.getInstance(PropertyMap.class,
                             Multimaps.forMap(skin == null ? Map.of() : Map.of("textures", new Property("textures", skin.value(),
                                     skin.signature())))).orElseThrow();
 
-                    GameProfile profile = Reflections.getInstance(GameProfile.class, newUUID, "NPC" + newUUID.toString().substring(0, 13),
+                    GameProfile profile = Reflections.getInstance(GameProfile.class, npc.getUUID(), "NPC" + npc.getUUID().toString().substring(0, 13),
                             propertyMap).orElseThrow();
 
-                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), newUUID, profile, npc.getName(player));
-                    npc.changeUUID(newUUID);
+                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player), true);
                     return null;
                 }
 

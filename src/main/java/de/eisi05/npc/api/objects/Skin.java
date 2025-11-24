@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.utils.exceptions.VersionNotFound;
@@ -225,6 +226,9 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
             });
         } catch(IOException e)
         {
+            if(NpcApi.config.debug())
+                e.printStackTrace();
+
             return Optional.empty();
         }
     }
