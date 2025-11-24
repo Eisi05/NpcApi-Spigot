@@ -7,14 +7,14 @@ import de.eisi05.npc.api.utils.PacketReader;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 public class ConnectionListener implements Listener
 {
     @EventHandler
-    public void onJoin(PlayerSpawnLocationEvent event)
+    public void onJoin(PlayerJoinEvent event)
     {
         PacketReader.inject(event.getPlayer());
 
