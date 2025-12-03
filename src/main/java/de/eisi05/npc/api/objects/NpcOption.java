@@ -372,6 +372,14 @@ public class NpcOption<T, S extends Serializable>
             aBoolean -> aBoolean, aBoolean -> aBoolean,
             (enabled, npc, player) -> null);
 
+    /**
+     * NPC option to store custom data for the NPC.
+     * This is an internal option, typically not directly set by users but controlled by {@link NPC#addCustomData(Serializable, Serializable)}.
+     */
+    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data", new HashMap<>(),
+            aHashMap -> aHashMap, aHashMap -> aHashMap,
+            (customData, npc, player) -> null);
+
     private final String path;
     private final T defaultValue;
     private final Function<T, S> serializer;

@@ -389,6 +389,49 @@ public class NPC extends NpcHolder
     }
 
     /**
+     * Adds custom data to this NPC.
+     * This data can be retrieved later using the {@link #getCustomData(Serializable)} method.
+     *
+     * @param key   the key for the custom data. Must not be null.
+     * @param value the value for the custom data. Must not be null.
+     */
+    public <K extends Serializable, V extends Serializable> void addCustomData(@NotNull K key, @NotNull V value)
+    {
+        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA);
+        map.put(key, value);
+        setOption(NpcOption.CUSTOM_DATA, map);
+    }
+
+    /**
+     * Removes custom data from this NPC.
+     * This data can be retrieved later using the {@link #getCustomData(Serializable)} method.
+     *
+     * @param key the key for the custom data. Must not be null.
+     * @return the value of the custom data, or null if the key does not exist.
+     */
+    @SuppressWarnings("unchecked")
+    public <K extends Serializable, T extends Serializable> @Nullable T removeCustomData(@NotNull K key)
+    {
+        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA);
+        T value = (T) map.remove(key);
+        setOption(NpcOption.CUSTOM_DATA, map);
+        return value;
+    }
+
+    /**
+     * Retrieves custom data from this NPC.
+     *
+     * @param key the key for the custom data. Must not be null.
+     * @return the value of the custom data, or null if the key does not exist.
+     */
+    @SuppressWarnings("unchecked")
+    public <K extends Serializable, T extends Serializable> @Nullable T getCustomData(@NotNull K key)
+    {
+        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA);
+        return (T) map.get(key);
+    }
+
+    /**
      * Updates the display name of the given player on the server.
      * <p>
      * Sends a packet to the player to modify their name tag, taking into account
