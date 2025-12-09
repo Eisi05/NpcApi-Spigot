@@ -11,7 +11,7 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_9), path = "net.minecraft.server.level.EntityTrackerEntry")
+@Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_11), path = "net.minecraft.server.level.EntityTrackerEntry")
 public class WrappedEntityTrackerEntry extends Wrapper
 {
     public WrappedEntityTrackerEntry(@NotNull WrappedEntity<?> entity)
@@ -21,6 +21,7 @@ public class WrappedEntityTrackerEntry extends Wrapper
 
     private static @NotNull Object createHandle(@NotNull WrappedEntity<?> entity)
     {
+        System.out.println("SERVER: " + entity.getServer());
         if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_5))
             return createInstance(WrappedEntityTrackerEntry.class, entity.getServer(), entity, 0, false, (Consumer<Object>) o ->
             {

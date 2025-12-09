@@ -12,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_21_9), path = "net.minecraft.world.entity.Display$TextDisplay")
+@Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_21_11), path = "net.minecraft.world.entity.Display$TextDisplay")
 public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
 {
     private static final boolean flag = Versions.isCurrentVersionSmallerThan(Versions.V1_20_2);

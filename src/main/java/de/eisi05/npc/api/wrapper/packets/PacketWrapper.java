@@ -19,7 +19,7 @@ public abstract class PacketWrapper extends Wrapper
         super(createInstance(clazz, args));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "net.minecraft.network.protocol.Packet")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.Packet")
     public static abstract class PacketHolder extends PacketWrapper
     {
         public PacketHolder(Object handle)

@@ -6,7 +6,7 @@ import de.eisi05.npc.api.wrapper.Wrapper;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "net.minecraft.world.phys.Vec3D")
+@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.phys.Vec3D")
 public class WrappedVec3D extends Wrapper
 {
     private WrappedVec3D(Object handle)
@@ -29,7 +29,7 @@ public class WrappedVec3D extends Wrapper
         return new WrappedVec3D(handle);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "g")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "g")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_6), path = "d")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21), path = "c")
     public double getX()
@@ -37,7 +37,7 @@ public class WrappedVec3D extends Wrapper
         return getWrappedFieldValue();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "h")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "h")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_6), path = "e")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21), path = "d")
     public double getY()
@@ -45,7 +45,7 @@ public class WrappedVec3D extends Wrapper
         return getWrappedFieldValue();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "i")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "i")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_6), path = "f")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21), path = "e")
     public double getZ()

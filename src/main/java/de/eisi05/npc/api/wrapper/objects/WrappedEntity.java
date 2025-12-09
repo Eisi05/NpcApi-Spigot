@@ -16,7 +16,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "net.minecraft.world.entity.Entity")
+@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.entity.Entity")
 public abstract class WrappedEntity<T extends Entity> extends Wrapper
 {
     protected WrappedEntity(Object handle)
@@ -52,21 +52,21 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         return false;
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "getBukkitEntity")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "getBukkitEntity")
     public @NotNull T getBukkitPlayer()
     {
         return invokeWrappedMethod();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_9), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setLocation")
     public void moveTo(@NotNull Location location)
     {
         invokeWrappedMethod(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
     }
 
-
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "aC")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "aD")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "aC")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "au")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_5), path = "ar")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_4), path = "au")
@@ -83,7 +83,7 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         return new WrappedEntityData(invokeWrappedMethod());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "aS")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "aS")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "aR")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_5), path = "u")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_4), path = "q")
@@ -96,7 +96,8 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         setWrappedFieldValue(ImmutableList.copyOf(Arrays.stream(entities).map(wrappedEntity -> wrappedEntity.handle).toList()));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "an")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "ao")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "an")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "ai")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_5), path = "cU")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "cN")
@@ -114,7 +115,7 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         return invokeWrappedMethod();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_9), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_11), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_6), path = "dl")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_4), path = "dj")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_2), path = "di")
@@ -129,7 +130,8 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         return new CustomPacket(invokeWrappedMethod(new WrappedEntityTrackerEntry(this)));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "de")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "dj")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "de")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "cV")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_5), path = "cR")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "cK")
@@ -155,17 +157,18 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         return getBukkitPlayer().getWorld();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "net.minecraft.world.entity.EntityTypes")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.entity.EntityTypes")
     public static class EntityTypes extends Wrapper
     {
-        @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "h")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "h")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_6), path = "g")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_4), path = "f")
         @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21), path = "d")
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_18_2), path = "c")
         public static final Object ARMOR_STAND = getStaticWrappedFieldValue("ARMOR_STAND").orElse(null);
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "bA")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "bD")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "bA")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "bx")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_5), path = "bw")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_4), path = "bu")
@@ -181,7 +184,7 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         }
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "net.minecraft.world.phys.AxisAlignedBB")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.phys.AxisAlignedBB")
     public static class BoundingBox extends Wrapper
     {
         private BoundingBox(Object handle)
@@ -189,7 +192,7 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
             super(handle);
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "c")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "c")
         public double getYSize()
         {
             return invokeWrappedMethod();

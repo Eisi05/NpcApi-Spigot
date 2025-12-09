@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "net.minecraft.server.level.EntityPlayer")
+@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.server.level.EntityPlayer")
 public class WrappedServerPlayer extends WrappedEntity<Player>
 {
     private static final Map<UUID, WrappedServerPlayer> map = new HashMap<>();
@@ -56,7 +56,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
             case V1_17, V1_18, V1_18_2, V1_19_3, V1_19_4, V1_20 ->
                     createWrappedInstance(WrappedServerPlayer.class, mcServer, serverLevel, gameProfile);
             case V1_19, V1_19_1 -> createWrappedInstance(WrappedServerPlayer.class, mcServer, serverLevel, gameProfile, null);
-            case V1_20_2, V1_20_4, V1_20_6, V1_21, V1_21_2, V1_21_4, V1_21_5, V1_21_6, V1_21_9 ->
+            case V1_20_2, V1_20_4, V1_20_6, V1_21, V1_21_2, V1_21_4, V1_21_5, V1_21_6, V1_21_9, V1_21_11 ->
             {
                 WrappedServerPlayer serverPlayer = createWrappedInstance(WrappedServerPlayer.class, mcServer, serverLevel, gameProfile,
                         WrappedClientInformation.createDefault().getHandle());
@@ -94,7 +94,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         return create(location, uuid, new GameProfile(uuid, "NPC" + uuid.toString().substring(0, 13)), name, forceNewPlayer);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_9), path = "h")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "h")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_5), path = "g")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "f")
     public @NotNull WrappedAttributeInstance getAttribute(Object attribute)
@@ -102,7 +102,8 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         return new WrappedAttributeInstance(invokeWrappedMethod(attribute));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "gz")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "gI")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "gz")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "gr")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_5), path = "gi")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_4), path = "gh")
@@ -123,7 +124,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         return invokeWrappedMethod();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_9), path = "g")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "g")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_5), path = "f")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20, to = Versions.V1_21), path = "c")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_19_4), path = "b")
@@ -132,7 +133,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         return new WrappedConnection(getWrappedFieldValue());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_9), path = "g")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "g")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_5), path = "f")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20, to = Versions.V1_21), path = "c")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_19_4), path = "b")
@@ -141,19 +142,19 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         setWrappedFieldValue(newConnection.getHandle());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "listName")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "listName")
     public void setListName(@Nullable WrappedComponent component)
     {
         setWrappedFieldValue(component.getHandle());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "listName")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "listName")
     public void setListName(@Nullable String name)
     {
         setListName(WrappedComponent.create(name));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_21_9), path = "listOrder")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_21_11), path = "listOrder")
     public void setListOrder(int order)
     {
         setWrappedFieldValue(order);
@@ -170,14 +171,14 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
                     new WrappedConnection.CommonListenerCookie(getGameProfile(), i, true)));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_9), path = "b")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "b")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setPose")
     public void setPose(@NotNull Pose pose)
     {
         invokeWrappedMethod(pose);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_9), path = "C")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "C")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "A")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_5), path = "z")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_4), path = "A")
@@ -196,7 +197,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         return new WrappedCommandSourceStack(invokeWrappedMethod());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_9), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "a")
     public void sendRawMessage(@NotNull WrappedComponent component)
     {
         if(Versions.isCurrentVersionSmallerThan(Versions.V1_19))
@@ -205,7 +206,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
             invokeWrappedMethod(component);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_9), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "a")
     public void remove()
     {
         map.remove(getUUID());
@@ -251,10 +252,10 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         this.nameDisplay = nameDisplay;
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_9), path = "net.minecraft.world.entity.Entity$RemovalReason")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "net.minecraft.world.entity.Entity$RemovalReason")
     private enum RemovalReason implements EnumWrapper
     {
-        @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_9), path = "b")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "b")
         DISCARDED;
 
         @Override

@@ -9,65 +9,65 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "net.minecraft.world.entity.EntityPose")
+@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.entity.EntityPose")
 public enum Pose implements Wrapper.EnumWrapper
 {
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
     STANDING(getBukkit("STANDING"), Material.ARMOR_STAND),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "b")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "b")
     FALL_FLYING(getBukkit("FALL_FLYING"), Material.FEATHER),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "c")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "c")
     SLEEPING(getBukkit("SLEEPING"), Material.RED_BED),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "d")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "d")
     SWIMMING(getBukkit("SWIMMING"), Material.WATER_BUCKET),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "e")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "e")
     SPIN_ATTACK(getBukkit("SPIN_ATTACK"), Material.TRIDENT),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "f")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "f")
     CROUCHING(getBukkit("SNEAKING"), Material.LEATHER_BOOTS),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "g")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "g")
     LONG_JUMPING(getBukkit("LONG_JUMPING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "h")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "h")
     DYING(getBukkit("DYING"), Material.ROTTEN_FLESH),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_9), path = "i")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "i")
     CROAKING(getBukkit("CROAKING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_9), path = "j")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "j")
     USING_TONGUE(getBukkit("USING_TONGUE"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_9), path = "k")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_11), path = "k")
     SITTING(getBukkit("SITTING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_9), path = "l")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_11), path = "l")
     @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_19_1), path = "k")
     ROARING(getBukkit("ROARING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_9), path = "m")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_11), path = "m")
     @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_19_1), path = "l")
     SNIFFING(getBukkit("SNIFFING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_9), path = "n")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_11), path = "n")
     @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_19_1), path = "m")
     EMERGING(getBukkit("EMERGING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_9), path = "o")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_11), path = "o")
     @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_19_1), path = "n")
     DIGGING(getBukkit("DIGGING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_9), path = "p")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "p")
     SLIDING(getBukkit("SLIDING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_9), path = "q")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "q")
     SHOOTING(getBukkit("SHOOTING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_9), path = "r")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "r")
     INHALING(getBukkit("INHALING"), null);
 
     private final org.bukkit.entity.Pose bukkitPose;

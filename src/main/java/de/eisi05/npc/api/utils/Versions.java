@@ -86,7 +86,11 @@ public enum Versions
     /**
      * Minecraft 1.21.9 version.
      */
-    V1_21_9("v1_21_R6");
+    V1_21_9("v1_21_R6"),
+    /**
+     * Minecraft 1.21.11 version.
+     */
+    V1_21_11("v1_21_R7");
 
     /**
      * Caches the determined current server version to avoid repeated lookups.
