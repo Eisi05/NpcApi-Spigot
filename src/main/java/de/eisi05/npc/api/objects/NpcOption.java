@@ -319,7 +319,7 @@ public class NpcOption<T, S extends Serializable>
 
                     SetPassengerPacket passengerPacket = new SetPassengerPacket(textDisplay);
                     RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(npc.getServerPlayer(),
-                            (byte) (player.getLocation().getYaw() * 256 / 360));
+                            (byte) (npc.getLocation().getYaw() * 256 / 360));
 
                     return new BundlePacket(addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
                 }
