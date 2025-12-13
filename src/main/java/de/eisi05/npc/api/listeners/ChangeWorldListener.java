@@ -13,8 +13,6 @@ public class ChangeWorldListener implements Listener
     @EventHandler
     public void onChange(PlayerChangedWorldEvent event)
     {
-        WrappedPlayerTeam.clear(event.getPlayer().getUniqueId());
-
         new BukkitRunnable()
         {
             @Override

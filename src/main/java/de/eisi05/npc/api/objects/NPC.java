@@ -48,7 +48,7 @@ public class NPC extends NpcHolder
     private final List<UUID> viewers = new ArrayList<>();
     private final Map<NpcOption<?, ?>, Object> options;
     WrappedServerPlayer serverPlayer;
-    private Path npcPath;
+    private final Path npcPath;
     NpcName name;
     private Location location;
     private NpcClickAction clickEvent;
@@ -870,19 +870,6 @@ public class NPC extends NpcHolder
                 continue;
 
             WrappedServerPlayer.fromPlayer(viewer).sendPacket(teleport);
-        }
-    }
-
-    void changeUUID(@NotNull UUID newUUID)
-    {
-        try
-        {
-            Files.deleteIfExists(npcPath);
-            npcPath = NpcApi.plugin.getDataFolder().toPath().resolve("NPC").resolve(newUUID + ".npc");
-            save();
-        } catch(Exception e)
-        {
-            throw new RuntimeException(e);
         }
     }
 

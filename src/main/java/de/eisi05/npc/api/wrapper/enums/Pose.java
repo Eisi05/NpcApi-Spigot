@@ -34,7 +34,7 @@ public enum Pose implements Wrapper.EnumWrapper
     LONG_JUMPING(getBukkit("LONG_JUMPING"), null),
 
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "h")
-    DYING(getBukkit("DYING"), Material.ROTTEN_FLESH),
+    DYING(getBukkit("DYING"), Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) ? Material.ROTTEN_FLESH : null),
 
     @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "i")
     CROAKING(getBukkit("CROAKING"), null),
@@ -43,7 +43,7 @@ public enum Pose implements Wrapper.EnumWrapper
     USING_TONGUE(getBukkit("USING_TONGUE"), null),
 
     @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_11), path = "k")
-    SITTING(getBukkit("SITTING"), null),
+    SITTING(getBukkit("SITTING"), Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) ? null : Material.OAK_STAIRS),
 
     @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_11), path = "l")
     @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_19_1), path = "k")

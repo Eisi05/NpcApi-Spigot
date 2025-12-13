@@ -191,33 +191,6 @@ public class NpcOption<T, S extends Serializable>
 
                 return SetEntityDataPacket.create(npc.getServerPlayer().getNameTag().getId(), data);
             });
-
-    /**
-     * NPC option to set the pose of the NPC (e.g., standing, sleeping, swimming).
-     * For a full list look at {@link Pose}.
-     */
-    public static final NpcOption<Pose, Pose> POSE = new NpcOption<>("pose", Pose.STANDING,
-            pose -> pose, pose -> pose,
-            (pose, npc, player) ->
-            {
-                de.eisi05.npc.api.wrapper.enums.Pose nmsPose = de.eisi05.npc.api.wrapper.enums.Pose.fromBukkit(pose);
-
-                if(nmsPose == null)
-                    throw new RuntimeException("Pose (" + pose.name() + ") not found");
-
-                npc.getServerPlayer().setPose(nmsPose);
-
-                WrappedEntityData data = npc.getServerPlayer().getEntityData();
-                data.set(WrappedEntityData.EntityDataSerializers.ENTITY_POSE.create(6), nmsPose);
-
-                if(pose == Pose.SPIN_ATTACK)
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x04);
-                else
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x01);
-
-                return SetEntityDataPacket.create(npc.getServerPlayer().getId(), data);
-            });
-
     /**
      * NPC option to set the equipment worn by the NPC (armor, items in hand).
      * The map uses {@link EquipmentSlot} as keys and {@link ItemStack} as values.
@@ -242,7 +215,6 @@ public class NpcOption<T, S extends Serializable>
 
                 return new SetEquipmentPacket(npc.getServerPlayer().getId(), list);
             });
-
     /**
      * NPC option to control which parts of the NPC's skin are visible (e.g., hat, jacket).
      * For a full list look at {@link SkinParts}.
@@ -256,7 +228,6 @@ public class NpcOption<T, S extends Serializable>
                         (byte) Arrays.stream(skinParts).mapToInt(SkinParts::getValue).sum());
                 return SetEntityDataPacket.create(npc.getServerPlayer().getId(), data);
             });
-
     /**
      * NPC option to make the NPC look at the player if they are within a certain distance.
      * The value is the maximum distance in blocks. A value of 0 or less disables this.
@@ -265,7 +236,6 @@ public class NpcOption<T, S extends Serializable>
     public static final NpcOption<Double, Double> LOOK_AT_PLAYER = new NpcOption<>("look-at-player", 0.0,
             distance -> distance, distance -> distance,
             (distance, npc, player) -> null);
-
     /**
      * NPC option to make the NPC glow with a specific color.
      * If null, the glowing effect is removed.
@@ -294,7 +264,59 @@ public class NpcOption<T, S extends Serializable>
 
                 return new BundlePacket(teamPacket, SetEntityDataPacket.create(npc.getServerPlayer().getId(), entityData));
             });
+    /**
+     * NPC option to set the pose of the NPC (e.g., standing, sleeping, swimming).
+     * For a full list look at {@link Pose}.
+     */
+    public static final NpcOption<Pose, Pose> POSE = new NpcOption<>("pose", Pose.STANDING,
+            pose -> pose, pose -> pose,
+            (pose, npc, player) ->
+            {
+                de.eisi05.npc.api.wrapper.enums.Pose nmsPose = de.eisi05.npc.api.wrapper.enums.Pose.fromBukkit(pose);
 
+                if(nmsPose == null)
+                    throw new RuntimeException("Pose (" + pose.name() + ") not found");
+
+                npc.getServerPlayer().setPose(nmsPose);
+
+                WrappedEntityData data = npc.getServerPlayer().getEntityData();
+                data.set(WrappedEntityData.EntityDataSerializers.ENTITY_POSE.create(6), nmsPose);
+
+                if(pose == Pose.SPIN_ATTACK)
+                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x04);
+                else
+                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x01);
+
+                if(pose == Pose.FALL_FLYING)
+                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0xC0 : 0x80));
+                else if(pose == Pose.SWIMMING)
+                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0x50 : 0x10));
+                else
+                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0);
+
+                if(nmsPose == de.eisi05.npc.api.wrapper.enums.Pose.SITTING)
+                {
+                    WrappedTextDisplay textDisplay = WrappedTextDisplay.create(npc.getLocation().getWorld());
+                    textDisplay.moveTo(npc.getLocation());
+                    npc.toDeleteEntities.add(textDisplay.getId());
+
+                    PacketWrapper addEntityPacket = textDisplay.getAddEntityPacket();
+
+                    WrappedEntityData wrappedEntityData = textDisplay.getEntityData();
+                    wrappedEntityData.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0x20);
+                    SetEntityDataPacket entityDataPacket = SetEntityDataPacket.create(textDisplay.getId(), wrappedEntityData);
+
+                    textDisplay.setPassengers(npc.getServerPlayer());
+
+                    SetPassengerPacket passengerPacket = new SetPassengerPacket(textDisplay);
+                    RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(npc.getServerPlayer(),
+                            (byte) (player.getLocation().getYaw() * 256 / 360));
+
+                    return new BundlePacket(addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
+                }
+
+                return SetEntityDataPacket.create(npc.getServerPlayer().getId(), data);
+            });
     /**
      * NPC option to set the scale (size) of the NPC.
      * A value of 1.0 is normal size. Requires Minecraft 1.20.6 or newer.
@@ -376,7 +398,8 @@ public class NpcOption<T, S extends Serializable>
      * NPC option to store custom data for the NPC.
      * This is an internal option, typically not directly set by users but controlled by {@link NPC#addCustomData(Serializable, Serializable)}.
      */
-    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data", new HashMap<>(),
+    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data",
+            new HashMap<>(),
             aHashMap -> aHashMap, aHashMap -> aHashMap,
             (customData, npc, player) -> null);
 
