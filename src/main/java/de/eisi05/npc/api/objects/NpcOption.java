@@ -282,17 +282,26 @@ public class NpcOption<T, S extends Serializable>
                 WrappedEntityData data = npc.getServerPlayer().getEntityData();
                 data.set(WrappedEntityData.EntityDataSerializers.ENTITY_POSE.create(6), nmsPose);
 
-                if(pose == Pose.SPIN_ATTACK)
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x04);
-                else
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x01);
-
+                PacketWrapper packetWrapper = null;
                 if(pose == Pose.FALL_FLYING)
+                {
                     data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0xC0 : 0x80));
+                    packetWrapper = new MoveEntityPacket.Rot(npc.getServerPlayer().getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
+                            (byte) 0, npc.getServerPlayer().isOnGround());
+                }
                 else if(pose == Pose.SWIMMING)
                     data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0x50 : 0x10));
                 else
                     data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0);
+
+                if(pose == Pose.SPIN_ATTACK)
+                {
+                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x04);
+                    packetWrapper = new MoveEntityPacket.Rot(npc.getServerPlayer().getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
+                            (byte) -90, npc.getServerPlayer().isOnGround());
+                }
+                else
+                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x01);
 
                 if(nmsPose == de.eisi05.npc.api.wrapper.enums.Pose.SITTING)
                 {
@@ -315,7 +324,8 @@ public class NpcOption<T, S extends Serializable>
                     return new BundlePacket(addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
                 }
 
-                return SetEntityDataPacket.create(npc.getServerPlayer().getId(), data);
+                return packetWrapper == null ? SetEntityDataPacket.create(npc.getServerPlayer().getId(), data) :
+                        new BundlePacket(SetEntityDataPacket.create(npc.getServerPlayer().getId(), data), packetWrapper);
             });
     /**
      * NPC option to set the scale (size) of the NPC.
