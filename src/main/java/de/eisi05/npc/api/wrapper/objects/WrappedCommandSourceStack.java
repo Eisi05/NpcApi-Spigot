@@ -45,7 +45,7 @@ public class WrappedCommandSourceStack extends Wrapper
         public static final WrappedPermissionSet NO = new WrappedPermissionSet(getStaticWrappedFieldValue("NO").orElse(null));
 
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "h")
-        public static final WrappedPermissionSet ALL = new WrappedPermissionSet(getStaticWrappedFieldValue("NO").orElse(null));
+        public static final WrappedPermissionSet ALL = new WrappedPermissionSet(getStaticWrappedFieldValue("ALL").orElse(null));
 
         private WrappedPermissionSet(Object handle)
         {
