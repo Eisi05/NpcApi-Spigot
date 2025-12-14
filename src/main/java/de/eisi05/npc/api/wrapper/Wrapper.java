@@ -409,7 +409,7 @@ public abstract class Wrapper implements HandleHolder
                                     return true;
                                 })
                                 .findFirst()
-                                .orElseThrow(() -> new RuntimeException(new NoSuchMethodException(
+                                .orElseThrow(() -> new RuntimeException(new NoSuchMethodException(getHandle().getClass() + " -> " +
                                         methodPath + "(" + Arrays.stream(newArgs).map(o -> o.getClass().toString()).toList() + ")")));
 
                         method.setAccessible(true);

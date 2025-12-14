@@ -21,7 +21,6 @@ public class WrappedEntityTrackerEntry extends Wrapper
 
     private static @NotNull Object createHandle(@NotNull WrappedEntity<?> entity)
     {
-        System.out.println("SERVER: " + entity.getServer());
         if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_5))
             return createInstance(WrappedEntityTrackerEntry.class, entity.getServer(), entity, 0, false, (Consumer<Object>) o ->
             {
