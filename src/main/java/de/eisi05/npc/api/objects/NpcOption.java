@@ -327,10 +327,6 @@ public class NpcOption<T, S extends Serializable>
                         return packetWrapper == null ? SetEntityDataPacket.create(npc.getServerPlayer().getId(), data) :
                                 new BundlePacket(SetEntityDataPacket.create(npc.getServerPlayer().getId(), data), packetWrapper);
 
-                    Object serverLevel = npc.getServerPlayer().getServer();
-                    var entity = Reflections.getField(serverLevel, "M").thanInvoke("e").thanInvoke("a", toDelete).get();
-                    System.out.println("ENTITY: " + entity);
-
                     npc.toDeleteEntities.remove("sit");
                     return packetWrapper == null ?
                             new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.getServerPlayer().getId(), data)) :
