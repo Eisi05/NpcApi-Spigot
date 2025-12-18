@@ -122,9 +122,6 @@ public class NpcOption<T, S extends Serializable>
 
                 npc.getServerPlayer().getGameProfile().getProperties().removeAll("textures");
 
-                if(skin == null)
-                    return null;
-
                 npc.getServerPlayer().getGameProfile().getProperties()
                         .put("textures", new Property("textures", skin.value(), skin.signature()));
                 return null;
@@ -138,24 +135,24 @@ public class NpcOption<T, S extends Serializable>
             aBoolean -> aBoolean, aBoolean -> aBoolean,
             (show, npc, player) ->
             {
-                if(show)
-                    return null;
-
-                new BukkitRunnable()
+                if(!show)
                 {
-                    @Override
-                    public void run()
+                    new BukkitRunnable()
                     {
-                        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_3) && player != null)
-                            WrappedServerPlayer.fromPlayer(player).sendPacket(
-                                    new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.REMOVE_PLAYER, npc.getServerPlayer()));
-                        else if(player != null)
-                            WrappedServerPlayer.fromPlayer(player)
-                                    .sendPacket(new PlayerInfoRemovePacket(List.of(npc.getUUID())));
-                    }
-                }.runTaskLater(NpcApi.plugin, 50);
-                return null;
-            });
+                        @Override
+                        public void run()
+                        {
+                            if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_3) && player != null)
+                                WrappedServerPlayer.fromPlayer(player).sendPacket(
+                                        new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.REMOVE_PLAYER, npc.getServerPlayer()));
+                            else if(player != null)
+                                WrappedServerPlayer.fromPlayer(player)
+                                        .sendPacket(new PlayerInfoRemovePacket(List.of(npc.getUUID())));
+                        }
+                    }.runTaskLater(NpcApi.plugin, 50);
+                }
+                return new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.ADD_PLAYER, npc.getServerPlayer());
+            }).loadBefore(true);
 
     /**
      * NPC option to set the simulated latency (ping) of the NPC in the tab list.
@@ -165,7 +162,6 @@ public class NpcOption<T, S extends Serializable>
             (latency, npc, player) ->
             {
                 npc.getServerPlayer().setLatency(latency);
-
                 return new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LATENCY, npc.getServerPlayer());
             });
 
@@ -307,7 +303,7 @@ public class NpcOption<T, S extends Serializable>
                 {
                     WrappedTextDisplay textDisplay = WrappedTextDisplay.create(npc.getLocation().getWorld());
                     textDisplay.moveTo(npc.getLocation());
-                    npc.toDeleteEntities.add(textDisplay.getId());
+                    npc.toDeleteEntities.put("sit", textDisplay.getId());
 
                     PacketWrapper addEntityPacket = textDisplay.getAddEntityPacket();
 
@@ -323,9 +319,23 @@ public class NpcOption<T, S extends Serializable>
 
                     return new BundlePacket(addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
                 }
+                else
+                {
+                    Integer toDelete = npc.toDeleteEntities.get("sit");
 
-                return packetWrapper == null ? SetEntityDataPacket.create(npc.getServerPlayer().getId(), data) :
-                        new BundlePacket(SetEntityDataPacket.create(npc.getServerPlayer().getId(), data), packetWrapper);
+                    if(toDelete == null)
+                        return packetWrapper == null ? SetEntityDataPacket.create(npc.getServerPlayer().getId(), data) :
+                                new BundlePacket(SetEntityDataPacket.create(npc.getServerPlayer().getId(), data), packetWrapper);
+
+                    Object serverLevel = npc.getServerPlayer().getServer();
+                    var entity = Reflections.getField(serverLevel, "M").thanInvoke("e").thanInvoke("a", toDelete).get();
+                    System.out.println("ENTITY: " + entity);
+
+                    npc.toDeleteEntities.remove("sit");
+                    return packetWrapper == null ?
+                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.getServerPlayer().getId(), data)) :
+                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.getServerPlayer().getId(), data), packetWrapper);
+                }
             });
     /**
      * NPC option to set the scale (size) of the NPC.
@@ -390,7 +400,7 @@ public class NpcOption<T, S extends Serializable>
                 data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(4), true);
                 data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(15), (byte) 0x10);
 
-                npc.toDeleteEntities.add(armorStand.getId());
+                npc.toDeleteEntities.put("name", armorStand.getId());
 
                 return new BundlePacket(addPacket, SetEntityDataPacket.create(armorStand.getId(), data));
             });
@@ -431,7 +441,7 @@ public class NpcOption<T, S extends Serializable>
      * @param packet       The packet generation function. Must not be null.
      */
     private NpcOption(@NotNull String path, @Nullable T defaultValue, @NotNull Function<T, S> serializer, @NotNull Function<S, T> deserializer,
-            @NotNull TriFunction<T, NPC, Player, PacketWrapper> packet)
+                      @NotNull TriFunction<T, NPC, Player, PacketWrapper> packet)
     {
         this.path = path;
         this.defaultValue = defaultValue;

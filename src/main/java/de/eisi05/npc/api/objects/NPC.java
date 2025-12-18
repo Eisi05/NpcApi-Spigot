@@ -44,7 +44,7 @@ public class NPC extends NpcHolder
 {
     private transient final Map<UUID, String> nameCache = new HashMap<>();
 
-    final List<Integer> toDeleteEntities = new ArrayList<>();
+    final Map<String, Integer> toDeleteEntities = new HashMap<>();
     private final List<UUID> viewers = new ArrayList<>();
     private final Map<NpcOption<?, ?>, Object> options;
     WrappedServerPlayer serverPlayer;
@@ -548,7 +548,7 @@ public class NPC extends NpcHolder
         Arrays.stream(NpcOption.values()).filter(NpcOption::loadBefore)
                 .forEach(npcOption -> npcOption.getPacket(getOption(npcOption), this, player).ifPresent(packets::add));
 
-        packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.ADD_PLAYER, serverPlayer));
+        //packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.ADD_PLAYER, serverPlayer));
         packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, serverPlayer));
 
         if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_3))
@@ -628,7 +628,7 @@ public class NPC extends NpcHolder
             wrappedServerPlayer.sendPacket(SetPlayerTeamPacket.createRemovePacket(wrappedPlayerTeam));
         }
 
-        toDeleteEntities.forEach(integer -> wrappedServerPlayer.sendPacket(new RemoveEntityPacket(integer)));
+        toDeleteEntities.values().forEach(integer -> wrappedServerPlayer.sendPacket(new RemoveEntityPacket(integer)));
 
         if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_3))
             wrappedServerPlayer.sendPacket(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.REMOVE_PLAYER, serverPlayer));
