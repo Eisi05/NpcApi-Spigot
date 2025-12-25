@@ -259,6 +259,12 @@ public class NPC extends NpcHolder
 
         if(NpcApi.config.autoUpdate())
         {
+            if(option.equals(NpcOption.SKIN) || option.equals(NpcOption.USE_PLAYER_SKIN))
+            {
+                updateSkin(player -> true);
+                return;
+            }
+
             viewers.forEach(uuid ->
             {
                 Player player = Bukkit.getPlayer(uuid);

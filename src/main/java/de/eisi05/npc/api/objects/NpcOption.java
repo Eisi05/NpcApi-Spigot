@@ -288,7 +288,7 @@ public class NpcOption<T, S extends Serializable>
                 else if(pose == Pose.SWIMMING)
                     data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0x50 : 0x10));
                 else
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0);
+                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0x40 : 0));
 
                 if(pose == Pose.SPIN_ATTACK)
                 {
@@ -308,7 +308,7 @@ public class NpcOption<T, S extends Serializable>
                     PacketWrapper addEntityPacket = textDisplay.getAddEntityPacket();
 
                     WrappedEntityData wrappedEntityData = textDisplay.getEntityData();
-                    wrappedEntityData.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0x20);
+                    wrappedEntityData.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0x60 : 0x20));
                     SetEntityDataPacket entityDataPacket = SetEntityDataPacket.create(textDisplay.getId(), wrappedEntityData);
 
                     textDisplay.setPassengers(npc.getServerPlayer());
