@@ -42,22 +42,20 @@ import java.util.stream.Collectors;
  */
 public class NPC extends NpcHolder
 {
-    private transient final Map<UUID, String> nameCache = new HashMap<>();
-
     final Map<String, Integer> toDeleteEntities = new HashMap<>();
+    private transient final Map<UUID, String> nameCache = new HashMap<>();
     private final List<UUID> viewers = new ArrayList<>();
     private final Map<NpcOption<?, ?>, Object> options;
-    WrappedServerPlayer serverPlayer;
     private final Path npcPath;
+    private final Map<UUID, PathTask> pathTasks = new HashMap<>();
+    WrappedServerPlayer serverPlayer;
     NpcName name;
     private Location location;
     private NpcClickAction clickEvent;
     private Instant createdAt = Instant.now();
-    private PathTask pathTask;
 
     /**
-     * Creates an NPC at the specified location with a random UUID and default name.
-     * The default name is an empty component.
+     * Creates an NPC at the specified location with a random UUID and default name. The default name is an empty component.
      *
      * @param location the location to spawn the NPC. Must not be null.
      */
@@ -78,8 +76,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Creates an NPC at the specified location with the given UUID and default name.
-     * The default name is an empty component.
+     * Creates an NPC at the specified location with the given UUID and default name. The default name is an empty component.
      *
      * @param location the location to spawn the NPC. Must not be null.
      * @param uuid     the UUID of the NPC. Must not be null.
@@ -90,8 +87,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Creates an NPC at the specified location with the given UUID and name.
-     * This is the primary constructor that initializes the NPC's core properties.
+     * Creates an NPC at the specified location with the given UUID and name. This is the primary constructor that initializes the NPC's core properties.
      *
      * @param location the location to spawn the NPC. Must not be null.
      * @param uuid     the UUID of the NPC. Must not be null.
@@ -121,7 +117,7 @@ public class NPC extends NpcHolder
      * @param clickEvent The click event for the NPC. Can be null.
      */
     private NPC(@NotNull Location location, @NotNull NpcName name, @NotNull Map<NpcOption<?, ?>, Object> options,
-            @Nullable NpcClickAction clickEvent)
+                @Nullable NpcClickAction clickEvent)
     {
         this(location, UUID.randomUUID(), name);
         this.options.putAll(options);
@@ -129,8 +125,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Creates a copy of this NPC at a new location.
-     * The copied NPC will have a new UUID but will retain the original NPC's name, options, and click event.
+     * Creates a copy of this NPC at a new location. The copied NPC will have a new UUID but will retain the original NPC's name, options, and click event.
      *
      * @param newLocation the location for the copied NPC. Must not be null.
      * @return the new NPC instance. Will not be null.
@@ -151,8 +146,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Saves the NPC's data to a file.
-     * This method serializes the NPC's current state and writes it to a .npc file.
+     * Saves the NPC's data to a file. This method serializes the NPC's current state and writes it to a .npc file.
      *
      * @throws IOException if an I/O error occurs during saving.
      */
@@ -197,8 +191,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Checks if the NPC is currently enabled.
-     * An enabled NPC is visible and interactable (unless overridden by player permissions).
+     * Checks if the NPC is currently enabled. An enabled NPC is visible and interactable (unless overridden by player permissions).
      *
      * @return {@code true} if the NPC is enabled, {@code false} otherwise.
      */
@@ -208,8 +201,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Sets the enabled state of the NPC.
-     * Changing this state will trigger a reload of the NPC for all viewers.
+     * Sets the enabled state of the NPC. Changing this state will trigger a reload of the NPC for all viewers.
      *
      * @param enabled {@code true} to enable the NPC, {@code false} to disable it.
      */
@@ -277,8 +269,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Gets the value of a specific option for this NPC.
-     * If the option has not been explicitly set, its default value will be returned.
+     * Gets the value of a specific option for this NPC. If the option has not been explicitly set, its default value will be returned.
      *
      * @param option the {@link NpcOption} to get. Must not be null.
      * @param <T>    the type of the option's value.
@@ -302,8 +293,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Reloads the NPC for all current viewers.
-     * This typically involves hiding and then re-showing the NPC to apply any changes.
+     * Reloads the NPC for all current viewers. This typically involves hiding and then re-showing the NPC to apply any changes.
      */
     public void reload()
     {
@@ -324,8 +314,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Sets the location of the NPC.
-     * This will also update the underlying server player's position.
+     * Sets the location of the NPC. This will also update the underlying server player's position.
      *
      * @param location the new {@link Location} for the NPC. Must not be null.
      */
@@ -380,8 +369,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Sets the display name of this NPC.
-     * This also updates the name for the underlying server player and its list name.
+     * Sets the display name of this NPC. This also updates the name for the underlying server player and its list name.
      *
      * @param name the new {@link WrappedComponent} name for the NPC. Must not be null.
      */
@@ -389,14 +377,13 @@ public class NPC extends NpcHolder
     {
         this.name = name;
         serverPlayer.setListName(name.isStatic() ? WrappedComponent.parseFromLegacy(name.getName().toLegacy(false).replace("\n", "\\n")) :
-                WrappedComponent.create(null));
+                                 WrappedComponent.create(null));
 
         viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> updateName(Bukkit.getPlayer(uuid)));
     }
 
     /**
-     * Adds custom data to this NPC.
-     * This data can be retrieved later using the {@link #getCustomData(Serializable)} method.
+     * Adds custom data to this NPC. This data can be retrieved later using the {@link #getCustomData(Serializable)} method.
      *
      * @param key   the key for the custom data. Must not be null.
      * @param value the value for the custom data. Must not be null.
@@ -409,8 +396,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Removes custom data from this NPC.
-     * This data can be retrieved later using the {@link #getCustomData(Serializable)} method.
+     * Removes custom data from this NPC. This data can be retrieved later using the {@link #getCustomData(Serializable)} method.
      *
      * @param key the key for the custom data. Must not be null.
      * @return the value of the custom data, or null if the key does not exist.
@@ -440,8 +426,7 @@ public class NPC extends NpcHolder
     /**
      * Updates the display name of the given player on the server.
      * <p>
-     * Sends a packet to the player to modify their name tag, taking into account
-     * the server version and whether custom naming is enabled.
+     * Sends a packet to the player to modify their name tag, taking into account the server version and whether custom naming is enabled.
      *
      * @param player the player whose name will be updated; must not be null
      */
@@ -450,15 +435,14 @@ public class NPC extends NpcHolder
         WrappedServerPlayer.fromPlayer(player)
                 .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
                         Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
-                                WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                                        .append(WrappedComponent.create("\n").append(name.getName(player))))));
+                        WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
+                                .append(WrappedComponent.create("\n").append(name.getName(player))))));
     }
 
     /**
      * Updates the display name for all players in the viewer list.
      * <p>
-     * Sends a packet to the player to modify their name tag, taking into account
-     * the server version and whether custom naming is enabled.
+     * Sends a packet to the player to modify their name tag, taking into account the server version and whether custom naming is enabled.
      */
     public void updateNameForAll()
     {
@@ -480,12 +464,10 @@ public class NPC extends NpcHolder
     /**
      * Updates the NPC's skin for a subset of players based on a condition.
      * <p>
-     * Iterates over all viewers of the NPC and, for each player that satisfies
-     * the given {@link Predicate}, hides and then shows the NPC to refresh its skin.
+     * Iterates over all viewers of the NPC and, for each player that satisfies the given {@link Predicate}, hides and then shows the NPC to refresh its skin.
      * </p>
      *
-     * @param predicate a {@link java.util.function.Predicate} that determines which players
-     *                  should have the skin updated.
+     * @param predicate a {@link java.util.function.Predicate} that determines which players should have the skin updated.
      */
     public void updateSkin(@NotNull Predicate<Player> predicate)
     {
@@ -514,8 +496,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Makes the NPC visible to all currently online players.
-     * This respects the NPC's enabled state and player permissions.
+     * Makes the NPC visible to all currently online players. This respects the NPC's enabled state and player permissions.
      */
     public void showNpcToAllPlayers()
     {
@@ -523,9 +504,8 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Makes the NPC visible to a specific player.
-     * If the NPC is disabled and the player is not an operator, the NPC will not be shown.
-     * This method handles sending all necessary packets to display the NPC correctly.
+     * Makes the NPC visible to a specific player. If the NPC is disabled and the player is not an operator, the NPC will not be shown. This method handles
+     * sending all necessary packets to display the NPC correctly.
      *
      * @param player the player to show the NPC to. Must not be null.
      */
@@ -590,8 +570,8 @@ public class NPC extends NpcHolder
 
             packets.add(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
                     Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
-                            WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                                    .append(WrappedComponent.create("\n").append(name.getName(player))))));
+                    WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
+                            .append(WrappedComponent.create("\n").append(name.getName(player))))));
 
             if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
                 packets.add(new SetPassengerPacket(serverPlayer));
@@ -615,8 +595,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Hides the NPC from a specific player.
-     * This method sends packets to remove the NPC and its associated entities from the player's view.
+     * Hides the NPC from a specific player. This method sends packets to remove the NPC and its associated entities from the player's view.
      *
      * @param player the player to hide the NPC from. Must not be null.
      */
@@ -632,7 +611,8 @@ public class NPC extends NpcHolder
         if(WrappedPlayerTeam.exists(player, getServerPlayer().getName()))
         {
             WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, getServerPlayer().getName());
-            wrappedServerPlayer.sendPacket(SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, getServerPlayer().getName(), SetPlayerTeamPacket.Action.REMOVE));
+            wrappedServerPlayer.sendPacket(
+                    SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, getServerPlayer().getName(), SetPlayerTeamPacket.Action.REMOVE));
             wrappedServerPlayer.sendPacket(SetPlayerTeamPacket.createRemovePacket(wrappedPlayerTeam));
             WrappedPlayerTeam.clear(player.getUniqueId(), getServerPlayer().getName());
         }
@@ -648,8 +628,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Deletes the NPC.
-     * This hides the NPC from all players, removes it from the NPC manager, and deletes its saved data file.
+     * Deletes the NPC. This hides the NPC from all players, removes it from the NPC manager, and deletes its saved data file.
      */
     public void delete() throws IOException
     {
@@ -667,8 +646,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Makes the NPC look at a specific player.
-     * This calculates the required yaw and pitch and sends update packets to the viewing player.
+     * Makes the NPC look at a specific player. This calculates the required yaw and pitch and sends update packets to the viewing player.
      *
      * @param viewer the player the NPC should look at. Must not be null.
      */
@@ -682,7 +660,7 @@ public class NPC extends NpcHolder
 
         double dx = playerLoc.getX() - npcLoc.getX();
         double dy = ((playerLoc.getY() + viewer.getEyeHeight())) -
-                ((npcLoc.getY() + serverPlayer.getBukkitPlayer().getEyeHeight() * getOption(NpcOption.SCALE)));
+                    ((npcLoc.getY() + serverPlayer.getBukkitPlayer().getEyeHeight() * getOption(NpcOption.SCALE)));
         double dz = playerLoc.getZ() - npcLoc.getZ();
 
         double distanceXZ = Math.sqrt(dx * dx + dz * dz);
@@ -699,8 +677,8 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Moves the NPC along a precomputed {@link de.eisi05.npc.api.pathfinding.Path}, simulating walking, jumping, and gravity.
-     * The NPC's position and rotation are updated each tick and sent to the specified player(s).
+     * Moves the NPC along a precomputed {@link de.eisi05.npc.api.pathfinding.Path}, simulating walking, jumping, and gravity. The NPC's position and rotation
+     * are updated each tick and sent to the specified player(s).
      *
      * @param path               The {@link de.eisi05.npc.api.pathfinding.Path} containing the ordered waypoints the NPC should follow.
      * @param walkSpeed          The walking speed of the NPC (clamped between 0.1 and 1).
@@ -713,21 +691,27 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Moves the NPC along a precomputed {@link de.eisi05.npc.api.pathfinding.Path}, simulating walking, jumping, and gravity.
-     * The NPC's position and rotation are updated each tick and sent to the specified player(s).
+     * Moves the NPC along a precomputed {@link de.eisi05.npc.api.pathfinding.Path}, simulating walking, jumping, and gravity. The NPC's position and rotation
+     * are updated each tick and sent to the specified player(s).
      *
      * @param path               The {@link de.eisi05.npc.api.pathfinding.Path} containing the ordered waypoints the NPC should follow.
      * @param walkSpeed          The walking speed of the NPC (clamped between 0.1 and 1).
      * @param changeRealLocation If true, the NPC's actual server-side location will be updated; otherwise only packets are sent.
      * @param onEnd              A {@link Runnable} to be executed when the NPC reaches the end of the path.
-     * @param viewers             The players who should see the NPC move. If null, updates all viewers in the `viewers` set.
+     * @param viewers            The players who should see the NPC move. If null, updates all viewers in the `viewers` set.
      * @return The {@link BukkitTask} representing the movement task.
      */
     public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed,
-            boolean changeRealLocation, @Nullable Consumer<WalkingResult> onEnd, @Nullable Player... viewers)
+                                      boolean changeRealLocation, @Nullable Consumer<WalkingResult> onEnd, @Nullable Player... viewers)
     {
-        if(isWalking())
-            cancelWalking();
+        if(viewers != null)
+        {
+            for(Player player : viewers)
+            {
+                if(isWalking(player))
+                    cancelWalking(player);
+            }
+        }
 
         final double speed = Math.max(Math.min(walkSpeed, 1), 0.1);
 
@@ -736,11 +720,17 @@ public class NPC extends NpcHolder
         if(event.isCancelled())
             return null;
 
-        pathTask = new PathTask.Builder(this, path)
+        PathTask pathTask = new PathTask.Builder(this, path)
                 .speed(event.getWalkSpeed())
                 .viewers(viewers)
                 .updateRealLocation(event.isChangeRealLocation())
                 .callback(onEnd).build();
+
+        if(viewers != null)
+        {
+            for(Player player : viewers)
+                pathTasks.put(player.getUniqueId(), pathTask);
+        }
 
         return pathTask.runTaskTimer(NpcApi.plugin, 1L, 1L);
     }
@@ -750,40 +740,39 @@ public class NPC extends NpcHolder
      * <p>
      * The NPC is considered walking if a path task exists and has not yet finished.
      *
+     * @param viewer Player who is viewing the NPC
      * @return true if the NPC is still walking, false otherwise
      */
-    public boolean isWalking()
+    public boolean isWalking(@NotNull Player viewer)
     {
-        return pathTask != null && !pathTask.isFinished();
+        return pathTasks.containsKey(viewer.getUniqueId()) && !pathTasks.get(viewer.getUniqueId()).isFinished();
     }
 
     /**
      * Cancels the NPC's current walking task if one is active.
      * <p>
-     * If the NPC is walking, the path task is cancelled and cleared. If no
-     * walking task is active, this method has no effect.
+     * If the NPC is walking, the path task is canceled and cleared. If no walking task is active, this method has no effect.
+     *
+     * @param viewer Player who is viewing the NPC
      */
-    public void cancelWalking()
+    public void cancelWalking(@NotNull Player viewer)
     {
-        if(pathTask != null)
-        {
-            pathTask.cancel();
-            pathTask = null;
-        }
+        if(!pathTasks.containsKey(viewer.getUniqueId()))
+            return;
+
+        pathTasks.remove(viewer.getUniqueId()).cancel();
     }
 
     /**
      * Sends movement-related packets for the NPC's body to specific players.
      * <p>
-     * If one or more {@link Player} instances are provided, the packet is sent only
-     * to those players. If {@code players} is {@code null}, the packet is sent to all
-     * currently online players who are registered as viewers of the NPC.
+     * If one or more {@link Player} instances are provided, the packet is sent only to those players. If {@code players} is {@code null}, the packet is sent to
+     * all currently online players who are registered as viewers of the NPC.
      * <p>
      * If {@code moveEntityPacket} is {@code null}, no packets are sent.
      *
      * @param moveEntityPacket the movement packet to send, or {@code null} to send nothing
-     * @param players          the target players to receive the packet, or {@code null}
-     *                         to send the packet to all online registered viewers
+     * @param players          the target players to receive the packet, or {@code null} to send the packet to all online registered viewers
      */
     public void sendNpcBodyPackets(@Nullable MoveEntityPacket.Rot moveEntityPacket, @Nullable Player... players)
     {
@@ -819,7 +808,7 @@ public class NPC extends NpcHolder
      * @param players              Players to send packets to. If null, packets are sent to all viewers.
      */
     public void sendNpcMovePackets(@Nullable TeleportEntityPacket teleportEntityPacket,
-            @Nullable RotateHeadPacket rotateHeadPacket, @Nullable Player... players)
+                                   @Nullable RotateHeadPacket rotateHeadPacket, @Nullable Player... players)
     {
         if(players != null)
         {
@@ -850,8 +839,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Updates the real location of the NPC and refreshes visibility for viewers.
-     * * @param location The new target location.
+     * Updates the real location of the NPC and refreshes visibility for viewers. * @param location The new target location.
      *
      * @param excludedPlayers Players who should NOT see the respawn/refresh.
      */
@@ -863,7 +851,7 @@ public class NPC extends NpcHolder
         setLocation(location);
 
         Set<UUID> excluded = excludedPlayers == null ? Collections.emptySet() :
-                Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
+                             Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
 
         TeleportEntityPacket teleport = new TeleportEntityPacket(serverPlayer,
                 new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), location.getYaw(), location.getPitch()),
@@ -883,12 +871,10 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Represents a fully serialized NPC, including its location, orientation,
-     * unique ID, name, additional options, click behavior, and creation time.
+     * Represents a fully serialized NPC, including its location, orientation, unique ID, name, additional options, click behavior, and creation time.
      * <p>
-     * The {@code name} field now uses {@link NpcName}, which supports
-     * both static and dynamic names. For backward compatibility, a secondary constructor
-     * allows creating a {@code SerializedNPC} from a legacy {@link WrappedComponent.SerializedComponent}.
+     * The {@code name} field now uses {@link NpcName}, which supports both static and dynamic names. For backward compatibility, a secondary constructor allows
+     * creating a {@code SerializedNPC} from a legacy {@link WrappedComponent.SerializedComponent}.
      *
      * @param world      the UUID of the world the NPC is in
      * @param x          the X-coordinate of the NPC
@@ -943,8 +929,7 @@ public class NPC extends NpcHolder
          *
          * @param <T> The type of the NpcOption value.
          * @param <S> The serializable type of the NpcOption value.
-         * @return an {@code Either} containing the deserialized {@link NPC} on the left,
-         *         or the world UUID on the right if the world is not currently loaded
+         * @return an {@code Either} containing the deserialized {@link NPC} on the left, or the world UUID on the right if the world is not currently loaded
          */
         @SuppressWarnings("unchecked")
         public <T, S extends Serializable> @NotNull Either<NPC, UUID> deserializedNPC()
