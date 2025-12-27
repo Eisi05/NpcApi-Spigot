@@ -55,6 +55,11 @@ public class WrappedPlayerTeam extends Wrapper
             entry.getValue().keySet().removeIf(s -> s.equals(name));
     }
 
+    public static void clear(UUID uuid, String name)
+    {
+        teams.get(uuid).remove(name);
+    }
+
     public static boolean exists(@NotNull Player player, @NotNull String name)
     {
         return teams.getOrDefault(player.getUniqueId(), new HashMap<>()).containsKey(name);

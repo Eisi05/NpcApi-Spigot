@@ -622,6 +622,9 @@ public class NPC extends NpcHolder
      */
     public void hideNpcFromPlayer(@NotNull Player player)
     {
+        if(!viewers.contains(player.getUniqueId()))
+            return;
+
         WrappedServerPlayer wrappedServerPlayer = WrappedServerPlayer.fromPlayer(player);
         wrappedServerPlayer.sendPacket(new RemoveEntityPacket(serverPlayer.getId()));
         wrappedServerPlayer.sendPacket(new RemoveEntityPacket(serverPlayer.getNameTag().getId()));
@@ -629,9 +632,9 @@ public class NPC extends NpcHolder
         if(WrappedPlayerTeam.exists(player, getServerPlayer().getName()))
         {
             WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, getServerPlayer().getName());
-            wrappedServerPlayer.sendPacket(
-                    SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, getServerPlayer().getName(), SetPlayerTeamPacket.Action.REMOVE));
+            wrappedServerPlayer.sendPacket(SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, getServerPlayer().getName(), SetPlayerTeamPacket.Action.REMOVE));
             wrappedServerPlayer.sendPacket(SetPlayerTeamPacket.createRemovePacket(wrappedPlayerTeam));
+            WrappedPlayerTeam.clear(player.getUniqueId(), getServerPlayer().getName());
         }
 
         toDeleteEntities.values().forEach(integer -> wrappedServerPlayer.sendPacket(new RemoveEntityPacket(integer)));
