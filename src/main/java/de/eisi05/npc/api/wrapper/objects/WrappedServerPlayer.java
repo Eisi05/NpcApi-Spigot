@@ -251,17 +251,4 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         setPassengers(nameDisplay);
         this.nameDisplay = nameDisplay;
     }
-
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "net.minecraft.world.entity.Entity$RemovalReason")
-    private enum RemovalReason implements EnumWrapper
-    {
-        @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "b")
-        DISCARDED;
-
-        @Override
-        public @NotNull Object getHandle()
-        {
-            return cast(this);
-        }
-    }
 }

@@ -20,11 +20,9 @@ import java.util.*;
 import java.util.function.BiConsumer;
 
 /**
- * The {@link PacketReader} class is responsible for injecting a custom Netty
- * channel handler into a player's network pipeline to intercept incoming packets.
- * It specifically listens for packets related to entity interaction (e.g., attacking or interacting with NPCs)
- * and dispatches custom events based on these interactions. It also allows for
- * custom packet readers to be added.
+ * The {@link PacketReader} class is responsible for injecting a custom Netty channel handler into a player's network pipeline to intercept incoming packets. It
+ * specifically listens for packets related to entity interaction (e.g., attacking or interacting with NPCs) and dispatches custom events based on these
+ * interactions. It also allows for custom packet readers to be added.
  */
 public class PacketReader
 {
@@ -32,11 +30,9 @@ public class PacketReader
     private static final List<BiConsumer<Player, Object>> readers = new ArrayList<>();
 
     /**
-     * Adds a custom packet reader to the list of readers.
-     * This reader will be called for every incoming packet processed by the injected handler.
+     * Adds a custom packet reader to the list of readers. This reader will be called for every incoming packet processed by the injected handler.
      *
-     * @param reader The {@link BiConsumer} to add. It accepts the {@link Player}
-     *               and the raw packet {@link Object}. Must not be {@code null}.
+     * @param reader The {@link BiConsumer} to add. It accepts the {@link Player} and the raw packet {@link Object}. Must not be {@code null}.
      */
     public static void addReader(@NotNull BiConsumer<Player, Object> reader)
     {
@@ -44,9 +40,8 @@ public class PacketReader
     }
 
     /**
-     * Injects a custom {@link ChannelDuplexHandler} into the specified player's Netty pipeline.
-     * This handler intercepts incoming packets to check for NPC interactions.
-     * The handler is named after the plugin's name to avoid conflicts and ensure proper removal.
+     * Injects a custom {@link ChannelDuplexHandler} into the specified player's Netty pipeline. This handler intercepts incoming packets to check for NPC
+     * interactions. The handler is named after the plugin's name to avoid conflicts and ensure proper removal.
      *
      * @param player The {@link Player} whose pipeline is to be injected. Must not be {@code null}.
      */
@@ -80,9 +75,8 @@ public class PacketReader
     }
 
     /**
-     * Checks if the given packet is a {@link UseEntityPacketWrapper} and, if so,
-     * processes the interaction to dispatch a {@link NpcInteractEvent}.
-     * This method is responsible for determining if a player has clicked or attacked an NPC.
+     * Checks if the given packet is a {@link UseEntityPacketWrapper} and, if so, processes the interaction to dispatch a {@link NpcInteractEvent}. This method
+     * is responsible for determining if a player has clicked or attacked an NPC.
      *
      * @param packet The raw packet object received from the Netty pipeline. Must not be {@code null}.
      * @param player The {@link Player} who sent the packet. Must not be {@code null}.
@@ -99,7 +93,12 @@ public class PacketReader
 
         int id = useEntityPacketWrapper.getId();
 
-        NPC npc = NpcManager.getList().stream().filter(npc1 -> npc1.getServerPlayer().getId() == id).findFirst().orElse(null);
+        NPC npc =
+                NpcManager.getList()
+                        .stream()
+                        .filter(npc1 -> npc1.getServerPlayer().getId() == id || (npc1.entity != null && npc1.entity.getId() == id))
+                        .findFirst()
+                        .orElse(null);
 
         if(npc == null)
             return;
@@ -117,8 +116,7 @@ public class PacketReader
     }
 
     /**
-     * Uninjects the custom {@link ChannelDuplexHandler} from the specified player's Netty pipeline.
-     * This stops the interception of packets for that player.
+     * Uninjects the custom {@link ChannelDuplexHandler} from the specified player's Netty pipeline. This stops the interception of packets for that player.
      *
      * @param player The {@link Player} whose pipeline is to be uninject. Must not be {@code null}.
      */
@@ -134,8 +132,7 @@ public class PacketReader
     }
 
     /**
-     * Uninjects the custom packet handler from all currently online players.
-     * This is typically called during plugin shutdown or reload.
+     * Uninjects the custom packet handler from all currently online players. This is typically called during plugin shutdown or reload.
      */
     public static void uninjectAll()
     {
@@ -144,8 +141,7 @@ public class PacketReader
     }
 
     /**
-     * Injects the custom packet handler into all currently online players.
-     * This is typically called during plugin startup or after a reload.
+     * Injects the custom packet handler into all currently online players. This is typically called during plugin startup or after a reload.
      */
     public static void injectAll()
     {

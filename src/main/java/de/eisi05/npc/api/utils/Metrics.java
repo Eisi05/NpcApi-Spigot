@@ -154,7 +154,7 @@ public class Metrics
 
     private void appendServiceData(JsonObjectBuilder builder)
     {
-        builder.appendField("pluginVersion", plugin.getDescription().getVersion());
+        builder.appendField("pluginVersion", "s" + plugin.getDescription().getVersion());
     }
 
     private int getPlayerAmount()

@@ -10,8 +10,9 @@ import de.eisi05.npc.api.scheduler.PathTask;
 import de.eisi05.npc.api.utils.ObjectSaver;
 import de.eisi05.npc.api.utils.Var;
 import de.eisi05.npc.api.utils.Versions;
+import de.eisi05.npc.api.wrapper.enums.Pose;
 import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
-import de.eisi05.npc.api.wrapper.objects.WrappedEntityData;
+import de.eisi05.npc.api.wrapper.objects.WrappedEntity;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import de.eisi05.npc.api.wrapper.packets.*;
@@ -19,6 +20,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
@@ -48,6 +50,7 @@ public class NPC extends NpcHolder
     private final Map<NpcOption<?, ?>, Object> options;
     private final Path npcPath;
     private final Map<UUID, PathTask> pathTasks = new HashMap<>();
+    public WrappedEntity<?> entity;
     WrappedServerPlayer serverPlayer;
     NpcName name;
     private Location location;
@@ -97,7 +100,7 @@ public class NPC extends NpcHolder
     {
         this.name = name;
         this.location = location;
-        this.serverPlayer = WrappedServerPlayer.create(location, uuid, name.isStatic() ? name.getName() : WrappedComponent.create(null), false);
+        this.entity = this.serverPlayer = WrappedServerPlayer.create(location, uuid, name.isStatic() ? name.getName() : WrappedComponent.create(null), false);
 
         npcPath = NpcApi.plugin.getDataFolder().toPath().resolve("NPC").resolve(uuid + ".npc");
 
@@ -377,7 +380,7 @@ public class NPC extends NpcHolder
     {
         this.name = name;
         serverPlayer.setListName(name.isStatic() ? WrappedComponent.parseFromLegacy(name.getName().toLegacy(false).replace("\n", "\\n")) :
-                                 WrappedComponent.create(null));
+                WrappedComponent.create(null));
 
         viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> updateName(Bukkit.getPlayer(uuid)));
     }
@@ -424,6 +427,17 @@ public class NPC extends NpcHolder
     }
 
     /**
+     * Retrieves the custom data associated with this NPC. The custom data is stored as a map of serializable key-value pairs.
+     *
+     * @return A {@code HashMap} containing the custom data, or {@code null} if no custom data is set
+     * @see NpcOption#CUSTOM_DATA
+     */
+    public @Nullable HashMap<Serializable, Serializable> getCustomData()
+    {
+        return getOption(NpcOption.CUSTOM_DATA);
+    }
+
+    /**
      * Updates the display name of the given player on the server.
      * <p>
      * Sends a packet to the player to modify their name tag, taking into account the server version and whether custom naming is enabled.
@@ -435,8 +449,8 @@ public class NPC extends NpcHolder
         WrappedServerPlayer.fromPlayer(player)
                 .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
                         Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
-                        WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                                .append(WrappedComponent.create("\n").append(name.getName(player))))));
+                                WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
+                                        .append(WrappedComponent.create("\n").append(name.getName(player))))));
     }
 
     /**
@@ -543,40 +557,6 @@ public class NPC extends NpcHolder
         if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_2))
             packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, serverPlayer));
 
-        packets.add(serverPlayer.getAddEntityPacket());
-
-        boolean modified = WrappedPlayerTeam.exists(player, getServerPlayer().getName());
-        WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, getServerPlayer().getName());
-        wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.NEVER);
-
-        packets.add(SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified));
-        packets.add(SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, getServerPlayer().getName(), SetPlayerTeamPacket.Action.ADD));
-
-        packets.add(new RotateHeadPacket(serverPlayer, (byte) ((location.getYaw() % 360) * 256 / 360)));
-        packets.add(new MoveEntityPacket.Rot(serverPlayer.getId(), (byte) location.getYaw(), (byte) location.getPitch(), serverPlayer.isOnGround()));
-
-        WrappedEntityData data = serverPlayer.getEntityData();
-        data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2), Optional.of(WrappedComponent.create("NPC").getHandle()));
-        data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), false);
-        packets.add(SetEntityDataPacket.create(serverPlayer.getId(), data));
-
-        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || !getOption(NpcOption.HIDE_NAMETAG))
-        {
-            if(Versions.isCurrentVersionSmallerThan(Versions.V1_21))
-                serverPlayer.getNameTag()
-                        .moveTo(getLocation().clone().add(0, (serverPlayer.getBoundingBox().getYSize() * getOption(NpcOption.SCALE)), 0));
-
-            packets.add(serverPlayer.getNameTag().getAddEntityPacket());
-
-            packets.add(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
-                    Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
-                    WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                            .append(WrappedComponent.create("\n").append(name.getName(player))))));
-
-            if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
-                packets.add(new SetPassengerPacket(serverPlayer));
-        }
-
         Arrays.stream(NpcOption.values()).filter(npcOption -> !npcOption.equals(NpcOption.ENABLED) && !npcOption.loadBefore())
                 .forEach(npcOption -> npcOption.getPacket(getOption(npcOption), this, player).ifPresent(packets::add));
 
@@ -639,7 +619,7 @@ public class NPC extends NpcHolder
         NpcManager.removeNPC(this);
 
         serverPlayer.remove();
-        serverPlayer = null;
+        entity = serverPlayer = null;
 
         npcPath.toFile().getParentFile().mkdirs();
         Files.deleteIfExists(npcPath);
@@ -652,15 +632,21 @@ public class NPC extends NpcHolder
      */
     public void lookAtPlayer(@NotNull Player viewer)
     {
-        Location npcLoc = serverPlayer.getBukkitPlayer().getLocation();
+        if(entity == null)
+            return;
+
+        Location npcLoc = entity.getBukkitPlayer().getLocation();
         Location playerLoc = viewer.getLocation();
 
         if(npcLoc.getWorld() != playerLoc.getWorld())
             return;
 
         double dx = playerLoc.getX() - npcLoc.getX();
-        double dy = ((playerLoc.getY() + viewer.getEyeHeight())) -
-                    ((npcLoc.getY() + serverPlayer.getBukkitPlayer().getEyeHeight() * getOption(NpcOption.SCALE)));
+
+        double eyeHeight = (entity.getBukkitPlayer() instanceof LivingEntity le ? le.getEyeHeight() :
+                entity.getBukkitPlayer().getHeight()) - (Pose.fromBukkit(getOption(NpcOption.POSE)) == Pose.SITTING ? 0.625 : 0);
+
+        double dy = (playerLoc.getY() + viewer.getEyeHeight()) - (npcLoc.getY() + (eyeHeight * getOption(NpcOption.SCALE)));
         double dz = playerLoc.getZ() - npcLoc.getZ();
 
         double distanceXZ = Math.sqrt(dx * dx + dz * dz);
@@ -672,8 +658,8 @@ public class NPC extends NpcHolder
 
         WrappedServerPlayer player = WrappedServerPlayer.fromPlayer(viewer);
 
-        player.sendPacket(new RotateHeadPacket(serverPlayer, yawByte));
-        player.sendPacket(new MoveEntityPacket.Rot(serverPlayer.getId(), yawByte, pitchByte, serverPlayer.isOnGround()));
+        player.sendPacket(new RotateHeadPacket(entity, yawByte));
+        player.sendPacket(new MoveEntityPacket.Rot(entity.getId(), yawByte, pitchByte, serverPlayer.isOnGround()));
     }
 
     /**
@@ -851,7 +837,7 @@ public class NPC extends NpcHolder
         setLocation(location);
 
         Set<UUID> excluded = excludedPlayers == null ? Collections.emptySet() :
-                             Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
+                Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
 
         TeleportEntityPacket teleport = new TeleportEntityPacket(serverPlayer,
                 new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), location.getYaw(), location.getPitch()),

@@ -17,9 +17,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 
 @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.entity.Entity")
-public abstract class WrappedEntity<T extends Entity> extends Wrapper
+public class WrappedEntity<T extends Entity> extends Wrapper
 {
-    protected WrappedEntity(Object handle)
+    WrappedEntity(Object handle)
     {
         super(handle);
     }
@@ -31,7 +31,8 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
             Constructor<V> constructor = clazz.getDeclaredConstructor(Object.class);
             constructor.setAccessible(true);
             return constructor.newInstance(Reflections.invokeMethod(entity, "getHandle").get());
-        } catch(NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e)
+        }
+        catch(NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e)
         {
             return null;
         }
@@ -157,6 +158,32 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         return getBukkitPlayer().getWorld();
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "net.minecraft.world.entity.Entity$RemovalReason")
+    enum RemovalReason implements EnumWrapper
+    {
+        @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "b")
+        DISCARDED;
+
+        @Override
+        public @NotNull Object getHandle()
+        {
+            return cast(this);
+        }
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.entity.EntitySpawnReason")
+    enum SpawnReason implements EnumWrapper
+    {
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "r")
+        LOAD;
+
+        @Override
+        public @NotNull Object getHandle()
+        {
+            return cast(this);
+        }
+    }
+
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.entity.EntityTypes")
     public static class EntityTypes extends Wrapper
     {
@@ -207,5 +234,17 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         }
 
         public abstract WrappedEntityData applyData(WrappedComponent component);
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.entity.EntityProcessor")
+    static class EntityProcessor extends Wrapper
+    {
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
+        public static final Object NOP = getStaticWrappedFieldValue("NOP").orElse(null);
+
+        private EntityProcessor()
+        {
+            super(null);
+        }
     }
 }

@@ -69,7 +69,7 @@ public class Tasks
                     if(range <= 0)
                         return;
 
-                    npc.getServerPlayer().getBukkitPlayer().getNearbyEntities(range, range, range)
+                    npc.entity.getBukkitPlayer().getNearbyEntities(range, range, range)
                             .stream().filter(entity -> entity instanceof Player)
                             .forEach(entity -> npc.lookAtPlayer((Player) entity));
                 });
