@@ -114,6 +114,12 @@ public class WrappedEntitySnapshot implements Serializable
             Reflections.invokeStaticMethod("net.minecraft.nbt.NBTCompressedStreamTools", "a", getHandle(), baos);
             return baos.toByteArray();
         }
+
+        @Override
+        public String toString()
+        {
+            return getHandle().toString();
+        }
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.nbt.NBTReadLimiter")
