@@ -2,25 +2,31 @@ package de.eisi05.npc.api.wrapper.packets;
 
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.wrapper.Mapping;
+import de.eisi05.npc.api.wrapper.objects.WrappedEntity;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
+import org.bukkit.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.Serializable;
 
 @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutAnimation")
 public class AnimatePacket extends PacketWrapper
 {
-    protected AnimatePacket(@NotNull WrappedServerPlayer player, int animationId)
+    protected AnimatePacket(@NotNull WrappedEntity<?> entity, int animationId)
     {
-        super(AnimatePacket.class, player, animationId);
+        super(AnimatePacket.class, entity, animationId);
     }
 
-    public static PacketWrapper create(@NotNull WrappedServerPlayer player, @NotNull Animation animation)
+    public static @Nullable PacketWrapper create(@NotNull WrappedEntity<?> entity, @NotNull Animation animation)
     {
         if(animation != Animation.HURT || Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
-            return new AnimatePacket(player, animation.ordinal());
+            return new AnimatePacket(entity, animation.ordinal());
 
-        return new HurtAnimationPacket(player);
+        if(!(entity.getBukkitPlayer() instanceof LivingEntity))
+            return null;
+
+        return new HurtAnimationPacket(entity);
     }
 
     public enum Animation implements Serializable
@@ -37,9 +43,9 @@ public class AnimatePacket extends PacketWrapper
             path = "net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket")
     public static class HurtAnimationPacket extends PacketWrapper
     {
-        private HurtAnimationPacket(@NotNull WrappedServerPlayer player)
+        private HurtAnimationPacket(@NotNull WrappedEntity<?> entity)
         {
-            super(HurtAnimationPacket.class, player);
+            super(HurtAnimationPacket.class, entity);
         }
     }
 }

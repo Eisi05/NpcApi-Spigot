@@ -260,6 +260,12 @@ public class NPC extends NpcHolder
                 return;
             }
 
+            if(option.equals(NpcOption.ENTITY))
+            {
+                reload();
+                return;
+            }
+
             viewers.forEach(uuid ->
             {
                 Player player = Bukkit.getPlayer(uuid);
@@ -292,7 +298,12 @@ public class NPC extends NpcHolder
      */
     public void playAnimation(@NotNull Player player, @NotNull AnimatePacket.Animation animation)
     {
-        WrappedServerPlayer.fromPlayer(player).sendPacket(AnimatePacket.create(getServerPlayer(), animation));
+        PacketWrapper packetWrapper = AnimatePacket.create(entity, animation);
+
+        if(packetWrapper == null)
+            return;
+
+        WrappedServerPlayer.fromPlayer(player).sendPacket(packetWrapper);
     }
 
     /**
@@ -325,8 +336,13 @@ public class NPC extends NpcHolder
     {
         this.location = location;
 
-        if(serverPlayer != null)
-            this.serverPlayer.moveTo(location);
+        if(serverPlayer == null)
+            return;
+
+        this.serverPlayer.moveTo(location);
+
+        if(!entity.equals(serverPlayer))
+            this.entity.moveTo(location);
     }
 
     /**
@@ -839,7 +855,11 @@ public class NPC extends NpcHolder
         Set<UUID> excluded = excludedPlayers == null ? Collections.emptySet() :
                 Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
 
-        TeleportEntityPacket teleport = new TeleportEntityPacket(serverPlayer,
+        TeleportEntityPacket teleport1 = new TeleportEntityPacket(serverPlayer,
+                new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), location.getYaw(), location.getPitch()),
+                Set.of(), true);
+
+        TeleportEntityPacket teleport2 = entity.equals(serverPlayer) ? null : new TeleportEntityPacket(entity,
                 new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), location.getYaw(), location.getPitch()),
                 Set.of(), true);
 
@@ -852,7 +872,11 @@ public class NPC extends NpcHolder
             if(excluded.contains(viewer.getUniqueId()))
                 continue;
 
-            WrappedServerPlayer.fromPlayer(viewer).sendPacket(teleport);
+            WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(viewer);
+            serverPlayer1.sendPacket(teleport1);
+
+            if(teleport2 != null)
+                serverPlayer1.sendPacket(teleport2);
         }
     }
 
@@ -925,8 +949,7 @@ public class NPC extends NpcHolder
                 return Either.right(world);
 
             NPC npc = new NPC(new Location(world1, x, y, z, yaw, pitch), id,
-                    (NpcName) name).setClickEvent(
-                    clickEvent == null ? clickEvent : clickEvent.initialize());
+                    (NpcName) name).setClickEvent(clickEvent == null ? clickEvent : clickEvent.initialize());
             options.forEach((string, serializable) -> NpcOption.getOption(string)
                     .ifPresent(npcOption -> npc.setOption((NpcOption<T, S>) npcOption, (T) npcOption.deserialize(Var.unsafeCast(serializable)))));
             npc.createdAt = createdAt == null ? Instant.now() : createdAt;

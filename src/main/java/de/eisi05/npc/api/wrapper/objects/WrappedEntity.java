@@ -171,16 +171,28 @@ public class WrappedEntity<T extends Entity> extends Wrapper
         }
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.entity.EntitySpawnReason")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_11), path = "net.minecraft.world.entity.EntitySpawnReason")
     enum SpawnReason implements EnumWrapper
     {
-        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "r")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_11), path = "r")
         LOAD;
 
         @Override
         public @NotNull Object getHandle()
         {
             return cast(this);
+        }
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "net.minecraft.world.entity.EntityProcessor")
+    static class EntityProcessor extends Wrapper
+    {
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "a")
+        public static final Object NOP = getStaticWrappedFieldValue("NOP").orElse(null);
+
+        private EntityProcessor()
+        {
+            super(null);
         }
     }
 
@@ -234,17 +246,5 @@ public class WrappedEntity<T extends Entity> extends Wrapper
         }
 
         public abstract WrappedEntityData applyData(WrappedComponent component);
-    }
-
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.entity.EntityProcessor")
-    static class EntityProcessor extends Wrapper
-    {
-        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
-        public static final Object NOP = getStaticWrappedFieldValue("NOP").orElse(null);
-
-        private EntityProcessor()
-        {
-            super(null);
-        }
     }
 }

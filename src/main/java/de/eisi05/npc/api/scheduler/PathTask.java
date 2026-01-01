@@ -5,7 +5,7 @@ import de.eisi05.npc.api.events.NpcStopWalkingEvent;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.pathfinding.Path;
 import de.eisi05.npc.api.utils.Var;
-import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
+import de.eisi05.npc.api.wrapper.objects.WrappedEntity;
 import de.eisi05.npc.api.wrapper.packets.MoveEntityPacket;
 import de.eisi05.npc.api.wrapper.packets.RotateHeadPacket;
 import de.eisi05.npc.api.wrapper.packets.TeleportEntityPacket;
@@ -26,9 +26,8 @@ import java.util.*;
 import java.util.function.Consumer;
 
 /**
- * A task that handles the movement of an NPC along a calculated path.
- * This class extends BukkitRunnable to handle the movement in a scheduled task,
- * providing smooth movement, physics, and door interaction capabilities.
+ * A task that handles the movement of an NPC along a calculated path. This class extends BukkitRunnable to handle the movement in a scheduled task, providing
+ * smooth movement, physics, and door interaction capabilities.
  */
 public class PathTask extends BukkitRunnable
 {
@@ -41,13 +40,14 @@ public class PathTask extends BukkitRunnable
     private final Path path;
     private final List<Location> pathPoints;
     private final Player[] viewers;
-    private final WrappedServerPlayer serverEntity;
+    private final WrappedEntity<?> serverEntity;
     private final Consumer<WalkingResult> callback;
 
     // Settings
     private final double speed;
     private final boolean updateRealLocation;
     private final Set<Block> openedDoors = new HashSet<>();
+
     // State
     private boolean finished = false;
     private int index = 0;
@@ -75,12 +75,11 @@ public class PathTask extends BukkitRunnable
         this.currentPos = npc.getLocation().toVector();
         this.previousYaw = npc.getLocation().getYaw();
         this.previousMoveDir = npc.getLocation().getDirection();
-        this.serverEntity = npc.getServerPlayer();
+        this.serverEntity = npc.entity;
     }
 
     /**
-     * The main execution method called by the Bukkit scheduler.
-     * Handles the NPC's movement along the path, including physics and door interactions.
+     * The main execution method called by the Bukkit scheduler. Handles the NPC's movement along the path, including physics and door interactions.
      */
     @Override
     public void run()
@@ -122,8 +121,7 @@ public class PathTask extends BukkitRunnable
     }
 
     /**
-     * Processes door interactions along the NPC's path.
-     * Opens doors that are in the NPC's path and within interaction range.
+     * Processes door interactions along the NPC's path. Opens doors that are in the NPC's path and within interaction range.
      */
     private void processDoors()
     {
@@ -166,8 +164,7 @@ public class PathTask extends BukkitRunnable
     }
 
     /**
-     * Cleans up opened doors that are no longer near the NPC.
-     * Closes doors that the NPC has moved away from.
+     * Cleans up opened doors that are no longer near the NPC. Closes doors that the NPC has moved away from.
      */
     private void cleanupDoors()
     {
@@ -200,8 +197,7 @@ public class PathTask extends BukkitRunnable
     }
 
     /**
-     * Forces all doors opened by this path task to close.
-     * Used when the path is completed or cancelled.
+     * Forces all doors opened by this path task to close. Used when the path is completed or canceled.
      */
     private void forceCloseAllDoors()
     {
@@ -218,8 +214,7 @@ public class PathTask extends BukkitRunnable
     }
 
     /**
-     * Handles the completion of the path.
-     * Performs final cleanup and calls the completion callback.
+     * Handles the completion of the path. Performs final cleanup and calls the completion callback.
      *
      * @return true if the path was successfully finished, false otherwise
      */
@@ -249,8 +244,7 @@ public class PathTask extends BukkitRunnable
 
         if(event.changeRealLocation())
         {
-            Location loc =
-                    path.getWaypoints().isEmpty() ? pathPoints.get(pathPoints.size() - 1) : path.getWaypoints().get(path.getWaypoints().size() - 1);
+            Location loc = path.getWaypoints().isEmpty() ? pathPoints.get(pathPoints.size() - 1) : path.getWaypoints().get(path.getWaypoints().size() - 1);
             npc.changeRealLocation(loc, viewers);
         }
 
@@ -269,8 +263,8 @@ public class PathTask extends BukkitRunnable
             return;
 
         RotateHeadPacket head = new RotateHeadPacket(serverEntity, (byte) (loc.getYaw() * 256 / 360));
-        MoveEntityPacket.Rot body = new MoveEntityPacket.Rot(serverEntity.getId(), (byte) (loc.getYaw() * 256 / 360),
-                (byte) (loc.getPitch() * 256 / 360), true);
+        MoveEntityPacket.Rot body = new MoveEntityPacket.Rot(serverEntity.getId(), (byte) (loc.getYaw() * 256 / 360), (byte) (loc.getPitch() * 256 / 360),
+                true);
 
         TeleportEntityPacket teleport = new TeleportEntityPacket(serverEntity,
                 new TeleportEntityPacket.PositionMoveRotation(loc.toVector(), new Vector(0, 0, 0), loc.getYaw(), loc.getPitch()), Set.of(), true);
@@ -478,17 +472,16 @@ public class PathTask extends BukkitRunnable
             return;
 
         RotateHeadPacket head = new RotateHeadPacket(serverEntity, (byte) (yaw * 256 / 360));
-        TeleportEntityPacket teleport = new TeleportEntityPacket(serverEntity,
-                new TeleportEntityPacket.PositionMoveRotation(currentPos, movement, yaw, pitch), Set.of(), onGround);
+        TeleportEntityPacket teleport = new TeleportEntityPacket(serverEntity, new TeleportEntityPacket.PositionMoveRotation(currentPos, movement, yaw, pitch),
+                Set.of(), onGround);
 
         npc.sendNpcMovePackets(teleport, head, viewers);
     }
 
     /**
-     * Cancels the path task and cleans up resources.
-     * Calls the callback with CANCELLED status if not already finished.
+     * Cancels the path task and cleans up resources. Calls the callback with CANCELLED status if not already finished.
      *
-     * @throws IllegalStateException if the task was already cancelled
+     * @throws IllegalStateException if the task was already canceled
      */
     @Override
     public synchronized void cancel() throws IllegalStateException
@@ -540,8 +533,7 @@ public class PathTask extends BukkitRunnable
     // --- Builder Class ---
 
     /**
-     * Builder class for creating PathTask instances with a fluent API.
-     * Allows for optional configuration of the path task.
+     * Builder class for creating PathTask instances with a fluent API. Allows for optional configuration of the path task.
      */
     public static class Builder
     {
@@ -602,7 +594,7 @@ public class PathTask extends BukkitRunnable
         }
 
         /**
-         * Sets the callback to be executed when the path is completed or cancelled.
+         * Sets the callback to be executed when the path is completed or canceled.
          *
          * @param callback The callback to execute
          * @return This builder instance for method chaining
