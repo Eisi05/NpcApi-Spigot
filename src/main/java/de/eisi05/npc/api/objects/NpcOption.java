@@ -403,7 +403,8 @@ public class NpcOption<T, S extends Serializable>
             (wrappedEntitySnapshot, npc, player) ->
             {
                 WrappedEntity<?> entity;
-                if(wrappedEntitySnapshot.getType() == EntityType.PLAYER)
+                if(wrappedEntitySnapshot.getType() == EntityType.PLAYER || wrappedEntitySnapshot.getType().name().equals("MANNEQUIN") ||
+                   wrappedEntitySnapshot.getType() == EntityType.UNKNOWN)
                 {
                     entity = npc.serverPlayer;
                 }
