@@ -1,6 +1,7 @@
 package de.eisi05.npc.api.utils;
 
 import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
+import de.eisi05.npc.api.wrapper.objects.WrappedEntitySnapshot;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.EntityType;
@@ -29,8 +30,8 @@ public class Var
     }
 
     /**
-     * Converts a Bukkit {@link EntityType} to its corresponding NMS (Netty Minecraft Server) entity type object.
-     * This is a utility method that uses reflection to access the internal NMS classes.
+     * Converts a Bukkit {@link EntityType} to its corresponding NMS (Netty Minecraft Server) entity type object. This is a utility method that uses reflection
+     * to access the internal NMS classes.
      *
      * @param entityType The Bukkit {@link EntityType} to convert
      * @return The corresponding NMS entity type object
@@ -96,6 +97,56 @@ public class Var
     public static <T> @Nullable T unsafeCast(@Nullable Object o)
     {
         return (T) o;
+    }
+
+    /**
+     * Converts a WrappedEntitySnapshot.WrappedCompoundTag containing common entity state booleans into a single byte representing the entity flags for accessor
+     * 0.
+     * <p>
+     * Each bit in the returned byte corresponds to a specific entity state:
+     * <ul>
+     *     <li>Bit 0 (0x01) - HasVisualFire</li>
+     *     <li>Bit 1 (0x02) - IsCrouching</li>
+     *     <li>Bit 2 (0x04) - IsRiding</li>
+     *     <li>Bit 3 (0x08) - IsSprinting</li>
+     *     <li>Bit 4 (0x10) - IsSwimming</li>
+     *     <li>Bit 5 (0x20) - IsInvisible</li>
+     *     <li>Bit 6 (0x40) - IsGlowing</li>
+     *     <li>Bit 7 (0x80) - IsFallFlying</li>
+     * </ul>
+     *
+     * @param nbt The WrappedCompoundTag containing the entity state booleans.
+     * @return A byte where each bit represents the corresponding entity state as listed above.
+     */
+    public static byte nbtToEntityFlags(@NotNull WrappedEntitySnapshot.WrappedCompoundTag nbt)
+    {
+        byte flags = 0;
+
+        if(nbt.getBoolean("HasVisualFire"))
+            flags |= 0x01;
+
+        if(nbt.getBoolean("IsCrouching"))
+            flags |= 0x02;
+
+        if(nbt.getBoolean("IsRiding"))
+            flags |= 0x04;
+
+        if(nbt.getBoolean("IsSprinting"))
+            flags |= 0x08;
+
+        if(nbt.getBoolean("IsSwimming"))
+            flags |= 0x10;
+
+        if(nbt.getBoolean("IsInvisible"))
+            flags |= 0x20;
+
+        if(nbt.getBoolean("IsGlowing"))
+            flags |= 0x40;
+
+        if(nbt.getBoolean("IsFallFlying"))
+            flags |= (byte) 0x80;
+
+        return flags;
     }
 
     public static boolean isCarpet(@NotNull Material material)

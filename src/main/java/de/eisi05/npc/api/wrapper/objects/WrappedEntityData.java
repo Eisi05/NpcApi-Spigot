@@ -29,6 +29,13 @@ public class WrappedEntityData extends Wrapper
         invokeWrappedMethod(accessor, value);
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "get")
+    public <T> @Nullable T get(@NotNull EntityDataAccessor<T> accessor)
+    {
+        return invokeWrappedMethod(accessor);
+    }
+
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "b")
     public @NotNull List<?> packDirty()
     {

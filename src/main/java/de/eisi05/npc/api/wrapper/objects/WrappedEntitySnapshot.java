@@ -101,11 +101,21 @@ public class WrappedEntitySnapshot implements Serializable
                             NbtAccounter.unlimitedHeap().getHandle()).get());
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setString")
         public void putString(@NotNull String key, @NotNull String value)
         {
             invokeWrappedMethod(key, value);
+        }
+
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "b")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_4), path = "q")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getBoolean")
+        public boolean getBoolean(@NotNull String key)
+        {
+            if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_5))
+                return invokeWrappedMethod(key);
+            return invokeWrappedMethod(key, false);
         }
 
         private byte[] getData()
