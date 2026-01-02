@@ -4,7 +4,10 @@ import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
 import de.eisi05.npc.api.wrapper.objects.WrappedEntitySnapshot;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -148,6 +151,62 @@ public class Var
 
         return flags;
     }
+
+    /**
+     * Extracts the entity flag byte (accessor 0) from the current state of a Bukkit {@link Entity}.
+     * <p>
+     * This method interprets Bukkit-level entity state as user intent and converts it into the corresponding Minecraft entity flags. It is intended to be used
+     * as an internal translation layer when NMS classes must not be exposed to API consumers.
+     * <p>
+     * <b>Important:</b> This is a best-effort mapping. Bukkit state is not a perfect mirror
+     * of the underlying NMS entity flags, so some flags (such as visual fire or swimming) are approximated based on available Bukkit APIs.
+     *
+     * <p>Flag mapping:</p>
+     * <ul>
+     *     <li>Bit 0 (0x01) - Visual fire (fire ticks or visual fire)</li>
+     *     <li>Bit 1 (0x02) - Sneaking / crouching</li>
+     *     <li>Bit 2 (0x04) - Riding / inside vehicle</li>
+     *     <li>Bit 3 (0x08) - Sprinting</li>
+     *     <li>Bit 4 (0x10) - Swimming</li>
+     *     <li>Bit 5 (0x20) - Invisible</li>
+     *     <li>Bit 6 (0x40) - Glowing</li>
+     *     <li>Bit 7 (0x80) - Fall flying (elytra gliding)</li>
+     * </ul>
+     *
+     * @param entity The Bukkit entity whose state should be converted into entity flags.
+     * @return A byte representing the combined entity flags for accessor 0.
+     */
+    public static byte extractFlagsFromBukkit(@NotNull Entity entity)
+    {
+        byte flags = 0;
+
+        if(entity.getFireTicks() > 0 || entity.isVisualFire())
+            flags |= 0x01;
+
+        if(entity instanceof Player player && player.isSneaking())
+            flags |= 0x02;
+
+        if(entity.isInsideVehicle())
+            flags |= 0x04;
+
+        if(entity instanceof Player player && player.isSprinting())
+            flags |= 0x08;
+
+        if(entity instanceof LivingEntity le && le.isSwimming())
+            flags |= 0x10;
+
+        if(entity instanceof LivingEntity le && le.isInvisible())
+            flags |= 0x20;
+
+        if(entity.isGlowing())
+            flags |= 0x40;
+
+        if(entity instanceof LivingEntity le && le.isGliding())
+            flags |= (byte) 0x80;
+
+        return flags;
+    }
+
 
     public static boolean isCarpet(@NotNull Material material)
     {

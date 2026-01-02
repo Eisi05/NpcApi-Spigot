@@ -6,6 +6,7 @@ import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.wrapper.Mapping;
 import de.eisi05.npc.api.wrapper.Wrapper;
 import org.bukkit.World;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -23,16 +24,25 @@ public class WrappedEntitySnapshot implements Serializable
 
     private final String type;
     private final byte[] data;
+    private final Function<? extends Entity, ? extends Entity> entityFunction;
 
     public WrappedEntitySnapshot(@NotNull EntityType type, @Nullable WrappedCompoundTag data)
     {
         this.type = type.name();
         this.data = data == null ? null : data.getData();
+        this.entityFunction = Function.identity();
+    }
+
+    public WrappedEntitySnapshot(@NotNull EntityType type, @NotNull Function<? extends Entity, ? extends Entity> function)
+    {
+        this.type = type.name();
+        this.data = null;
+        this.entityFunction = function;
     }
 
     public WrappedEntitySnapshot(@NotNull EntityType type)
     {
-        this(type, null);
+        this(type, (WrappedCompoundTag) null);
     }
 
     public @NotNull EntityType getType()
@@ -45,30 +55,35 @@ public class WrappedEntitySnapshot implements Serializable
         return data == null ? new WrappedCompoundTag() : WrappedCompoundTag.parse(data);
     }
 
+    @SuppressWarnings("unchecked")
     public @NotNull WrappedEntity<?> create(@NotNull World world)
     {
+        WrappedEntity<?> entity;
         if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_2))
         {
             getData().putString("id", type.toLowerCase());
-            return new WrappedEntity<>(
-                    Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a",
-                            getData().getHandle(), Var.getNmsLevel(world), Function.identity()).get());
+
+            entity = new WrappedEntity<>(Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a",
+                    getData().getHandle(), Var.getNmsLevel(world), Function.identity()).get());
         }
         else if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_9))
         {
             getData().putString("id", type.toLowerCase());
-            return new WrappedEntity<>(
+            entity = new WrappedEntity<>(
                     Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a",
                             getData().getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get());
         }
         else if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_11))
-            return new WrappedEntity<>(
+            entity = new WrappedEntity<>(
                     Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()), getData().getHandle(),
                             Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get());
+        else
+            entity = new WrappedEntity<>(
+                    Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()),
+                            getData().getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(),
+                            WrappedEntity.EntityProcessor.NOP).get());
 
-        return new WrappedEntity<>(
-                Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()),
-                        getData().getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), WrappedEntity.EntityProcessor.NOP).get());
+        return WrappedEntity.fromEntity(entityFunction.apply(Var.unsafeCast(entity.getBukkitPlayer())), WrappedEntity.class);
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.nbt.NBTTagCompound")

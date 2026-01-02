@@ -241,7 +241,6 @@ public class NpcOption<T, S extends Serializable>
                 WrappedEntityData.EntityDataAccessor<Byte> accessor = WrappedEntityData.EntityDataSerializers.BYTE.create(0);
                 Byte value = entityData.get(accessor);
                 byte flags = value == null ? 0 : value;
-                System.out.println("FLAGS: " + flags + " -> " + ((flags & 0x01) != 0));
 
                 byte modifier = 0x40;
 
@@ -329,7 +328,6 @@ public class NpcOption<T, S extends Serializable>
                 }
                 else
                 {
-                    System.out.println("DATA: " + data.get(accessor) + " -> " + ((data.get(accessor) & 0x01) != 0));
                     Integer toDelete = npc.toDeleteEntities.get("sit");
 
                     if(toDelete == null)
@@ -445,7 +443,9 @@ public class NpcOption<T, S extends Serializable>
                         (byte) npc.getLocation().getPitch(), npc.getServerPlayer().isOnGround()));
 
                 WrappedEntityData data = entity.getEntityData();
-                data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), Var.nbtToEntityFlags(wrappedEntitySnapshot.getData()));
+
+                data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0),
+                        (byte) (Var.nbtToEntityFlags(wrappedEntitySnapshot.getData()) | Var.extractFlagsFromBukkit(entity.getBukkitPlayer())));
                 data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2), Optional.of(WrappedComponent.create("NPC").getHandle()));
                 data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), false);
                 packets.add(SetEntityDataPacket.create(entity.getId(), data));

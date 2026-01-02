@@ -46,8 +46,8 @@ public class NPC extends NpcHolder
 {
     final Map<String, Integer> toDeleteEntities = new HashMap<>();
     private transient final Map<UUID, String> nameCache = new HashMap<>();
-    private final List<UUID> viewers = new ArrayList<>();
-    private final Map<NpcOption<?, ?>, Object> options;
+    final List<UUID> viewers = new ArrayList<>();
+
     private final Path npcPath;
     private final Map<UUID, PathTask> pathTasks = new HashMap<>();
     public WrappedEntity<?> entity;
@@ -104,7 +104,6 @@ public class NPC extends NpcHolder
 
         npcPath = NpcApi.plugin.getDataFolder().toPath().resolve("NPC").resolve(uuid + ".npc");
 
-        this.options = new HashMap<>();
         for(NpcOption<?, ?> value : NpcOption.values())
             setOption(value, Var.unsafeCast(value.getDefaultValue()));
 
@@ -236,58 +235,6 @@ public class NPC extends NpcHolder
     public void setEditable(boolean editable)
     {
         setOption(NpcOption.EDITABLE, editable);
-    }
-
-    /**
-     * Sets a specific option for this NPC.
-     *
-     * @param option the {@link NpcOption} to set. Must not be null.
-     * @param value  the value for the option. If {@code null}, the option will be removed (reverting to default).
-     * @param <T>    the type of the option's value.
-     */
-    public <T> void setOption(@NotNull NpcOption<T, ?> option, @Nullable T value)
-    {
-        if(value == null)
-            options.remove(option);
-        else
-            options.put(option, value);
-
-        if(NpcApi.config.autoUpdate())
-        {
-            if(option.equals(NpcOption.SKIN) || option.equals(NpcOption.USE_PLAYER_SKIN))
-            {
-                updateSkin(player -> true);
-                return;
-            }
-
-            if(option.equals(NpcOption.ENTITY))
-            {
-                reload();
-                return;
-            }
-
-            viewers.forEach(uuid ->
-            {
-                Player player = Bukkit.getPlayer(uuid);
-                if(player == null)
-                    return;
-
-                option.getPacket(value, this, player).ifPresent(packetWrapper -> WrappedServerPlayer.fromPlayer(player).sendPacket(packetWrapper));
-            });
-        }
-    }
-
-    /**
-     * Gets the value of a specific option for this NPC. If the option has not been explicitly set, its default value will be returned.
-     *
-     * @param option the {@link NpcOption} to get. Must not be null.
-     * @param <T>    the type of the option's value.
-     * @return the value of the option.
-     */
-    @SuppressWarnings("unchecked")
-    public <T> @Nullable T getOption(@NotNull NpcOption<T, ?> option)
-    {
-        return (T) options.getOrDefault(option, option.getDefaultValue());
     }
 
     /**
