@@ -93,13 +93,7 @@ public class PacketReader
 
         int id = useEntityPacketWrapper.getId();
 
-        NPC npc =
-                NpcManager.getList()
-                        .stream()
-                        .filter(npc1 -> npc1.getServerPlayer().getId() == id || (npc1.entity != null && npc1.entity.getId() == id))
-                        .findFirst()
-                        .orElse(null);
-
+        NPC npc = NpcManager.fromId(id).orElse(null);
         if(npc == null)
             return;
 

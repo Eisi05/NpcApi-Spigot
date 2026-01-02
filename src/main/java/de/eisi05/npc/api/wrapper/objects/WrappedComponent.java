@@ -21,25 +21,52 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
+/**
+ * A wrapper class for Minecraft's chat component system, providing a type-safe way to create and manipulate
+ * chat messages with formatting, click events, hover events, and other rich text features.
+ */
 @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.chat.IChatBaseComponent")
 public class WrappedComponent extends Wrapper
 {
+    /**
+     * Creates a new WrappedComponent instance from a native Minecraft component.
+     *
+     * @param handle The native Minecraft component object
+     */
     private WrappedComponent(Object handle)
     {
         super(handle);
     }
 
+    /**
+     * Creates a WrappedComponent from a native Minecraft component handle.
+     *
+     * @param handle The native Minecraft component object (can be null)
+     * @return A new WrappedComponent instance, or null if handle is null
+     */
     public static WrappedComponent fromHandle(@Nullable Object handle)
     {
         return new WrappedComponent(handle);
     }
 
+    /**
+     * Creates a new text component with the specified text.
+     *
+     * @param text The text to display (can be null for empty component)
+     * @return A new WrappedComponent containing the specified text
+     */
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
     public static @NotNull WrappedComponent create(@Nullable String text)
     {
         return new WrappedComponent(text == null ? CommonComponents.EMPTY : invokeStaticWrappedMethod(text));
     }
 
+    /**
+     * Parses a legacy formatted string (using § color codes) into a WrappedComponent.
+     *
+     * @param legacy The legacy formatted string (e.g., "§aHello &bWorld!")
+     * @return A new WrappedComponent with the parsed formatting
+     */
     public static @NotNull WrappedComponent parseFromLegacy(@Nullable String legacy)
     {
         if(legacy == null || legacy.isEmpty())
@@ -48,6 +75,12 @@ public class WrappedComponent extends Wrapper
         return Var.fromString(legacy);
     }
 
+    /**
+     * Applies the specified chat formats to this component.
+     *
+     * @param format One or more ChatFormat values to apply (e.g., BOLD, ITALIC, UNDERLINE)
+     * @return This component for method chaining
+     */
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
     public @NotNull WrappedComponent setFormats(@NotNull ChatFormat... format)
     {
@@ -77,6 +110,12 @@ public class WrappedComponent extends Wrapper
         return this;
     }
 
+    /**
+     * Adds a click event to this component.
+     *
+     * @param clickEvent The click event to add
+     * @return This component for method chaining
+     */
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "format")
     public @NotNull WrappedComponent withClickEvent(@NotNull ClickEvent clickEvent)
@@ -85,6 +124,12 @@ public class WrappedComponent extends Wrapper
         return this;
     }
 
+    /**
+     * Adds a hover event to this component.
+     *
+     * @param hoverEvent The hover event to add
+     * @return This component for method chaining
+     */
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "format")
     public @NotNull WrappedComponent withHoverEvent(@NotNull HoverEvent hoverEvent)
@@ -93,6 +138,12 @@ public class WrappedComponent extends Wrapper
         return this;
     }
 
+    /**
+     * Appends another component to this component.
+     *
+     * @param wrappedComponent The component to append
+     * @return This component for method chaining
+     */
     @Mapping(range = @Mapping.Range(from = Versions.V1_19_1, to = Versions.V1_21_11), path = "b")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_19), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "addSibling")
@@ -102,6 +153,11 @@ public class WrappedComponent extends Wrapper
         return this;
     }
 
+    /**
+     * Creates a deep copy of this component.
+     *
+     * @return A new WrappedComponent that is a copy of this one
+     */
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "f")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_20_2), path = "e")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "mutableCopy")
@@ -110,16 +166,33 @@ public class WrappedComponent extends Wrapper
         return new WrappedComponent(invokeWrappedMethod());
     }
 
+    /**
+     * Converts this component to a legacy formatted string.
+     *
+     * @param withLineBreak Whether to preserve newline characters
+     * @return A legacy formatted string with color codes
+     */
     public @NotNull String toLegacy(boolean withLineBreak)
     {
         return withLineBreak ? Var.toString(this) : Var.toString(this).replace("\n", "\\n");
     }
 
+    /**
+     * Converts this component to a plain text string without color codes.
+     *
+     * @param withLineBreak Whether to preserve newline characters
+     * @return A plain text string without formatting
+     */
     public @NotNull String toLegacyNoColor(boolean withLineBreak)
     {
         return ChatColor.stripColor(toLegacy(withLineBreak));
     }
 
+    /**
+     * Serializes this component to a SerializedComponent for storage.
+     *
+     * @return A serializable representation of this component
+     */
     public @NotNull SerializedComponent serialize()
     {
         return new SerializedComponent(toLegacy(true));

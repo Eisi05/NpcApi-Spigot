@@ -19,6 +19,8 @@ import java.util.Arrays;
 @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.entity.Entity")
 public class WrappedEntity<T extends Entity> extends Wrapper
 {
+    public String data = "{}";
+
     WrappedEntity(Object handle)
     {
         super(handle);

@@ -7,6 +7,7 @@ import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.datafixers.util.Pair;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.enums.SkinParts;
+import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.*;
 import de.eisi05.npc.api.wrapper.enums.ChatFormat;
@@ -69,7 +70,9 @@ public class NpcOption<T, S extends Serializable>
                             Reflections.getInstance(PropertyMap.class, Multimaps.forMap(property == null ? Map.of() : Map.of("textures", property)))
                                     .orElseThrow()).orElseThrow();
 
+                    NpcManager.removeNPC(npc);
                     npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player), true);
+                    NpcManager.addNPC(npc);
                     return null;
                 }
 
@@ -117,7 +120,9 @@ public class NpcOption<T, S extends Serializable>
                     GameProfile profile = Reflections.getInstance(GameProfile.class, npc.getUUID(), "NPC" + npc.getUUID().toString().substring(0, 13),
                             propertyMap).orElseThrow();
 
+                    NpcManager.removeNPC(npc);
                     npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player), true);
+                    NpcManager.addNPC(npc);
                     return null;
                 }
 
@@ -288,23 +293,26 @@ public class NpcOption<T, S extends Serializable>
                 if(pose == Pose.FALL_FLYING)
                 {
                     data.set(accessor, (byte) (flags | 0x80));
-                    //(byte) (npc.getOption(NpcOption.GLOWING) != null ? 0xC0 : 0x80)); //TODO
                     packetWrapper = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
                             (byte) 0, npc.getServerPlayer().isOnGround());
                 }
                 else if(pose == Pose.SWIMMING)
-                    data.set(accessor, (byte) (flags | 0x10));// (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0x50 : 0x10)); //TODO
+                    data.set(accessor, (byte) (flags | 0x10));
                 else
-                    data.set(accessor, (byte) (flags & ~(0x80 | 0x10))); // (npc.getOption(NpcOption.GLOWING) != null ? 0x40 : 0)); //TODO
+                    data.set(accessor, (byte) (flags & ~(0x80 | 0x10)));
 
-                if(pose == Pose.SPIN_ATTACK)
+                if(!npc.entity.getBukkitPlayer().getType().name().equals("ITEM_DISPLAY") &&
+                        !npc.entity.getBukkitPlayer().getType().name().equals("BLOCK_DISPLAY"))
                 {
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x04);
-                    packetWrapper = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
-                            (byte) -90, npc.getServerPlayer().isOnGround());
+                    if(pose == Pose.SPIN_ATTACK)
+                    {
+                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x04);
+                        packetWrapper = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
+                                (byte) -90, npc.getServerPlayer().isOnGround());
+                    }
+                    else
+                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x01);
                 }
-                else
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x01);
 
                 if(nmsPose == de.eisi05.npc.api.wrapper.enums.Pose.SITTING)
                 {
@@ -315,7 +323,7 @@ public class NpcOption<T, S extends Serializable>
                     PacketWrapper addEntityPacket = textDisplay.getAddEntityPacket();
 
                     WrappedEntityData wrappedEntityData = textDisplay.getEntityData();
-                    wrappedEntityData.set(accessor, (byte) (flags | 0x20));// (npc.getOption(NpcOption.GLOWING) != null ? 0x60 : 0x20)); //TODO
+                    wrappedEntityData.set(accessor, (byte) (flags | 0x20));
                     SetEntityDataPacket entityDataPacket = SetEntityDataPacket.create(textDisplay.getId(), wrappedEntityData);
 
                     textDisplay.setPassengers(npc.entity);
@@ -347,6 +355,10 @@ public class NpcOption<T, S extends Serializable>
             scale -> scale, scale -> scale,
             (scale, npc, player) ->
             {
+                if(npc.entity.getBukkitPlayer().getType().name().equals("ITEM_DISPLAY") ||
+                        npc.entity.getBukkitPlayer().getType().name().equals("BLOCK_DISPLAY"))
+                    return null;
+
                 WrappedAttributeInstance instance = npc.getServerPlayer().getAttribute(WrappedAttributeInstance.Attributes.SCALE_HOLDER);
                 instance.setBaseValue(scale);
 
@@ -415,14 +427,18 @@ public class NpcOption<T, S extends Serializable>
                 if(wrappedEntitySnapshot.getType() == EntityType.PLAYER || wrappedEntitySnapshot.getType().name().equals("MANNEQUIN") ||
                         wrappedEntitySnapshot.getType() == EntityType.UNKNOWN)
                     entity = npc.serverPlayer;
-                else
+                else if(wrappedEntitySnapshot.getType() != npc.entity.getBukkitPlayer().getType() ||
+                        !npc.entity.data.equals(wrappedEntitySnapshot.getData().toString()))
                 {
                     entity = wrappedEntitySnapshot.create(player.getWorld());
                     entity.moveTo(npc.getLocation());
                     npc.toDeleteEntities.put("entity", entity.getId());
                 }
+                else
+                    entity = npc.entity;
 
                 npc.entity = entity;
+                NpcManager.addID(npc.entity.getId(), npc);
 
                 List<PacketWrapper> packets = new ArrayList<>();
 
