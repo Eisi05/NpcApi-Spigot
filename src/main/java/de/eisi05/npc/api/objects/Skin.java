@@ -234,6 +234,16 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
     }
 
     /**
+     * Converts this Skin to a NpcSkin.
+     *
+     * @return the NpcSkin representation of this Skin
+     */
+    public NpcSkin toNpcSkin()
+    {
+        return NpcSkin.of(this);
+    }
+
+    /**
      * Asynchronously fetches a skin by the player's UUID.
      *
      * @param uuid the UUID of the player

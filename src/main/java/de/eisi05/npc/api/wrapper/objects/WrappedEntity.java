@@ -147,6 +147,12 @@ public abstract class WrappedEntity<T extends Entity> extends Wrapper
         return new BoundingBox(invokeWrappedMethod());
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "e")
+    public void setId(int id)
+    {
+        invokeWrappedMethod(id);
+    }
+
     public int getId()
     {
         return getBukkitPlayer().getEntityId();

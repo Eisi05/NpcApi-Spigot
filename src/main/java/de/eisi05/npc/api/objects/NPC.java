@@ -22,6 +22,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -34,7 +35,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 public class NPC extends NpcHolder
 {
     final Map<String, Integer> toDeleteEntities = new HashMap<>();
+
     private transient final Map<UUID, String> nameCache = new HashMap<>();
     private final List<UUID> viewers = new ArrayList<>();
     private final Map<NpcOption<?, ?>, Object> options;
@@ -97,7 +98,7 @@ public class NPC extends NpcHolder
     {
         this.name = name;
         this.location = location;
-        this.serverPlayer = WrappedServerPlayer.create(location, uuid, name.isStatic() ? name.getName() : WrappedComponent.create(null), false);
+        this.serverPlayer = WrappedServerPlayer.create(location, uuid, name.isStatic() ? name.getName() : WrappedComponent.create(null), null);
 
         npcPath = NpcApi.plugin.getDataFolder().toPath().resolve("NPC").resolve(uuid + ".npc");
 
@@ -253,7 +254,7 @@ public class NPC extends NpcHolder
         {
             if(option.equals(NpcOption.SKIN) || option.equals(NpcOption.USE_PLAYER_SKIN))
             {
-                updateSkin(player -> true);
+                updateSkin(viewers.stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toArray(Player[]::new));
                 return;
             }
 
@@ -377,7 +378,7 @@ public class NPC extends NpcHolder
     {
         this.name = name;
         serverPlayer.setListName(name.isStatic() ? WrappedComponent.parseFromLegacy(name.getName().toLegacy(false).replace("\n", "\\n")) :
-                                 WrappedComponent.create(null));
+                WrappedComponent.create(null));
 
         viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> updateName(Bukkit.getPlayer(uuid)));
     }
@@ -435,8 +436,8 @@ public class NPC extends NpcHolder
         WrappedServerPlayer.fromPlayer(player)
                 .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
                         Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
-                        WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                                .append(WrappedComponent.create("\n").append(name.getName(player))))));
+                                WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
+                                        .append(WrappedComponent.create("\n").append(name.getName(player))))));
     }
 
     /**
@@ -462,27 +463,26 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Updates the NPC's skin for a subset of players based on a condition.
-     * <p>
-     * Iterates over all viewers of the NPC and, for each player that satisfies the given {@link Predicate}, hides and then shows the NPC to refresh its skin.
-     * </p>
+     * Updates the NPC's skin for the specified players by hiding and then showing the NPC. This forces a skin refresh for each player in the provided array.
      *
-     * @param predicate a {@link java.util.function.Predicate} that determines which players should have the skin updated.
+     * @param players the players who should see the updated skin. If no players are provided, no action is taken.
+     * @throws IllegalArgumentException if the players array is null
+     * @see #hideNpcFromPlayer(Player)
+     * @see #showNPCToPlayer(Player)
      */
-    public void updateSkin(@NotNull Predicate<Player> predicate)
+    public void updateSkin(@NotNull Player... players)
     {
-        for(UUID uuid : viewers)
-        {
-            Player player = Bukkit.getPlayer(uuid);
-            if(player == null)
-                continue;
-
-            if(!predicate.test(player))
-                continue;
-
+        for(Player player : players)
             hideNpcFromPlayer(player);
+
+        for(Player player : players)
             showNPCToPlayer(player);
-        }
+    }
+
+    @ApiStatus.Internal
+    public List<UUID> getViewers()
+    {
+        return new ArrayList<>(viewers);
     }
 
     /**
@@ -526,13 +526,13 @@ public class NPC extends NpcHolder
         if(!viewers.contains(player.getUniqueId()))
             viewers.add(player.getUniqueId());
 
-        if(!name.isStatic() && getOption(NpcOption.SHOW_TAB_LIST))
-            setOption(NpcOption.SHOW_TAB_LIST, false);
-
         List<PacketWrapper> packets = new ArrayList<>();
 
         Arrays.stream(NpcOption.values()).filter(NpcOption::loadBefore)
                 .forEach(npcOption -> npcOption.getPacket(getOption(npcOption), this, player).ifPresent(packets::add));
+
+        if(!name.isStatic() && getOption(NpcOption.SHOW_TAB_LIST))
+            setOption(NpcOption.SHOW_TAB_LIST, false);
 
         //packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.ADD_PLAYER, serverPlayer));
         packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, serverPlayer));
@@ -570,8 +570,8 @@ public class NPC extends NpcHolder
 
             packets.add(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
                     Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
-                    WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                            .append(WrappedComponent.create("\n").append(name.getName(player))))));
+                            WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
+                                    .append(WrappedComponent.create("\n").append(name.getName(player))))));
 
             if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
                 packets.add(new SetPassengerPacket(serverPlayer));
@@ -660,7 +660,7 @@ public class NPC extends NpcHolder
 
         double dx = playerLoc.getX() - npcLoc.getX();
         double dy = ((playerLoc.getY() + viewer.getEyeHeight())) -
-                    ((npcLoc.getY() + serverPlayer.getBukkitPlayer().getEyeHeight() * getOption(NpcOption.SCALE)));
+                ((npcLoc.getY() + serverPlayer.getBukkitPlayer().getEyeHeight() * getOption(NpcOption.SCALE)));
         double dz = playerLoc.getZ() - npcLoc.getZ();
 
         double distanceXZ = Math.sqrt(dx * dx + dz * dz);
@@ -851,7 +851,7 @@ public class NPC extends NpcHolder
         setLocation(location);
 
         Set<UUID> excluded = excludedPlayers == null ? Collections.emptySet() :
-                             Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
+                Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
 
         TeleportEntityPacket teleport = new TeleportEntityPacket(serverPlayer,
                 new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), location.getYaw(), location.getPitch()),
