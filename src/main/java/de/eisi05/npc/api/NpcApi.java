@@ -1,9 +1,6 @@
 package de.eisi05.npc.api;
 
-import de.eisi05.npc.api.listeners.ChangeWorldListener;
-import de.eisi05.npc.api.listeners.ConnectionListener;
-import de.eisi05.npc.api.listeners.NpcInteractListener;
-import de.eisi05.npc.api.listeners.WorldLoadListener;
+import de.eisi05.npc.api.listeners.*;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcConfig;
@@ -33,7 +30,7 @@ import java.util.function.Function;
 public final class NpcApi
 {
     private static final List<Listener> listeners = List.of(new ChangeWorldListener(), new ConnectionListener(), new NpcInteractListener(),
-            new WorldLoadListener());
+            new WorldLoadListener(), new ServerReadyListener());
     /**
      * A static reference to the Bukkit plugin instance that is using this API.
      * This is set during the API's initialization.
@@ -65,7 +62,6 @@ public final class NpcApi
         ConfigurationSerialization.registerClass(Path.class);
 
         NpcManager.loadNPCs();
-        PacketReader.injectAll();
 
         Tasks.start();
 
