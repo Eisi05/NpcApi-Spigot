@@ -46,7 +46,7 @@ public class NpcOption<T, S extends Serializable>
             aBoolean -> aBoolean, aBoolean -> aBoolean,
             (skin, npc, player) ->
             {
-                if(!skin)
+                if(!skin || !npc.serverPlayer.equals(npc.entity))
                     return null;
 
                 if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_9))
@@ -94,7 +94,7 @@ public class NpcOption<T, S extends Serializable>
             skin -> skin, skin -> skin instanceof Skin skin1 ? NpcSkin.of(skin1) : (NpcSkin) skin,
             (skinData, npc, player) ->
             {
-                if(npc.getOption(USE_PLAYER_SKIN) || skinData == null)
+                if(npc.getOption(USE_PLAYER_SKIN) || skinData == null || !npc.serverPlayer.equals(npc.entity))
                     return null;
 
                 Skin skin = skinData.getSkin(player, npc);

@@ -96,7 +96,7 @@ public class Tasks
                 NpcManager.getList().forEach(npc ->
                 {
                     NpcSkin npcSkin = npc.getOption(NpcOption.SKIN);
-                    if(npcSkin == null || npcSkin.isStatic() || npcSkin.getSkin() == null)
+                    if(npcSkin == null || npcSkin.isStatic() || npcSkin.getSkin() == null || !npc.entity.equals(npc.getServerPlayer()))
                         return;
 
                     npc.updateSkin(player ->
