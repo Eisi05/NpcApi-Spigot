@@ -2,32 +2,30 @@ package de.eisi05.npc.api.events;
 
 import de.eisi05.npc.api.objects.NPC;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Called when an NPC is shown to a player. This event is called before the NPC is shown to the player. The event can be canceled to prevent the NPC from being
- * shown.
+ * Called after an NPC has been fully shown to a player and all packets have been sent. This event is called after the NPC is already visible to the player and
+ * cannot be canceled.
  */
-public class NpcShowEvent extends Event implements Cancellable
+public class NpcPostShowEvent extends Event
 {
     private static final HandlerList HANDLERS = new HandlerList();
     private final Player player;
     private final NPC npc;
     private final boolean wasViewer;
-    private boolean cancelled;
 
     /**
-     * Creates a new NpcShowEvent.
+     * Creates a new NpcPostShowEvent.
      *
-     * @param player    the player to whom the NPC is being shown
-     * @param npc       the NPC that is being shown
+     * @param player    the player to whom the NPC was shown
+     * @param npc       the NPC that was shown
      * @param wasViewer whether the player was previously a viewer of this NPC
      * @throws IllegalArgumentException if player or npc is null
      */
-    public NpcShowEvent(@NotNull Player player, @NotNull NPC npc, boolean wasViewer)
+    public NpcPostShowEvent(@NotNull Player player, @NotNull NPC npc, boolean wasViewer)
     {
         this.player = player;
         this.npc = npc;
@@ -51,31 +49,9 @@ public class NpcShowEvent extends Event implements Cancellable
     }
 
     /**
-     * {@inheritDoc}
+     * Gets the NPC that was shown.
      *
-     * @return true if this event is canceled
-     */
-    @Override
-    public boolean isCancelled()
-    {
-        return cancelled;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param cancel true if you wish to cancel this event
-     */
-    @Override
-    public void setCancelled(boolean cancel)
-    {
-        cancelled = cancel;
-    }
-
-    /**
-     * Gets the NPC that is being shown.
-     *
-     * @return the NPC being shown, never null
+     * @return the NPC that was shown, never null
      */
     public @NotNull NPC getNpc()
     {
@@ -83,7 +59,7 @@ public class NpcShowEvent extends Event implements Cancellable
     }
 
     /**
-     * Gets the player to whom the NPC is being shown.
+     * Gets the player to whom the NPC was shown.
      *
      * @return the player, never null
      */
@@ -93,8 +69,8 @@ public class NpcShowEvent extends Event implements Cancellable
     }
 
     /**
-     * Checks if the player was previously a viewer of this NPC. This can be used to determine if the player is seeing this NPC for the first time or if it's a
-     * refresh of an existing view.
+     * Checks if the player was previously a viewer of this NPC. This can be used to determine if the player was seeing this NPC for the first time or if it was
+     * a refresh of an existing view.
      *
      * @return true if the player was previously viewing this NPC, false otherwise
      */

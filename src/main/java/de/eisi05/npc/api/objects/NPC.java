@@ -4,7 +4,8 @@ import com.mojang.datafixers.util.Either;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.enums.WalkingResult;
 import de.eisi05.npc.api.events.NpcHideEvent;
-import de.eisi05.npc.api.events.NpcShowEvent;
+import de.eisi05.npc.api.events.NpcPostShowEvent;
+import de.eisi05.npc.api.events.NpcPreShowEvent;
 import de.eisi05.npc.api.events.NpcStartWalkingEvent;
 import de.eisi05.npc.api.interfaces.NpcClickAction;
 import de.eisi05.npc.api.manager.NpcManager;
@@ -501,9 +502,9 @@ public class NPC extends NpcHolder
         if(!serverPlayer.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4))
             return;
 
-        NpcShowEvent npcShowEvent = new NpcShowEvent(player, this, viewers.contains(player.getUniqueId()));
-        Bukkit.getPluginManager().callEvent(npcShowEvent);
-        if(npcShowEvent.isCancelled())
+        NpcPreShowEvent npcPreShowEvent = new NpcPreShowEvent(player, this, viewers.contains(player.getUniqueId()));
+        Bukkit.getPluginManager().callEvent(npcPreShowEvent);
+        if(npcPreShowEvent.isCancelled())
             return;
 
         if(!viewers.contains(player.getUniqueId()))
@@ -533,6 +534,8 @@ public class NPC extends NpcHolder
 
         WrappedServerPlayer wrappedServerPlayer = WrappedServerPlayer.fromPlayer(player);
         packets.forEach(wrappedServerPlayer::sendPacket);
+
+        Bukkit.getPluginManager().callEvent(new NpcPostShowEvent(player, this, npcPreShowEvent.wasViewer()));
     }
 
     /**
