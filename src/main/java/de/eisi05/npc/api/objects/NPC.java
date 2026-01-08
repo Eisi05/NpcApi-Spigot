@@ -3,6 +3,8 @@ package de.eisi05.npc.api.objects;
 import com.mojang.datafixers.util.Either;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.enums.WalkingResult;
+import de.eisi05.npc.api.events.NpcHideEvent;
+import de.eisi05.npc.api.events.NpcShowEvent;
 import de.eisi05.npc.api.events.NpcStartWalkingEvent;
 import de.eisi05.npc.api.interfaces.NpcClickAction;
 import de.eisi05.npc.api.manager.NpcManager;
@@ -45,9 +47,8 @@ import java.util.stream.Collectors;
 public class NPC extends NpcHolder
 {
     final Map<String, Integer> toDeleteEntities = new HashMap<>();
-    private transient final Map<UUID, String> nameCache = new HashMap<>();
     final List<UUID> viewers = new ArrayList<>();
-
+    private transient final Map<UUID, String> nameCache = new HashMap<>();
     private final Path npcPath;
     private final Map<UUID, PathTask> pathTasks = new HashMap<>();
     public WrappedEntity<?> entity;
@@ -500,6 +501,11 @@ public class NPC extends NpcHolder
         if(!serverPlayer.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4))
             return;
 
+        NpcShowEvent npcShowEvent = new NpcShowEvent(player, this, viewers.contains(player.getUniqueId()));
+        Bukkit.getPluginManager().callEvent(npcShowEvent);
+        if(npcShowEvent.isCancelled())
+            return;
+
         if(!viewers.contains(player.getUniqueId()))
             viewers.add(player.getUniqueId());
 
@@ -568,6 +574,8 @@ public class NPC extends NpcHolder
             wrappedServerPlayer.sendPacket(new PlayerInfoRemovePacket(List.of(getUUID())));
 
         viewers.remove(player.getUniqueId());
+
+        Bukkit.getPluginManager().callEvent(new NpcHideEvent(player, this));
     }
 
     /**
