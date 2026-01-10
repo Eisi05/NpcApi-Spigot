@@ -47,9 +47,9 @@ import java.util.stream.Collectors;
  */
 public class NPC extends NpcHolder
 {
+    public transient final Map<UUID, String> nameCache = new HashMap<>();
     final Map<String, Integer> toDeleteEntities = new HashMap<>();
     final List<UUID> viewers = new ArrayList<>();
-    private transient final Map<UUID, String> nameCache = new HashMap<>();
     private final Path npcPath;
     private final Map<UUID, PathTask> pathTasks = new HashMap<>();
     public WrappedEntity<?> entity;
@@ -431,7 +431,7 @@ public class NPC extends NpcHolder
             if(player == null)
                 continue;
 
-            String name = getName(Bukkit.getPlayer(uuid)).toLegacy(false);
+            String name = getName(player).toLegacy(false);
             if(nameCache.getOrDefault(uuid, "").equals(name))
                 continue;
 

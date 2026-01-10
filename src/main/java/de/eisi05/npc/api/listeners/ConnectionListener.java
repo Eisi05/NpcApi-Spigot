@@ -3,6 +3,7 @@ package de.eisi05.npc.api.listeners;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.objects.NPC;
+import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.PacketReader;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import org.bukkit.event.EventHandler;
@@ -35,7 +36,12 @@ public class ConnectionListener implements Listener
     {
         PacketReader.uninject(event.getPlayer());
 
+        Tasks.placeholderCache.remove(event.getPlayer().getUniqueId());
+
         for(NPC npc : NpcManager.getList())
+        {
+            npc.nameCache.remove(event.getPlayer().getUniqueId());
             npc.hideNpcFromPlayer(event.getPlayer());
+        }
     }
 }

@@ -11,25 +11,23 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * The {@link Tasks} class manages and starts various recurring tasks
- * related to Non-Player Characters (NPCs) within the Bukkit environment.
- * These tasks often involve NPC behavior such as looking at nearby players.
+ * The {@link Tasks} class manages and starts various recurring tasks related to Non-Player Characters (NPCs) within the Bukkit environment. These tasks often
+ * involve NPC behavior such as looking at nearby players.
  */
 public class Tasks
 {
-    private static final Map<UUID, String> placeholderCache = new HashMap<>();
+    public static final Map<UUID, String> placeholderCache = new HashMap<>();
     private static BukkitTask lookAtTask;
     private static BukkitTask placeholderTask;
 
     /**
-     * Starts all defined NPC-related tasks.
-     * This method should be called when the plugin is enabled to ensure
-     * that NPC behaviors are active.
+     * Starts all defined NPC-related tasks. This method should be called when the plugin is enabled to ensure that NPC behaviors are active.
      */
     public static void start()
     {
@@ -50,10 +48,8 @@ public class Tasks
     }
 
     /**
-     * Implements a recurring task that makes NPCs look at nearby players.
-     * The task runs on a timer defined by {@code NpcApi.config.lookAtTimer()}.
-     * NPCs will only look at players within a specified range, which is
-     * configured via {@link NpcOption#LOOK_AT_PLAYER}.
+     * Implements a recurring task that makes NPCs look at nearby players. The task runs on a timer defined by {@code NpcApi.config.lookAtTimer()}. NPCs will
+     * only look at players within a specified range, which is configured via {@link NpcOption#LOOK_AT_PLAYER}.
      */
     private static void lookAtTask()
     {
@@ -62,7 +58,7 @@ public class Tasks
             @Override
             public void run()
             {
-                NpcManager.getList().forEach(npc ->
+                for(NPC npc : NpcManager.getList())
                 {
                     double range = npc.getOption(NpcOption.LOOK_AT_PLAYER);
 
@@ -72,14 +68,13 @@ public class Tasks
                     npc.entity.getBukkitPlayer().getNearbyEntities(range, range, range)
                             .stream().filter(entity -> entity instanceof Player)
                             .forEach(entity -> npc.lookAtPlayer((Player) entity));
-                });
+                }
             }
         }.runTaskTimer(NpcApi.plugin, 0, NpcApi.config.lookAtTimer());
     }
 
     /**
-     * Implements a recurring task that updates placeholders.
-     * The task runs on a timer defined by {@code NpcApi.config.placeholderTimer()}.
+     * Implements a recurring task that updates placeholders. The task runs on a timer defined by {@code NpcApi.config.placeholderTimer()}.
      */
     private static void placeholderTask()
     {
@@ -88,12 +83,17 @@ public class Tasks
             @Override
             public void run()
             {
-                NpcManager.getList().stream().filter(npc -> !npc.getNpcName().isStatic()).forEach(NPC::updateNameForAll);
+                Collection<NPC> npcs = NpcManager.getList();
+                for(NPC npc : npcs)
+                {
+                    if(!npc.getNpcName().isStatic())
+                        npc.updateNameForAll();
+                }
 
                 if(!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI"))
                     return;
 
-                NpcManager.getList().forEach(npc ->
+                for(NPC npc : NpcManager.getList())
                 {
                     NpcSkin npcSkin = npc.getOption(NpcOption.SKIN);
                     if(npcSkin == null || npcSkin.isStatic() || npcSkin.getSkin() == null || !npc.entity.equals(npc.getServerPlayer()))
@@ -104,16 +104,16 @@ public class Tasks
                         String newPlaceholder = (String) Reflections.invokeStaticMethod("me.clip.placeholderapi.PlaceholderAPI",
                                 "setPlaceholders", player, npcSkin.getSkin().name()).get();
 
-                        String old = placeholderCache.getOrDefault(player.getUniqueId(), "");
+                        String old = placeholderCache.getOrDefault(player.getUniqueId(), null);
 
-                        if(!old.equals(newPlaceholder))
+                        if(old != null && !newPlaceholder.equals(old))
                         {
                             placeholderCache.put(player.getUniqueId(), newPlaceholder);
                             return true;
                         }
                         return false;
                     });
-                });
+                }
             }
         }.runTaskTimer(NpcApi.plugin, NpcApi.config.placeholderTimer(), NpcApi.config.placeholderTimer());
     }
