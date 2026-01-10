@@ -24,7 +24,7 @@ public abstract class NpcHolder implements InventoryHolder
     /**
      * Flag indicating whether there are unsaved changes to this holder. Defaults to {@code false}.
      */
-    private boolean unsavedChanges = false;
+    private volatile boolean unsavedChanges = false;
 
     /**
      * Checks if there are any unsaved changes for this NPC holder.
