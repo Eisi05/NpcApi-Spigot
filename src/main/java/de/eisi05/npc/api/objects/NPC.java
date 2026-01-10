@@ -184,6 +184,17 @@ public class NPC extends NpcHolder
 
     /**
      * Sets the click action for this NPC.
+     * <p>
+     * ⚠ <b>Serialization notice:</b><br> The provided {@link NpcClickAction} is serialized when the NPC is saved. Avoid using lambdas or method references that
+     * capture non-serializable objects (e.g. plugin instances, command classes, or {@code this}), as this will cause a
+     * {@link java.io.NotSerializableException}.
+     * <p>
+     * Recommended approaches are:
+     * <ul>
+     *   <li>Stateless lambdas that capture nothing</li>
+     *   <li>Method references to static methods</li>
+     *   <li>Explicit {@link NpcClickAction} implementation classes</li>
+     * </ul>
      *
      * @param event the {@link NpcClickAction} to set, or {@code null} to remove the current action.
      * @return this NPC instance for method chaining. Will not be null.
