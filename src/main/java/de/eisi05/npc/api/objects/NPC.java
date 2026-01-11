@@ -514,7 +514,7 @@ public class NPC extends NpcHolder
         if(!getOption(NpcOption.ENABLED) && !player.isPermissionSet("npc.admin") && !player.isOp())
             return;
 
-        if(!player.getWorld().getName().equals(serverPlayer.getWorld().getName()))
+        if(!player.getWorld().getUID().equals(serverPlayer.getWorld().getUID()))
         {
             hideNpcFromPlayer(player);
             return;
