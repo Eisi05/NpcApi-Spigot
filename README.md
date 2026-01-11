@@ -44,7 +44,7 @@ This method requires [NpcPlugin](https://www.spigotmc.org/resources/npc-plugin-1
 <dependency>
     <groupId>com.github.Eisi05</groupId>
     <artifactId>NpcApi</artifactId>
-    <version>1.4.5</version>
+    <version>1.4.6</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -60,7 +60,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    compileOnly 'com.github.Eisi05:NpcApi:1.4.5'
+    compileOnly 'com.github.Eisi05:NpcApi:1.4.6'
 }
 ```
 
@@ -93,7 +93,7 @@ Add the repository and dependency to your `pom.xml`:
     <dependency>
         <groupId>com.github.Eisi05</groupId>
         <artifactId>NpcApi</artifactId>
-        <version>1.4.5</version>
+        <version>1.4.6</version>
     </dependency>
 </dependencies>
 ```
@@ -110,7 +110,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    implementation 'com.github.Eisi05:NpcApi:1.4.5'
+    implementation 'com.github.Eisi05:NpcApi:1.4.6'
 }
 ```
 
