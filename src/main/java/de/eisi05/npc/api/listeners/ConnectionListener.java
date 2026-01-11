@@ -12,6 +12,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
+
 public class ConnectionListener implements Listener
 {
     @EventHandler
@@ -26,7 +28,7 @@ public class ConnectionListener implements Listener
             @Override
             public void run()
             {
-                NpcManager.getList().forEach(npc -> npc.showNPCToPlayer(event.getPlayer()));
+                new ArrayList<>(NpcManager.getList()).forEach(npc -> npc.showNPCToPlayer(event.getPlayer()));
             }
         }.runTaskLater(NpcApi.plugin, 10L);
     }
