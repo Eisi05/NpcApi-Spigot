@@ -871,6 +871,7 @@ public class NPC extends NpcHolder
                                 @NotNull Serializable name, @NotNull Map<String, ? extends Serializable> options, @Nullable NpcClickAction clickEvent,
                                 @NotNull Instant createdAt) implements Serializable
     {
+        //TODO: Convert to regular class
         @Serial
         private static final long serialVersionUID = 1L;
 
@@ -899,6 +900,8 @@ public class NPC extends NpcHolder
                 fixedName = NpcName.of(oldName.deserialize());
             else
                 throw new IllegalStateException("Unexpected type for name field: " + name.getClass());
+
+            //TODO: Fix options
 
             return new SerializedNPC(world, x, y, z, yaw, pitch, id, fixedName, options, clickEvent, createdAt);
         }

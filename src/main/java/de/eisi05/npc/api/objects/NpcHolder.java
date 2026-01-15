@@ -12,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Abstract class representing an entity that can hold NPC-related data and has a concept of unsaved changes. It implements {@link InventoryHolder} but onlay as
@@ -19,7 +20,8 @@ import java.util.Map;
  */
 public abstract class NpcHolder implements InventoryHolder
 {
-    protected final Map<NpcOption<?, ?>, Object> options = new HashMap<>();
+    protected static final UUID GLOBAL_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
+    protected final Map<UUID, Map<NpcOption<?, ?>, Object>> options = new HashMap<>();
 
     /**
      * Flag indicating whether there are unsaved changes to this holder. Defaults to {@code false}.
@@ -56,19 +58,23 @@ public abstract class NpcHolder implements InventoryHolder
         unsavedChanges = false;
     }
 
-    /**
-     * Sets a specific option for this NPC.
-     *
-     * @param option the {@link NpcOption} to set. Must not be null.
-     * @param value  the value for the option. If {@code null}, the option will be removed (reverting to default).
-     * @param <T>    the type of the option's value.
-     */
+
     public <T> void setOption(@NotNull NpcOption<T, ?> option, @Nullable T value)
     {
+        setOption(option, value, GLOBAL_UUID);
+    }
+
+    public <T> void setOption(@NotNull NpcOption<T, ?> option, @Nullable T value, @NotNull UUID uuid)
+    {
+        Map<NpcOption<?, ?>, Object> playerOptions = options.computeIfAbsent(uuid, k -> new HashMap<>());
         if(value == null)
-            options.remove(option);
+        {
+            playerOptions.remove(option);
+            if(playerOptions.isEmpty() && uuid.equals(GLOBAL_UUID))
+                options.remove(uuid);
+        }
         else
-            options.put(option, value);
+            playerOptions.put(option, value);
 
         if(NpcApi.config.autoUpdate() && this instanceof NPC npc)
         {
@@ -84,9 +90,9 @@ public abstract class NpcHolder implements InventoryHolder
                 return;
             }
 
-            npc.viewers.forEach(uuid ->
+            npc.viewers.forEach(uuid1 ->
             {
-                Player player = Bukkit.getPlayer(uuid);
+                Player player = Bukkit.getPlayer(uuid1);
                 if(player == null)
                     return;
 
@@ -95,46 +101,43 @@ public abstract class NpcHolder implements InventoryHolder
         }
     }
 
-    /**
-     * Gets the value of a specific option for this NPC. If the option has not been explicitly set, its default value will be returned.
-     *
-     * @param option the {@link NpcOption} to get. Must not be null.
-     * @param <T>    the type of the option's value.
-     * @return the value of the option.
-     */
     @SuppressWarnings("unchecked")
-    public <T> @Nullable T getOption(@NotNull NpcOption<T, ?> option)
+    public <T> @Nullable T getOption(@NotNull NpcOption<T, ?> option, @NotNull UUID uuid)
     {
-        return (T) options.getOrDefault(option, option.getDefaultValue());
+        Map<NpcOption<?, ?>, Object> playerOptions = options.get(uuid);
+        if(playerOptions != null && playerOptions.containsKey(option))
+            return (T) playerOptions.get(option);
+
+        return option.getDefaultValue();
     }
 
-    /**
-     * Applies the given NPC options to this instance and optionally triggers an update.
-     * <p>
-     * All entries in the provided map are merged into the current option set. If an option already exists, its value will be overwritten by the new value.
-     * Options not present in the provided map remain unchanged.
-     * <p>
-     * If automatic updates are enabled and this instance represents an {@link NPC}, the NPC will be reloaded after the options have been applied.
-     *
-     * @param options A map containing NPC options to apply and their associated values. Must not be {@code null}.
-     */
-    public void applyOptions(@NotNull Map<NpcOption<?, ?>, Object> options)
+    public <T> @Nullable T getOption(@NotNull NpcOption<T, ?> option)
     {
-        this.options.putAll(options);
+        return getOption(option, GLOBAL_UUID);
+    }
+
+
+    public void applyOptions(@NotNull Map<NpcOption<?, ?>, Object> options, @NotNull UUID uuid)
+    {
+        Map<NpcOption<?, ?>, Object> playerOptions = this.options.computeIfAbsent(uuid, k -> new HashMap<>());
+        playerOptions.putAll(options);
         if(NpcApi.config.autoUpdate() && this instanceof NPC npc)
             npc.reload();
     }
 
-    /**
-     * Returns an immutable view of the currently applied NPC options.
-     * <p>
-     * The returned map represents the full set of options that are currently active for this NPC instance.
-     *
-     * @return A map of all active NPC options and their values.
-     */
+    public void applyOptions(@NotNull Map<NpcOption<?, ?>, Object> options)
+    {
+        applyOptions(options, GLOBAL_UUID);
+    }
+
+    public @NotNull Map<NpcOption<?, ?>, Object> getOptions(@NotNull UUID uuid)
+    {
+        return options.getOrDefault(uuid, new HashMap<>());
+    }
+
     public @NotNull Map<NpcOption<?, ?>, Object> getOptions()
     {
-        return options;
+        return getOptions(GLOBAL_UUID);
     }
 
     /**
