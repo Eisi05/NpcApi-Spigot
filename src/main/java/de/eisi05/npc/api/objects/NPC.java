@@ -120,7 +120,7 @@ public class NPC extends NpcHolder
      * @param options    The options map for the NPC. Must not be null.
      * @param clickEvent The click event for the NPC. Can be null.
      */
-    private NPC(@NotNull Location location, @NotNull NpcName name, @NotNull Map<NpcOption<?, ?>, Object> options,
+    private NPC(@NotNull Location location, @NotNull NpcName name, @NotNull Map<UUID, Map<NpcOption<?, ?>, Object>> options,
                 @Nullable NpcClickAction clickEvent)
     {
         this(location, UUID.randomUUID(), name);
@@ -871,7 +871,6 @@ public class NPC extends NpcHolder
                                 @NotNull Serializable name, @NotNull Map<String, ? extends Serializable> options, @Nullable NpcClickAction clickEvent,
                                 @NotNull Instant createdAt) implements Serializable
     {
-        //TODO: Convert to regular class
         @Serial
         private static final long serialVersionUID = 1L;
 
@@ -883,13 +882,20 @@ public class NPC extends NpcHolder
          */
         public static @NotNull SerializedNPC serializedNPC(@NotNull NPC npc)
         {
+            Map<String, HashMap<String, Serializable>> map = npc.options.entrySet()
+                    .stream()
+                    .collect(HashMap::new, (m, e) -> m.put(e.getKey().toString(), e.getValue()
+                                    .entrySet()
+                                    .stream()
+                                    .collect(HashMap::new, (om, oe) -> om.put(oe.getKey().getPath(), oe.getKey().serialize(oe.getValue())), HashMap::putAll)),
+                            HashMap::putAll);
+
             return new SerializedNPC(npc.getLocation().getWorld().getUID(), npc.getLocation().getX(), npc.getLocation().getY(),
                     npc.getLocation().getZ(), npc.getLocation().getYaw(), npc.getLocation().getPitch(), npc.getUUID(),
-                    npc.getNpcName(), npc.options.keySet().stream().collect(
-                    Collectors.toMap(NpcOption::getPath, npcOption -> npcOption.serialize(npc.getOption((NpcOption<?, ?>) npcOption)))),
-                    npc.clickEvent, npc.createdAt);
+                    npc.getNpcName(), map, npc.clickEvent, npc.createdAt);
         }
 
+        @SuppressWarnings("unchecked")
         @Serial
         private Object readResolve() throws ObjectStreamException
         {
@@ -901,9 +907,20 @@ public class NPC extends NpcHolder
             else
                 throw new IllegalStateException("Unexpected type for name field: " + name.getClass());
 
-            //TODO: Fix options
+            Map<String, Serializable> fixedOptions = new HashMap<>();
+            if(options != null)
+                options.forEach((s, serializable) ->
+                {
+                    if(serializable instanceof Map)
+                        fixedOptions.put(s, serializable);
+                    else
+                    {
+                        Map<String, Serializable> map = (Map<String, Serializable>) fixedOptions.computeIfAbsent(GLOBAL_UUID.toString(), s1 -> new HashMap<>());
+                        map.put(s, serializable);
+                    }
+                });
 
-            return new SerializedNPC(world, x, y, z, yaw, pitch, id, fixedName, options, clickEvent, createdAt);
+            return new SerializedNPC(world, x, y, z, yaw, pitch, id, fixedName, fixedOptions, clickEvent, createdAt);
         }
 
         /**
@@ -920,10 +937,17 @@ public class NPC extends NpcHolder
             if(world1 == null)
                 return Either.right(world);
 
-            NPC npc = new NPC(new Location(world1, x, y, z, yaw, pitch), id,
-                    (NpcName) name).setClickEvent(clickEvent == null ? clickEvent : clickEvent.initialize());
-            options.forEach((string, serializable) -> NpcOption.getOption(string)
-                    .ifPresent(npcOption -> npc.setOption((NpcOption<T, S>) npcOption, (T) npcOption.deserialize(Var.unsafeCast(serializable)))));
+            NPC npc = new NPC(new Location(world1, x, y, z, yaw, pitch), id, (NpcName) name).setClickEvent(
+                    clickEvent == null ? clickEvent : clickEvent.initialize());
+
+            options.forEach((s, serializable) ->
+            {
+                Map<String, Serializable> map = (Map<String, Serializable>) serializable;
+                map.forEach((s1, serializable1) -> NpcOption.getOption(s1)
+                        .ifPresent(npcOption -> npc.setOption((NpcOption<T, S>) npcOption, (T) npcOption.deserialize(Var.unsafeCast(serializable1)),
+                                UUID.fromString(s))));
+            });
+
             npc.createdAt = createdAt == null ? Instant.now() : createdAt;
             return Either.left(npc);
         }
