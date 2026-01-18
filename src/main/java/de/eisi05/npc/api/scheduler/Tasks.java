@@ -63,7 +63,7 @@ public class Tasks
                     double range = npc.getOption(NpcOption.LOOK_AT_PLAYER);
 
                     if(range <= 0)
-                        return;
+                        continue;
 
                     npc.entity.getBukkitPlayer().getNearbyEntities(range, range, range)
                             .stream().filter(entity -> entity instanceof Player)
@@ -97,7 +97,7 @@ public class Tasks
                 {
                     NpcSkin npcSkin = npc.getOption(NpcOption.SKIN);
                     if(npcSkin == null || npcSkin.isStatic() || npcSkin.getSkin() == null || !npc.entity.equals(npc.getServerPlayer()))
-                        return;
+                        continue;
 
                     npc.updateSkin(player ->
                     {

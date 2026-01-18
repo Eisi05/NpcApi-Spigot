@@ -95,11 +95,16 @@ public abstract class NpcHolder implements InventoryHolder
         if(value == null)
         {
             playerOptions.remove(option);
-            if(playerOptions.isEmpty() && uuid.equals(GLOBAL_UUID))
+            if(playerOptions.isEmpty() && !uuid.equals(GLOBAL_UUID))
                 options.remove(uuid);
+            else
+                options.put(uuid, playerOptions);
         }
         else
+        {
             playerOptions.put(option, value);
+            options.put(uuid, playerOptions);
+        }
 
         if(NpcApi.config.autoUpdate() && this instanceof NPC npc)
         {
@@ -139,6 +144,7 @@ public abstract class NpcHolder implements InventoryHolder
     <T> @Nullable T getOption(@NotNull NpcOption<T, ?> option, @NotNull UUID uuid)
     {
         Map<NpcOption<?, ?>, Object> playerOptions = options.get(uuid);
+
         if(playerOptions != null && playerOptions.containsKey(option))
             return (T) playerOptions.get(option);
 

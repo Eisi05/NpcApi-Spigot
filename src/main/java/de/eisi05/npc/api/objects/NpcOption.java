@@ -681,4 +681,19 @@ public class NpcOption<T, S extends Serializable>
 
         return Optional.ofNullable(packet.apply((T) object, npc, player));
     }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if(!(obj instanceof NpcOption<?, ?> npcOption))
+            return false;
+
+        return npcOption.getPath().equals(getPath());
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return getPath().hashCode();
+    }
 }
