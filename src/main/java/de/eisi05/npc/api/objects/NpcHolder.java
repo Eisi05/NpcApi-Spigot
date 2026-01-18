@@ -3,9 +3,11 @@ package de.eisi05.npc.api.objects;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -58,13 +60,36 @@ public abstract class NpcHolder implements InventoryHolder
         unsavedChanges = false;
     }
 
+    /**
+     * Gets the unique identifier of this NPC holder.
+     *
+     * @return The UUID of this NPC holder, or {@code null} if this is a global holder
+     */
+    public abstract @Nullable UUID getUUID();
 
+    /**
+     * Sets an option value for this NPC holder with the global UUID.
+     *
+     * @param <T>    the type of the option value
+     * @param option the option to set
+     * @param value  the value to set for the option, or {@code null} to remove the option
+     * @throws NullPointerException if the option is null
+     */
     public <T> void setOption(@NotNull NpcOption<T, ?> option, @Nullable T value)
     {
         setOption(option, value, GLOBAL_UUID);
     }
 
-    public <T> void setOption(@NotNull NpcOption<T, ?> option, @Nullable T value, @NotNull UUID uuid)
+    /**
+     * Sets an option value for this NPC holder with the specified UUID.
+     *
+     * @param <T>    the type of the option value
+     * @param option the option to set
+     * @param value  the value to set for the option, or {@code null} to remove the option
+     * @param uuid   the UUID to associate with this option setting
+     * @throws NullPointerException if either option or uuid is null
+     */
+    <T> void setOption(@NotNull NpcOption<T, ?> option, @Nullable T value, @NotNull UUID uuid)
     {
         Map<NpcOption<?, ?>, Object> playerOptions = options.computeIfAbsent(uuid, k -> new HashMap<>());
         if(value == null)
@@ -101,8 +126,17 @@ public abstract class NpcHolder implements InventoryHolder
         }
     }
 
+    /**
+     * Gets the value of an option for a specific UUID.
+     *
+     * @param <T>    the type of the option value
+     * @param option the option to get
+     * @param uuid   the UUID to get the option for
+     * @return the option value, or the default value if not set
+     * @throws NullPointerException if either option or uuid is null
+     */
     @SuppressWarnings("unchecked")
-    public <T> @Nullable T getOption(@NotNull NpcOption<T, ?> option, @NotNull UUID uuid)
+    <T> @Nullable T getOption(@NotNull NpcOption<T, ?> option, @NotNull UUID uuid)
     {
         Map<NpcOption<?, ?>, Object> playerOptions = options.get(uuid);
         if(playerOptions != null && playerOptions.containsKey(option))
@@ -111,12 +145,44 @@ public abstract class NpcHolder implements InventoryHolder
         return option.getDefaultValue();
     }
 
+    /**
+     * Gets the value of an option using the global UUID.
+     *
+     * @param <T>    the type of the option value
+     * @param option the option to get
+     * @return the option value, or the default value if not set
+     * @throws NullPointerException if option is null
+     */
     public <T> @Nullable T getOption(@NotNull NpcOption<T, ?> option)
     {
         return getOption(option, GLOBAL_UUID);
     }
 
+    /**
+     * Gets the value of an option for a specific player.
+     *
+     * @param <T>    the type of the option value
+     * @param option the option to get
+     * @param player the player to get the option for
+     * @return the option value, or the default value if not set
+     * @throws NullPointerException if either option or player is null
+     */
+    public <T> @Nullable T getOption(@NotNull NpcOption<T, ?> option, @NotNull Player player)
+    {
+        if(getUUID() == null)
+            return getOption(option);
 
+        NamespacedKey key = new NamespacedKey(NpcApi.plugin, getUUID() + "-" + player.getUniqueId());
+        return getOption(option, UUID.fromString(player.getPersistentDataContainer().getOrDefault(key, PersistentDataType.STRING, GLOBAL_UUID.toString())));
+    }
+
+    /**
+     * Applies multiple options to this NPC holder for a specific UUID.
+     *
+     * @param options the map of options to apply
+     * @param uuid    the UUID to associate with these options
+     * @throws NullPointerException if either options or uuid is null
+     */
     public void applyOptions(@NotNull Map<NpcOption<?, ?>, Object> options, @NotNull UUID uuid)
     {
         Map<NpcOption<?, ?>, Object> playerOptions = this.options.computeIfAbsent(uuid, k -> new HashMap<>());
@@ -125,19 +191,47 @@ public abstract class NpcHolder implements InventoryHolder
             npc.reload();
     }
 
+    /**
+     * Applies multiple options to this NPC holder using the global UUID.
+     *
+     * @param options the map of options to apply
+     * @throws NullPointerException if options is null
+     */
     public void applyOptions(@NotNull Map<NpcOption<?, ?>, Object> options)
     {
         applyOptions(options, GLOBAL_UUID);
     }
 
+    /**
+     * Gets all options for a specific UUID.
+     *
+     * @param uuid the UUID to get options for
+     * @return a map of options for the specified UUID, or an empty map if none exist
+     * @throws NullPointerException if uuid is null
+     */
     public @NotNull Map<NpcOption<?, ?>, Object> getOptions(@NotNull UUID uuid)
     {
         return options.getOrDefault(uuid, new HashMap<>());
     }
 
-    public @NotNull Map<NpcOption<?, ?>, Object> getOptions()
+    /**
+     * Gets all options associated with the global UUID.
+     *
+     * @return a map of global options, or an empty map if none exist
+     */
+    public @NotNull Map<NpcOption<?, ?>, Object> getGlobalOptions()
     {
         return getOptions(GLOBAL_UUID);
+    }
+
+    /**
+     * Gets all options for all UUIDs.
+     *
+     * @return a map of UUIDs to their respective option maps
+     */
+    public @NotNull Map<UUID, Map<NpcOption<?, ?>, Object>> getOptions()
+    {
+        return options;
     }
 
     /**

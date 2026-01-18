@@ -94,7 +94,7 @@ public class NpcOption<T, S extends Serializable>
             skin -> skin, skin -> skin instanceof Skin skin1 ? NpcSkin.of(skin1) : (NpcSkin) skin,
             (skinData, npc, player) ->
             {
-                if(npc.getOption(USE_PLAYER_SKIN) || skinData == null || !npc.serverPlayer.equals(npc.entity))
+                if(npc.getOption(USE_PLAYER_SKIN, player) || skinData == null || !npc.serverPlayer.equals(npc.entity))
                     return null;
 
                 Skin skin = skinData.getSkin(player, npc);
@@ -141,7 +141,7 @@ public class NpcOption<T, S extends Serializable>
             aBoolean -> aBoolean, aBoolean -> aBoolean,
             (show, npc, player) ->
             {
-                if(!show)
+                if(!show || !npc.name.isStatic())
                 {
                     new BukkitRunnable()
                     {
@@ -400,7 +400,7 @@ public class NpcOption<T, S extends Serializable>
                 armorStand.moveTo(npc.entity.getBukkitPlayer()
                         .getLocation()
                         .clone()
-                        .add(0, (npc.getServerPlayer().getBoundingBox().getYSize() * npc.getOption(SCALE)), 0));
+                        .add(0, (npc.getServerPlayer().getBoundingBox().getYSize() * npc.getOption(SCALE, player)), 0));
 
                 PacketWrapper addPacket = armorStand.getAddEntityPacket();
 
@@ -466,12 +466,12 @@ public class NpcOption<T, S extends Serializable>
                 data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), false);
                 packets.add(SetEntityDataPacket.create(entity.getId(), data));
 
-                if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || !npc.getOption(NpcOption.HIDE_NAMETAG))
+                if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || !npc.getOption(NpcOption.HIDE_NAMETAG, player))
                 {
                     if(Versions.isCurrentVersionSmallerThan(Versions.V1_21))
                         npc.serverPlayer.getNameTag()
                                 .moveTo(entity.getBukkitPlayer().getLocation().clone().add(0,
-                                        (entity.getBoundingBox().getYSize() * npc.getOption(NpcOption.SCALE)), 0));
+                                        (entity.getBoundingBox().getYSize() * npc.getOption(NpcOption.SCALE, player)), 0));
 
                     packets.add(npc.serverPlayer.getNameTag().getAddEntityPacket());
 

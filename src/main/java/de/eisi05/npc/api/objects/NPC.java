@@ -212,7 +212,7 @@ public class NPC extends NpcHolder
      */
     public boolean isEnabled()
     {
-        return getOption(NpcOption.ENABLED);
+        return getOption(NpcOption.ENABLED, GLOBAL_UUID);
     }
 
     /**
@@ -235,7 +235,7 @@ public class NPC extends NpcHolder
      */
     public boolean isEditable()
     {
-        return getOption(NpcOption.EDITABLE);
+        return getOption(NpcOption.EDITABLE, GLOBAL_UUID);
     }
 
     /**
@@ -310,7 +310,8 @@ public class NPC extends NpcHolder
      *
      * @return the {@link UUID} of the NPC. Will not be null.
      */
-    public @NotNull UUID getUUID()
+    @Override
+    public @Nullable UUID getUUID()
     {
         if(serverPlayer != null)
             return serverPlayer.getUUID();
@@ -369,7 +370,7 @@ public class NPC extends NpcHolder
      */
     public <K extends Serializable, V extends Serializable> void addCustomData(@NotNull K key, @NotNull V value)
     {
-        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA);
+        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA, GLOBAL_UUID);
         map.put(key, value);
         setOption(NpcOption.CUSTOM_DATA, map);
     }
@@ -383,7 +384,7 @@ public class NPC extends NpcHolder
     @SuppressWarnings("unchecked")
     public <K extends Serializable, T extends Serializable> @Nullable T removeCustomData(@NotNull K key)
     {
-        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA);
+        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA, GLOBAL_UUID);
         T value = (T) map.remove(key);
         setOption(NpcOption.CUSTOM_DATA, map);
         return value;
@@ -398,7 +399,7 @@ public class NPC extends NpcHolder
     @SuppressWarnings("unchecked")
     public <K extends Serializable, T extends Serializable> @Nullable T getCustomData(@NotNull K key)
     {
-        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA);
+        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA, GLOBAL_UUID);
         return (T) map.get(key);
     }
 
@@ -410,7 +411,7 @@ public class NPC extends NpcHolder
      */
     public @Nullable HashMap<Serializable, Serializable> getCustomData()
     {
-        return getOption(NpcOption.CUSTOM_DATA);
+        return getOption(NpcOption.CUSTOM_DATA, GLOBAL_UUID);
     }
 
     /**
@@ -501,7 +502,7 @@ public class NPC extends NpcHolder
      */
     public void showNPCToPlayer(@NotNull Player player)
     {
-        if(!getOption(NpcOption.ENABLED) && !player.isPermissionSet("npc.admin") && !player.isOp())
+        if(!getOption(NpcOption.ENABLED, GLOBAL_UUID) && !player.isPermissionSet("npc.admin") && !player.isOp())
             return;
 
         if(!player.getWorld().getName().equals(serverPlayer.getWorld().getName()))
@@ -521,13 +522,10 @@ public class NPC extends NpcHolder
         if(!viewers.contains(player.getUniqueId()))
             viewers.add(player.getUniqueId());
 
-        if(!name.isStatic() && getOption(NpcOption.SHOW_TAB_LIST))
-            setOption(NpcOption.SHOW_TAB_LIST, false);
-
         List<PacketWrapper> packets = new ArrayList<>();
 
         Arrays.stream(NpcOption.values()).filter(NpcOption::loadBefore)
-                .forEach(npcOption -> npcOption.getPacket(getOption(npcOption), this, player).ifPresent(packets::add));
+                .forEach(npcOption -> npcOption.getPacket(getOption(npcOption, player), this, player).ifPresent(packets::add));
 
         //packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.ADD_PLAYER, serverPlayer));
         packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, serverPlayer));
@@ -539,7 +537,7 @@ public class NPC extends NpcHolder
             packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, serverPlayer));
 
         Arrays.stream(NpcOption.values()).filter(npcOption -> !npcOption.equals(NpcOption.ENABLED) && !npcOption.loadBefore())
-                .forEach(npcOption -> npcOption.getPacket(getOption(npcOption), this, player).ifPresent(packets::add));
+                .forEach(npcOption -> npcOption.getPacket(getOption(npcOption, player), this, player).ifPresent(packets::add));
 
         NpcOption.ENABLED.getPacket(isEnabled(), this, player).ifPresent(packets::add);
 
@@ -629,9 +627,9 @@ public class NPC extends NpcHolder
         double dx = playerLoc.getX() - npcLoc.getX();
 
         double eyeHeight = (entity.getBukkitPlayer() instanceof LivingEntity le ? le.getEyeHeight() :
-                entity.getBukkitPlayer().getHeight()) - (Pose.fromBukkit(getOption(NpcOption.POSE)) == Pose.SITTING ? 0.625 : 0);
+                entity.getBukkitPlayer().getHeight()) - (Pose.fromBukkit(getOption(NpcOption.POSE, viewer)) == Pose.SITTING ? 0.625 : 0);
 
-        double dy = (playerLoc.getY() + viewer.getEyeHeight()) - (npcLoc.getY() + (eyeHeight * getOption(NpcOption.SCALE)));
+        double dy = (playerLoc.getY() + viewer.getEyeHeight()) - (npcLoc.getY() + (eyeHeight * getOption(NpcOption.SCALE, viewer)));
         double dz = playerLoc.getZ() - npcLoc.getZ();
 
         double distanceXZ = Math.sqrt(dx * dx + dz * dz);
