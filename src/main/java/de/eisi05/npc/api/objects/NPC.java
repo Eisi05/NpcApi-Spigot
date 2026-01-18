@@ -54,7 +54,7 @@ public class NPC extends NpcHolder
     private final Map<UUID, PathTask> pathTasks = new HashMap<>();
     public WrappedEntity<?> entity;
     WrappedServerPlayer serverPlayer;
-    NpcName name;
+
     private Location location;
     private NpcClickAction clickEvent;
     private Instant createdAt = Instant.now();
@@ -343,6 +343,7 @@ public class NPC extends NpcHolder
      *
      * @return the {@link WrappedComponent} representing the NPC's name. Will not be null.
      */
+    @Override
     public @NotNull WrappedComponent getName()
     {
         return name.getName();
@@ -353,6 +354,7 @@ public class NPC extends NpcHolder
      *
      * @param name the new {@link WrappedComponent} name for the NPC. Must not be null.
      */
+    @Override
     public void setName(@NotNull NpcName name)
     {
         this.name = name;

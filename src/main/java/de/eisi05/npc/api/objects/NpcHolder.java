@@ -1,6 +1,7 @@
 package de.eisi05.npc.api.objects;
 
 import de.eisi05.npc.api.NpcApi;
+import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -24,6 +25,8 @@ public abstract class NpcHolder implements InventoryHolder
 {
     protected static final UUID GLOBAL_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
     protected final Map<UUID, Map<NpcOption<?, ?>, Object>> options = new HashMap<>();
+
+    protected NpcName name;
 
     /**
      * Flag indicating whether there are unsaved changes to this holder. Defaults to {@code false}.
@@ -63,9 +66,23 @@ public abstract class NpcHolder implements InventoryHolder
     /**
      * Gets the unique identifier of this NPC holder.
      *
-     * @return The UUID of this NPC holder, or {@code null} if this is a global holder
+     * @return The UUID of this NPC holder, or {@code null}
      */
     public abstract @Nullable UUID getUUID();
+
+    /**
+     * Gets the name of this NPC holder.
+     *
+     * @return The Name of this NPC holder, or {@code null}
+     */
+    public abstract @NotNull WrappedComponent getName();
+
+    /**
+     * Sets the name of this NPC holder.
+     *
+     * @param name The name of this NPC holder
+     */
+    public abstract void setName(@NotNull NpcName name);
 
     /**
      * Sets an option value for this NPC holder with the global UUID.
