@@ -128,7 +128,7 @@ public abstract class NpcHolder implements InventoryHolder
         {
             if(option.equals(NpcOption.SKIN) || option.equals(NpcOption.USE_PLAYER_SKIN))
             {
-                npc.updateSkin(npc.viewers.stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toArray(Player[]::new));
+                npc.updateSkin(npc.getViewers().stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toArray(Player[]::new));
                 return;
             }
 
@@ -138,7 +138,7 @@ public abstract class NpcHolder implements InventoryHolder
                 return;
             }
 
-            npc.viewers.forEach(uuid1 ->
+            npc.getViewers().forEach(uuid1 ->
             {
                 Player player = Bukkit.getPlayer(uuid1);
                 if(player == null)

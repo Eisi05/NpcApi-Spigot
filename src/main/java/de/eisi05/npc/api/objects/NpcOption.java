@@ -430,6 +430,18 @@ public class NpcOption<T, S extends Serializable>
                 return new BundlePacket(addPacket, SetEntityDataPacket.create(armorStand.getId(), data));
             });
 
+    /**
+     * NPC option to change the entity type of the NPC. This allows transforming the NPC into any Minecraft entity type. The default is a PLAYER entity. When
+     * changed, the NPC will be recreated as the new entity type.
+     *
+     * <p>Note: Some entity types may not work as expected, and certain NPC features may be limited
+     * depending on the entity type. The NPC will maintain its position, name, and other properties when changing entity types.</p>
+     *
+     * <p>Example usage to change to a zombie:
+     * <pre>{@code
+     * npc.setOption(NpcOption.ENTITY, new WrappedEntitySnapshot(EntityType.ZOMBIE));
+     * }</pre>
+     */
     public static final NpcOption<WrappedEntitySnapshot, WrappedEntitySnapshot> ENTITY = new NpcOption<>("entity",
             new WrappedEntitySnapshot(EntityType.PLAYER),
             wrappedEntitySnapshot -> wrappedEntitySnapshot, wrappedEntitySnapshot -> wrappedEntitySnapshot,

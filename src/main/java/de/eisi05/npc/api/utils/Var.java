@@ -207,7 +207,6 @@ public class Var
         return flags;
     }
 
-
     public static boolean isCarpet(@NotNull Material material)
     {
         return material.name().contains("CARPET");

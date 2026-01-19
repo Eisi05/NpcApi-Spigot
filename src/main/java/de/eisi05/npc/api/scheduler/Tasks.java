@@ -95,7 +95,7 @@ public class Tasks
                 if(!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI"))
                     return;
 
-                for(NPC npc : NpcManager.getList())
+                for(NPC npc : npcs)
                 {
                     NpcSkin npcSkin = npc.getOption(NpcOption.SKIN);
                     if(npcSkin == null || npcSkin.isStatic() || npcSkin.getPlaceholder() == null || npc.getOption(NpcOption.USE_PLAYER_SKIN))

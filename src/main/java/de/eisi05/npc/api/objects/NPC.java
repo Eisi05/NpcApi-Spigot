@@ -46,7 +46,7 @@ public class NPC extends NpcHolder
 {
     public transient final Map<UUID, String> nameCache = new HashMap<>();
     final Map<String, Integer> toDeleteEntities = new HashMap<>();
-    final List<UUID> viewers = new ArrayList<>();
+    private final List<UUID> viewers = new ArrayList<>();
     private final Path npcPath;
     private final Map<UUID, PathTask> pathTasks = new HashMap<>();
     public WrappedEntity<?> entity;

@@ -31,15 +31,15 @@ public class ConnectionListener implements Listener
             @Override
             public void run()
             {
-                new ArrayList<>(NpcManager.getList()).forEach(npc ->
+                for(NPC npc : new ArrayList<>(NpcManager.getList()))
                 {
                     npc.showNPCToPlayer(event.getPlayer());
                     NpcSkin npcSkin = npc.getOption(NpcOption.SKIN);
                     if(npcSkin == null || npcSkin.isStatic() || npcSkin.getPlaceholder() == null || npc.getOption(NpcOption.USE_PLAYER_SKIN))
-                        return;
+                        continue;
 
                     Tasks.updateSkin(event.getPlayer(), npc, npcSkin);
-                });
+                }
             }
         }.runTaskLater(NpcApi.plugin, 10L);
     }
