@@ -39,9 +39,9 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
     }
 
     public static @NotNull WrappedServerPlayer create(@NotNull Location location, @NotNull UUID uuid, @NotNull GameProfile gameProfile,
-            @NotNull WrappedComponent name, boolean forceNewPlayer)
+                                                      @NotNull WrappedComponent name, @Nullable WrappedNameTag<?> nameDisplay)
     {
-        if(map.containsKey(uuid) && !forceNewPlayer)
+        if(map.containsKey(uuid) && nameDisplay == null)
             return map.get(uuid);
 
         Object mcServer = WrappedMinecraftServer.INSTANCE.getHandle();
@@ -53,8 +53,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
 
         WrappedServerPlayer wrappedServerPlayer = switch(Versions.getVersion())
         {
-            case V1_17, V1_18, V1_18_2, V1_19_3, V1_19_4, V1_20 ->
-                    createWrappedInstance(WrappedServerPlayer.class, mcServer, serverLevel, gameProfile);
+            case V1_17, V1_18, V1_18_2, V1_19_3, V1_19_4, V1_20 -> createWrappedInstance(WrappedServerPlayer.class, mcServer, serverLevel, gameProfile);
             case V1_19, V1_19_1 -> createWrappedInstance(WrappedServerPlayer.class, mcServer, serverLevel, gameProfile, null);
             case V1_20_2, V1_20_4, V1_20_6, V1_21, V1_21_2, V1_21_4, V1_21_5, V1_21_6, V1_21_9, V1_21_11 ->
             {
@@ -70,7 +69,9 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
             case NONE -> throw new VersionNotFound();
         };
 
-        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
+        if(nameDisplay != null)
+            wrappedServerPlayer.setNameTag(nameDisplay);
+        else if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
         {
             WrappedArmorStand armorStand = WrappedArmorStand.create(location.getWorld());
             armorStand.moveTo(location.clone().add(0, 0.2, 0));
@@ -89,9 +90,10 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         return wrappedServerPlayer;
     }
 
-    public static @NotNull WrappedServerPlayer create(@NotNull Location location, @NotNull UUID uuid, @NotNull WrappedComponent name, boolean forceNewPlayer)
+    public static @NotNull WrappedServerPlayer create(@NotNull Location location, @NotNull UUID uuid, @NotNull WrappedComponent name,
+                                                      @Nullable WrappedNameTag<?> nameDisplay)
     {
-        return create(location, uuid, new GameProfile(uuid, "NPC" + uuid.toString().substring(0, 13)), name, forceNewPlayer);
+        return create(location, uuid, new GameProfile(uuid, "NPC" + uuid.toString().substring(0, 13)), name, nameDisplay);
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "h")

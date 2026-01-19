@@ -70,9 +70,9 @@ public class NpcOption<T, S extends Serializable>
                             Reflections.getInstance(PropertyMap.class, Multimaps.forMap(property == null ? Map.of() : Map.of("textures", property)))
                                     .orElseThrow()).orElseThrow();
 
-                    NpcManager.removeNPC(npc);
+                    int id = npc.serverPlayer.getId();
                     npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player), true);
-                    NpcManager.addNPC(npc);
+                    npc.serverPlayer.setId(id);
                     return null;
                 }
 
@@ -120,9 +120,9 @@ public class NpcOption<T, S extends Serializable>
                     GameProfile profile = Reflections.getInstance(GameProfile.class, npc.getUUID(), "NPC" + npc.getUUID().toString().substring(0, 13),
                             propertyMap).orElseThrow();
 
-                    NpcManager.removeNPC(npc);
+                    int id = npc.serverPlayer.getId();
                     npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player), true);
-                    NpcManager.addNPC(npc);
+                    npc.serverPlayer.setId(id);
                     return null;
                 }
 
@@ -382,6 +382,7 @@ public class NpcOption<T, S extends Serializable>
 
                 return new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, npc.getServerPlayer());
             }).since(Versions.V1_21_2);
+
     /**
      * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
      * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.

@@ -50,6 +50,10 @@ public class PacketReader
         WrappedServerPlayer serverPlayer = WrappedServerPlayer.fromPlayer(player);
 
         Channel channel = serverPlayer.playerConnection().networkManager().channel();
+
+        if(channel == null)
+            return;
+
         channels.put(player.getUniqueId(), channel);
 
         if(channel.pipeline().get(NpcApi.plugin.getName()) != null)

@@ -5,11 +5,13 @@ import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcOption;
 import de.eisi05.npc.api.objects.NpcSkin;
+import de.eisi05.npc.api.objects.Skin;
 import de.eisi05.npc.api.utils.Reflections;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -22,7 +24,7 @@ import java.util.UUID;
  */
 public class Tasks
 {
-    public static final Map<UUID, String> placeholderCache = new HashMap<>();
+    private static final Map<UUID, Map<UUID, String>> placeholderCache = new HashMap<>();
     private static BukkitTask lookAtTask;
     private static BukkitTask placeholderTask;
 
@@ -96,25 +98,55 @@ public class Tasks
                 for(NPC npc : NpcManager.getList())
                 {
                     NpcSkin npcSkin = npc.getOption(NpcOption.SKIN);
-                    if(npcSkin == null || npcSkin.isStatic() || npcSkin.getSkin() == null || !npc.entity.equals(npc.getServerPlayer()))
+                    if(npcSkin == null || npcSkin.isStatic() || npcSkin.getPlaceholder() == null || npc.getOption(NpcOption.USE_PLAYER_SKIN))
                         continue;
 
-                    npc.updateSkin(player ->
+                    for(UUID viewerId : npc.getViewers())
                     {
-                        String newPlaceholder = (String) Reflections.invokeStaticMethod("me.clip.placeholderapi.PlaceholderAPI",
-                                "setPlaceholders", player, npcSkin.getSkin().name()).get();
+                        if(viewerId == null)
+                            continue;
 
-                        String old = placeholderCache.getOrDefault(player.getUniqueId(), null);
+                        Player player = Bukkit.getPlayer(viewerId);
+                        if(player == null)
+                            continue;
 
-                        if(old != null && !newPlaceholder.equals(old))
-                        {
-                            placeholderCache.put(player.getUniqueId(), newPlaceholder);
-                            return true;
-                        }
-                        return false;
-                    });
-                }
+                        updateSkin(player, npc, npcSkin);
+                    }
+                });
             }
-        }.runTaskTimer(NpcApi.plugin, NpcApi.config.placeholderTimer(), NpcApi.config.placeholderTimer());
+        }.runTaskTimer(NpcApi.plugin, 10, NpcApi.config.placeholderTimer());
+    }
+
+    /**
+     * Updates the skin of an NPC for a specific player based on a placeholder value. This method handles both UUID and string-based skin lookups, and updates
+     * the NPC's skin asynchronously when the skin is fetched.
+     *
+     * @param player  The player who will see the updated skin. Must not be null.
+     * @param npc     The NPC whose skin will be updated. Must not be null.
+     * @param npcSkin The NpcSkin configuration containing the placeholder and skin settings. Must not be null.
+     * @throws NullPointerException if any parameter is null.
+     */
+    public static void updateSkin(@NotNull Player player, @NotNull NPC npc, @NotNull NpcSkin npcSkin)
+    {
+        String newPlaceholder = (String) Reflections.invokeStaticMethod("me.clip.placeholderapi.PlaceholderAPI", "setPlaceholders", player,
+                npcSkin.getPlaceholder()).get();
+
+        Map<UUID, String> playerCache = placeholderCache.getOrDefault(npc.getUUID(), new HashMap<>());
+        String oldPlaceholder = playerCache.getOrDefault(player.getUniqueId(), null);
+        if(newPlaceholder.equals(oldPlaceholder))
+            return;
+
+        playerCache.put(player.getUniqueId(), newPlaceholder);
+        placeholderCache.put(npc.getUUID(), playerCache);
+
+        try
+        {
+            UUID skinUuid = UUID.fromString(newPlaceholder);
+            Skin.fetchSkinAsync(skinUuid).thenAccept(skinOpt -> skinOpt.ifPresent(skin -> npc.updateSkin(player)));
+        }
+        catch(IllegalArgumentException e)
+        {
+            Skin.fetchSkinAsync(newPlaceholder).thenAccept(skinOpt -> skinOpt.ifPresent(skin -> npc.updateSkin(player)));
+        }
     }
 }
