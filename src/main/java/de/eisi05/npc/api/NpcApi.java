@@ -64,6 +64,7 @@ public final class NpcApi
         NpcManager.loadNPCs();
 
         Tasks.start();
+        PacketReader.injectAll();
 
         new Metrics(plugin, 28179).addCustomChart(new Metrics.SingleLineChart("npcCount", () -> NpcManager.getList().size()));
     }

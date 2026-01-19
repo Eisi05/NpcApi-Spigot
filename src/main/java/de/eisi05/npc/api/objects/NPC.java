@@ -537,40 +537,6 @@ public class NPC extends NpcHolder
         if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_2))
             packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, serverPlayer));
 
-        packets.add(serverPlayer.getAddEntityPacket());
-
-        boolean modified = WrappedPlayerTeam.exists(player, getServerPlayer().getName());
-        WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, getServerPlayer().getName());
-        wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.NEVER);
-
-        packets.add(SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified));
-        packets.add(SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, getServerPlayer().getName(), SetPlayerTeamPacket.Action.ADD));
-
-        packets.add(new RotateHeadPacket(serverPlayer, (byte) ((location.getYaw() % 360) * 256 / 360)));
-        packets.add(new MoveEntityPacket.Rot(serverPlayer.getId(), (byte) location.getYaw(), (byte) location.getPitch(), serverPlayer.isOnGround()));
-
-        WrappedEntityData data = serverPlayer.getEntityData();
-        data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2), Optional.of(WrappedComponent.create("NPC").getHandle()));
-        data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), false);
-        packets.add(SetEntityDataPacket.create(serverPlayer.getId(), data));
-
-        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || !getOption(NpcOption.HIDE_NAMETAG))
-        {
-            if(Versions.isCurrentVersionSmallerThan(Versions.V1_21))
-                serverPlayer.getNameTag()
-                        .moveTo(getLocation().clone().add(0, (serverPlayer.getBoundingBox().getYSize() * getOption(NpcOption.SCALE)), 0));
-
-            packets.add(serverPlayer.getNameTag().getAddEntityPacket());
-
-            packets.add(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
-                    Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
-                    WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                            .append(WrappedComponent.create("\n").append(name.getName(player))))));
-
-            if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
-                packets.add(new SetPassengerPacket(serverPlayer));
-        }
-
         Arrays.stream(NpcOption.values()).filter(npcOption -> !npcOption.equals(NpcOption.ENABLED) && !npcOption.loadBefore())
                 .forEach(npcOption -> npcOption.getPacket(getOption(npcOption, player), this, player).ifPresent(packets::add));
 

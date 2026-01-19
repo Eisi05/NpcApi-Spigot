@@ -71,9 +71,11 @@ public class NpcOption<T, S extends Serializable>
                                     .orElseThrow()).orElseThrow();
 
                     int id = npc.serverPlayer.getId();
+                    NpcManager.removeNPC(npc);
                     npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player),
                             npc.getServerPlayer().getNameTag());
                     npc.serverPlayer.setId(id);
+                    NpcManager.addNPC(npc);
                     return null;
                 }
 
@@ -122,16 +124,17 @@ public class NpcOption<T, S extends Serializable>
                             propertyMap).orElseThrow();
 
                     int id = npc.serverPlayer.getId();
+                    NpcManager.removeNPC(npc);
                     npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player),
                             npc.getServerPlayer().getNameTag());
                     npc.serverPlayer.setId(id);
+                    NpcManager.addNPC(npc);
                     return null;
                 }
 
                 npc.getServerPlayer().getGameProfile().getProperties().removeAll("textures");
 
-                npc.getServerPlayer().getGameProfile().getProperties()
-                        .put("textures", new Property("textures", skin.value(), skin.signature()));
+                npc.getServerPlayer().getGameProfile().getProperties().put("textures", new Property("textures", skin.value(), skin.signature()));
                 return null;
             }).loadBefore(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_9));
 
