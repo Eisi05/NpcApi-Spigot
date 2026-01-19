@@ -71,7 +71,8 @@ public class NpcOption<T, S extends Serializable>
                                     .orElseThrow()).orElseThrow();
 
                     int id = npc.serverPlayer.getId();
-                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player), true);
+                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player),
+                            npc.getServerPlayer().getNameTag());
                     npc.serverPlayer.setId(id);
                     return null;
                 }
@@ -121,7 +122,8 @@ public class NpcOption<T, S extends Serializable>
                             propertyMap).orElseThrow();
 
                     int id = npc.serverPlayer.getId();
-                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player), true);
+                    npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player),
+                            npc.getServerPlayer().getNameTag());
                     npc.serverPlayer.setId(id);
                     return null;
                 }
@@ -193,6 +195,7 @@ public class NpcOption<T, S extends Serializable>
 
                 return SetEntityDataPacket.create(npc.getServerPlayer().getNameTag().getId(), data);
             });
+
     /**
      * NPC option to set the equipment worn by the NPC (armor, items in hand). The map uses {@link EquipmentSlot} as keys and {@link ItemStack} as values.
      * Serialized form uses item base64 strings.
@@ -216,6 +219,7 @@ public class NpcOption<T, S extends Serializable>
 
                 return new SetEquipmentPacket(npc.entity.getId(), list);
             });
+
     /**
      * NPC option to control which parts of the NPC's skin are visible (e.g., hat, jacket). For a full list look at {@link SkinParts}.
      */
@@ -228,6 +232,7 @@ public class NpcOption<T, S extends Serializable>
                         (byte) Arrays.stream(skinParts).mapToInt(SkinParts::getValue).sum());
                 return SetEntityDataPacket.create(npc.getServerPlayer().getId(), data);
             });
+
     /**
      * NPC option to make the NPC look at the player if they are within a certain distance. The value is the maximum distance in blocks. A value of 0 or less
      * disables this. The actual looking logic is handled by {@link Tasks#lookAtTask()}.
@@ -235,6 +240,7 @@ public class NpcOption<T, S extends Serializable>
     public static final NpcOption<Double, Double> LOOK_AT_PLAYER = new NpcOption<>("look-at-player", 0.0,
             distance -> distance, distance -> distance,
             (distance, npc, player) -> null);
+
     /**
      * NPC option to make the NPC glow with a specific color. If null, the glowing effect is removed.
      */
@@ -268,6 +274,7 @@ public class NpcOption<T, S extends Serializable>
 
                 return new BundlePacket(teamPacket, SetEntityDataPacket.create(npc.entity.getId(), entityData));
             });
+
     /**
      * NPC option to set the pose of the NPC (e.g., standing, sleeping, swimming). For a full list look at {@link Pose}.
      */
@@ -348,6 +355,7 @@ public class NpcOption<T, S extends Serializable>
                             new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.entity.getId(), data), packetWrapper);
                 }
             });
+
     /**
      * NPC option to set the scale (size) of the NPC. A value of 1.0 is normal size. Requires Minecraft 1.20.6 or newer.
      */
@@ -490,6 +498,7 @@ public class NpcOption<T, S extends Serializable>
 
                 return new BundlePacket(packets.toArray(new PacketWrapper[0]));
             }).loadBefore(true);
+
     /**
      * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
      * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.

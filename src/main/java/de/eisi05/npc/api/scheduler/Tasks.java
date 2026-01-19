@@ -24,7 +24,7 @@ import java.util.UUID;
  */
 public class Tasks
 {
-    private static final Map<UUID, Map<UUID, String>> placeholderCache = new HashMap<>();
+    public static final Map<UUID, Map<UUID, String>> placeholderCache = new HashMap<>();
     private static BukkitTask lookAtTask;
     private static BukkitTask placeholderTask;
 
@@ -112,7 +112,7 @@ public class Tasks
 
                         updateSkin(player, npc, npcSkin);
                     }
-                });
+                }
             }
         }.runTaskTimer(NpcApi.plugin, 10, NpcApi.config.placeholderTimer());
     }

@@ -14,10 +14,7 @@ import de.eisi05.npc.api.utils.ObjectSaver;
 import de.eisi05.npc.api.utils.Var;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.wrapper.enums.Pose;
-import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
-import de.eisi05.npc.api.wrapper.objects.WrappedEntityData;
-import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
-import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
+import de.eisi05.npc.api.wrapper.objects.*;
 import de.eisi05.npc.api.wrapper.packets.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -40,7 +37,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**

@@ -15,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -127,7 +128,7 @@ public abstract class NpcHolder implements InventoryHolder
         {
             if(option.equals(NpcOption.SKIN) || option.equals(NpcOption.USE_PLAYER_SKIN))
             {
-                npc.updateSkin(player -> true);
+                npc.updateSkin(npc.viewers.stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toArray(Player[]::new));
                 return;
             }
 
