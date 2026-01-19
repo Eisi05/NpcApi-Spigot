@@ -195,8 +195,22 @@ public abstract class NpcHolder implements InventoryHolder
         if(getUUID() == null)
             return getOption(option);
 
-        NamespacedKey key = new NamespacedKey(NpcApi.plugin, getUUID() + "-" + player.getUniqueId());
-        return getOption(option, UUID.fromString(player.getPersistentDataContainer().getOrDefault(key, PersistentDataType.STRING, GLOBAL_UUID.toString())));
+        return getOption(option, UUID.fromString(player.getPersistentDataContainer().getOrDefault(getKey(player), PersistentDataType.STRING,
+                GLOBAL_UUID.toString())));
+    }
+
+    /**
+     * Generates a unique {@link NamespacedKey} for storing player-specific NPC data. The key is constructed using the NPC's UUID and the player's UUID to
+     * ensure uniqueness.
+     *
+     * @param player The player for whom to generate the key
+     * @return A new {@link NamespacedKey} in the format: "npcplugin:[npcUuid]-[playerUuid]"
+     * @throws NullPointerException  if the player parameter is null
+     * @throws IllegalStateException if the NPC's UUID is null
+     */
+    protected @NotNull NamespacedKey getKey(@NotNull Player player)
+    {
+        return new NamespacedKey(NpcApi.plugin, getUUID() + "-" + player.getUniqueId());
     }
 
     /**
