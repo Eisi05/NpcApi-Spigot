@@ -28,6 +28,8 @@ See the in-repo wiki pages under:
 ## Installation
 Choose your preferred installation method based on your project needs:
 
+[!WARNING] Version 2.0.0-beta is currently not stable, use at your own risk! Last stable version is 1.4.6.
+
 ### Method 1: Plugin Dependency (Recommended)
 
 This method requires [NpcPlugin](https://www.spigotmc.org/resources/npc-plugin-1-17.87761/) to be installed as a separate plugin on the server.
