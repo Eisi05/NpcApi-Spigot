@@ -51,7 +51,7 @@ public class PacketReader
 
         Channel channel = serverPlayer.playerConnection().networkManager().channel();
 
-        if(channel == null)
+        if(channel == null || NpcApi.plugin == null)
             return;
 
         channels.put(player.getUniqueId(), channel);
@@ -122,7 +122,7 @@ public class PacketReader
     {
         Channel channel = channels.get(player.getUniqueId());
 
-        if(channel == null)
+        if(channel == null || NpcApi.plugin == null)
             return;
 
         if(channel.pipeline().get(NpcApi.plugin.getName()) != null)
