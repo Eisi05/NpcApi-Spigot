@@ -33,7 +33,7 @@ body:
       placeholder: e.g., Purpur, Tuinity, etc.
     validations:
       required: false
-#    visible: ${{ !contains(github.event.issue.body, '### Server Software\n\n- [ ] Spigot\n- [ ] Paper\n- [X] Other') || contains(github.event.issue.body, '### Please specify server software') }}
+    visible: ${{ !contains(github.event.issue.body, '### Server Software\n\n- [ ] Spigot\n- [ ] Paper\n- [X] Other') || contains(github.event.issue.body, '### Please specify server software') }}
   - type: input
     id: server_version
     attributes:
