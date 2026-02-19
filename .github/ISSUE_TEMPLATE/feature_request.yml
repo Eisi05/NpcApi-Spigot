@@ -33,14 +33,6 @@ body:
       label: Server Version
       description: e.g., 1.21.11
       placeholder: 1.x.x
-  - type: checkboxes
-    id: usage_type
-    attributes:
-      label: Using API/Plugin
-      options:
-        - label: Using NpcAPI as a dependency
-        - label: Using NpcAPI as a plugin
-        - label: Both
   - type: textarea
     id: additional
     attributes:
