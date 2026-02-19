@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🐞 Bug Report
+    url: https://github.com/Eisi05/NpcApi-Spigot/issues/new?assignees=&labels=bug&projects=&template=bug_report.md&title=[BUG]
+    about: Report a bug or unexpected behavior
+
+  - name: ✨ Feature Request
+    url: https://github.com/Eisi05/NpcApi-Spigot/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.md&title=[FEATURE]
+    about: Suggest a new feature or improvement

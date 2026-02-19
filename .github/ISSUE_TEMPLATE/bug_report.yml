@@ -1,0 +1,88 @@
+name: Bug Report
+description: Report an issue with NpcAPI to help us improve
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues to avoid creating duplicates.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: What's the issue you're experiencing?
+    validations:
+      required: true
+  - type: checkboxes
+    id: server_software
+    attributes:
+      label: Server Software
+      options:
+        - label: Spigot
+        - label: Paper
+        - label: Other (please specify)
+  - type: input
+    id: server_version
+    attributes:
+      label: Server Version
+      description: e.g., 1.21.11
+      placeholder: 1.x.x
+  - type: input
+    id: plugin_version
+    attributes:
+      label: Plugin/API Version
+      description: Use /npc version
+      placeholder: e.g., 1.7.5 or 1.4.5-SNAPSHOT
+  - type: checkboxes
+    id: usage_type
+    attributes:
+      label: Using API/Plugin
+      options:
+        - label: Using NpcAPI as a dependency
+        - label: Using NpcAPI as a plugin
+        - label: Both
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: |
+        Please provide clear steps to reproduce the issue.
+        1. First step
+        2. Second step
+        3. And so on...
+      placeholder: |
+        1. 
+        2. 
+        3. 
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs
+      description: Paste any error logs here
+      render: text
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here.
+  - type: textarea
+    id: solution
+    attributes:
+      label: Possible Solution
+      description: If you have a suggestion for a fix, please describe it here.
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots/Videos
+      description: If applicable, add links to screenshots or videos to help explain your problem.
