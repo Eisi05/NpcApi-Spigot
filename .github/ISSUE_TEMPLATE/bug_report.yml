@@ -25,14 +25,14 @@ body:
         - label: Other
     validations:
       required: true
-#  - type: input
-#    id: other_server_software
-#    attributes:
-#      label: Please specify server software
-#      description: Required if 'Other' is selected above
-#      placeholder: e.g., Purpur, Tuinity, etc.
-#    validations:
-#      required: false
+  - type: input
+    id: other_server_software
+    attributes:
+      label: Please specify server software
+      description: Required if 'Other' is selected above
+      placeholder: e.g., Purpur, Tuinity, etc.
+    validations:
+      required: false
 #    visible: ${{ !contains(github.event.issue.body, '### Server Software\n\n- [ ] Spigot\n- [ ] Paper\n- [X] Other') || contains(github.event.issue.body, '### Please specify server software') }}
   - type: input
     id: server_version
