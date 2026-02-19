@@ -33,7 +33,6 @@ body:
       placeholder: e.g., Purpur, Tuinity, etc.
     validations:
       required: false
-    visible: github.event.issue.body == '' || contains(github.event.issue.body, '### Please specify server software')
   - type: input
     id: server_version
     attributes:
