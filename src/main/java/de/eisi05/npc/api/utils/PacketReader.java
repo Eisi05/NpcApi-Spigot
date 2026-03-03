@@ -6,9 +6,12 @@ import de.eisi05.npc.api.events.NpcInteractEvent;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.wrapper.enums.InteractionHand;
+import de.eisi05.npc.api.wrapper.objects.WrappedMinecraftServer;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
+import de.eisi05.npc.api.wrapper.packets.AnimatePacket;
 import de.eisi05.npc.api.wrapper.packets.PacketWrapper;
 import de.eisi05.npc.api.wrapper.packets.UseEntityPacketWrapper;
+import de.eisi05.npc.api.wrapper.packets.UseItemPacketWrapper;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -17,6 +20,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
 /**
@@ -28,6 +32,7 @@ public class PacketReader
 {
     private static final Map<UUID, Channel> channels = new HashMap<>();
     private static final List<BiConsumer<Player, Object>> readers = new ArrayList<>();
+    private static final Map<UUID, Integer> cancelUseUntilTick = new ConcurrentHashMap<>();
 
     /**
      * Adds a custom packet reader to the list of readers. This reader will be called for every incoming packet processed by the injected handler.
@@ -93,6 +98,23 @@ public class PacketReader
         if(!PacketWrapper.PacketHolder.is(packet, UseEntityPacketWrapper.class))
             return;
 
+        if(PacketWrapper.PacketHolder.is(packet, UseItemPacketWrapper.class))
+        {
+            int currentTick = WrappedMinecraftServer.getCurrentTick();
+            Integer until = cancelUseUntilTick.remove(player.getUniqueId());
+
+            if(until == null || currentTick > until)
+                return;
+
+            Bukkit.getScheduler().runTask(NpcApi.plugin, () ->
+            {
+                WrappedServerPlayer serverPlayer = WrappedServerPlayer.fromPlayer(player);
+                serverPlayer.stopUsingItem();
+                serverPlayer.sendPacket(AnimatePacket.create(serverPlayer, AnimatePacket.Animation.SWING_MAIN_HAND));
+                player.updateInventory();
+            });
+        }
+
         UseEntityPacketWrapper useEntityPacketWrapper = PacketWrapper.PacketHolder.wrap(packet, UseEntityPacketWrapper.class);
 
         int id = useEntityPacketWrapper.getId();
@@ -103,14 +125,19 @@ public class PacketReader
 
         UseEntityPacketWrapper.Action action = useEntityPacketWrapper.getAction();
 
+        int currentTick = WrappedMinecraftServer.getCurrentTick();
         if(action.getActionType() == UseEntityPacketWrapper.ActionType.ATTACK)
         {
             Bukkit.getScheduler().scheduleSyncDelayedTask(NpcApi.plugin,
                     () -> Bukkit.getPluginManager().callEvent(new NpcInteractEvent(player, npc, ClickActionType.LEFT)), 0);
+            cancelUseUntilTick.put(player.getUniqueId(), currentTick + 10);
         }
         else if(action.getActionType() == UseEntityPacketWrapper.ActionType.INTERACT && action.getHand() == InteractionHand.MAIN_HAND)
+        {
             Bukkit.getScheduler().scheduleSyncDelayedTask(NpcApi.plugin,
                     () -> Bukkit.getPluginManager().callEvent(new NpcInteractEvent(player, npc, ClickActionType.RIGHT)), 0);
+            cancelUseUntilTick.put(player.getUniqueId(), currentTick + 10);
+        }
     }
 
     /**

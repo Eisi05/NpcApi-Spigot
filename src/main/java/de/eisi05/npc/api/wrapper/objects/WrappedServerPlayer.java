@@ -199,6 +199,27 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         return new WrappedCommandSourceStack(invokeWrappedMethod());
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "gf")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "fU")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "fM")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_5), path = "fF")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21), path = "fx")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_6), path = "fB")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_4), path = "ft")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_2), path = "fs")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20), path = "fo")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_4), path = "fk")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_3), path = "ff")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_1), path = "eZ")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19), path = "fa")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_18_2), path = "eS")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_18), path = "eR")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "clearActiveItem")
+    public void stopUsingItem()
+    {
+        invokeWrappedMethod();
+    }
+
     @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "a")
     public void sendRawMessage(@NotNull WrappedComponent component)
     {
