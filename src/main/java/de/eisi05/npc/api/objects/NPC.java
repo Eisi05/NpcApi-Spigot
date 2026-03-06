@@ -14,7 +14,10 @@ import de.eisi05.npc.api.utils.ObjectSaver;
 import de.eisi05.npc.api.utils.Var;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.wrapper.enums.Pose;
-import de.eisi05.npc.api.wrapper.objects.*;
+import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
+import de.eisi05.npc.api.wrapper.objects.WrappedEntity;
+import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
+import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import de.eisi05.npc.api.wrapper.packets.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -607,6 +610,33 @@ public class NPC extends NpcHolder
 
         npcPath.toFile().getParentFile().mkdirs();
         Files.deleteIfExists(npcPath);
+    }
+
+    /**
+     * Rotates the NPC's head to the specified yaw and pitch angles. This sends rotation packets to all current viewers.
+     *
+     * @param yaw   The horizontal rotation angle in degrees (0-360)
+     * @param pitch The vertical rotation angle in degrees (-90 to 90)
+     */
+    public void rotateHead(float yaw, float pitch)
+    {
+        rotateHead(yaw, pitch, this.viewers.stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toList());
+    }
+
+    /**
+     * Rotates the NPC's head to the specified yaw and pitch angles. This sends rotation packets only to the specified viewers.
+     *
+     * @param yaw     The horizontal rotation angle in degrees (0-360)
+     * @param pitch   The vertical rotation angle in degrees (-90 to 90)
+     * @param viewers The list of players who should see the rotation. Must not be null.
+     */
+    public void rotateHead(float yaw, float pitch, List<Player> viewers)
+    {
+        RotateHeadPacket head = new RotateHeadPacket(entity, (byte) (yaw * 256 / 360));
+        MoveEntityPacket.Rot body = new MoveEntityPacket.Rot(entity.getId(), (byte) (yaw * 256 / 360), (byte) (pitch * 256 / 360), true);
+
+        sendNpcMovePackets(null, head, viewers.toArray(new Player[0]));
+        sendNpcBodyPackets(body, viewers.toArray(new Player[0]));
     }
 
     /**
