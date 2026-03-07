@@ -683,9 +683,11 @@ public class NPC extends NpcHolder
      * @param path               The {@link de.eisi05.npc.api.pathfinding.Path} containing the ordered waypoints the NPC should follow.
      * @param walkSpeed          The walking speed of the NPC (clamped between 0.1 and 1).
      * @param changeRealLocation If true, the NPC's actual server-side location will be updated; otherwise only packets are sent.
+     * @param onEnd              A {@link Runnable} to be executed when the NPC reaches the end of the path.
      * @return The {@link BukkitTask} representing the movement task.
      */
-    public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed, boolean changeRealLocation)
+    public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed, boolean changeRealLocation,
+                                      @Nullable Consumer<WalkingResult> onEnd)
     {
         return walkTo(path, walkSpeed, changeRealLocation, null, (Player[]) null);
     }
@@ -704,13 +706,12 @@ public class NPC extends NpcHolder
     public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed,
                                       boolean changeRealLocation, @Nullable Consumer<WalkingResult> onEnd, @Nullable Player... viewers)
     {
-        if(viewers != null)
+        viewers = viewers == null ? this.viewers.stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toArray(Player[]::new) : viewers;
+
+        for(Player player : viewers)
         {
-            for(Player player : viewers)
-            {
-                if(isWalking(player))
-                    cancelWalking(player);
-            }
+            if(isWalking(player))
+                cancelWalking(player);
         }
 
         final double speed = Math.max(Math.min(walkSpeed, 1), 0.1);
@@ -726,11 +727,8 @@ public class NPC extends NpcHolder
                 .updateRealLocation(event.isChangeRealLocation())
                 .callback(onEnd).build();
 
-        if(viewers != null)
-        {
-            for(Player player : viewers)
-                pathTasks.put(player.getUniqueId(), pathTask);
-        }
+        for(Player player : viewers)
+            pathTasks.put(player.getUniqueId(), pathTask);
 
         return pathTask.runTaskTimer(NpcApi.plugin, 1L, 1L);
     }
@@ -780,6 +778,9 @@ public class NPC extends NpcHolder
         {
             for(var player : players)
             {
+                if(player == null)
+                    continue;
+
                 WrappedServerPlayer serverPlayer = WrappedServerPlayer.fromPlayer(player);
                 if(moveEntityPacket != null)
                     serverPlayer.sendPacket(moveEntityPacket);
@@ -814,6 +815,9 @@ public class NPC extends NpcHolder
         {
             for(Player player : players)
             {
+                if(player == null)
+                    continue;
+
                 WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(player);
                 if(teleportEntityPacket != null)
                     serverPlayer1.sendPacket(teleportEntityPacket);
