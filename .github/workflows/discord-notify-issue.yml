@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Skip if the comment author is you
-    if: github.event.comment.user.login != 'Eisi05'
+    #if: github.event.comment.user.login != 'Eisi05'
 
     steps:
       - name: Prepare Embed Data
