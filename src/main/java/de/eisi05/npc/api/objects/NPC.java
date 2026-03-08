@@ -26,6 +26,7 @@ import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -523,6 +524,12 @@ public class NPC extends NpcHolder
         if(!viewers.contains(player.getUniqueId()))
             viewers.add(player.getUniqueId());
 
+        WrappedServerPlayer wrappedServerPlayer = WrappedServerPlayer.fromPlayer(player);
+
+        Team team = player.getScoreboard().getEntryTeam(player.getName());
+        String listName = team == null ? player.getName() : team.getPrefix() + team.getColor() + player.getName() + team.getSuffix();
+        wrappedServerPlayer.setListName(listName);
+
         List<PacketWrapper> packets = new ArrayList<>();
 
         Arrays.stream(NpcOption.values()).filter(NpcOption::loadBefore)
@@ -545,7 +552,11 @@ public class NPC extends NpcHolder
 
         NpcOption.ENABLED.getPacket(isEnabled(), this, player).ifPresent(packets::add);
 
-        WrappedServerPlayer wrappedServerPlayer = WrappedServerPlayer.fromPlayer(player);
+        packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, wrappedServerPlayer));
+
+        if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_3))
+            packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LISTED, wrappedServerPlayer));
+
         packets.forEach(wrappedServerPlayer::sendPacket);
 
         Bukkit.getPluginManager().callEvent(new NpcPostShowEvent(player, this, npcPreShowEvent.wasViewer()));

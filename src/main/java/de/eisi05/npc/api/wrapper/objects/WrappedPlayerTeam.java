@@ -72,6 +72,20 @@ public class WrappedPlayerTeam extends Wrapper
         invokeWrappedMethod(visibility.getHandle());
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setCollisionRule")
+    public void setCollisionRule(@NotNull CollisionRule collisionRule)
+    {
+        invokeWrappedMethod(collisionRule.getHandle());
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "b")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setCanSeeFriendlyInvisibles")
+    public void setCanSeeFriendlyInvisible(boolean canSeeFriendlyInvisible)
+    {
+        invokeWrappedMethod(canSeeFriendlyInvisible);
+    }
+
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "h")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_4), path = "g")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getPlayerNameSet")
@@ -117,6 +131,29 @@ public class WrappedPlayerTeam extends Wrapper
 
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "d")
         HIDE_FOR_OWN_TEAM;
+
+        @Override
+        public @NotNull Object getHandle()
+        {
+            return cast(this);
+        }
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.scores" +
+            ".ScoreboardTeamBase$EnumTeamPush")
+    public enum CollisionRule implements EnumWrapper
+    {
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
+        ALWAYS,
+
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "b")
+        NEVER,
+
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "c")
+        PUSH_OTHER_TEAMS,
+
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "d")
+        PUSH_OWN_TEAM;
 
         @Override
         public @NotNull Object getHandle()
