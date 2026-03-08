@@ -587,8 +587,6 @@ public class NPC extends NpcHolder
         if(WrappedPlayerTeam.exists(player, getServerPlayer().getName()))
         {
             WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, getServerPlayer().getName());
-            wrappedServerPlayer.sendPacket(
-                    SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, getServerPlayer().getName(), SetPlayerTeamPacket.Action.REMOVE));
             wrappedServerPlayer.sendPacket(SetPlayerTeamPacket.createRemovePacket(wrappedPlayerTeam));
             WrappedPlayerTeam.clear(player.getUniqueId(), getServerPlayer().getName());
         }
