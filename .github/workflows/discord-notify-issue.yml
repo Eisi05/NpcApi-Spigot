@@ -1,8 +1,8 @@
 name: Notify Discord on New Comment
 
 on:
-  issue_comment:
-    types: [created]
+  issues:
+    types: [opened]
 
 jobs:
   notify_comment:
