@@ -8,9 +8,6 @@ jobs:
   notify_comment:
     runs-on: ubuntu-latest
 
-    # Skip if the comment author is you
-    if: github.event.comment.user.login != 'Eisi05'
-
     steps:
      - name: Send Discord embed
        uses: actions/github-script@v7
