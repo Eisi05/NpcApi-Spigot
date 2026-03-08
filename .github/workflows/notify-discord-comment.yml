@@ -11,7 +11,7 @@ jobs:
     # ⬇️ ADD THIS CONDITION TO THE *JOB*
     # This skips the *entire job* if the commenter is the user you want to ignore.
     # Replace 'YOUR-USERNAME-TO-IGNORE' with your actual GitHub login.
-    #if: github.event.comment.user.login != 'Eisi05'
+    if: github.event.comment.user.login != 'Eisi05'
 
     steps:
       - name: Prepare Embed Data
