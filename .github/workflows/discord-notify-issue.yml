@@ -1,35 +1,51 @@
-- name: Send Discord embed
-  uses: actions/github-script@v7
-  with:
-    script: |
-      const issue = context.payload.issue;
+name: Notify Discord on New Comment
 
-      let body = issue.body || "No description provided.";
-      if (body.length > 1024) body = body.substring(0,1021) + "...";
+on:
+  issue_comment:
+    types: [created]
 
-      const payload = {
-        embeds: [{
-          title: `🆕 New Issue #${issue.number}: ${issue.title}`,
-          url: issue.html_url,
-          description: body,
-          color: 5814783,
-          fields: [
-            { name: "State", value: "Open", inline: true }
-          ],
-          author: {
-            name: issue.user.login,
-            url: issue.user.html_url,
-            icon_url: issue.user.avatar_url
-          },
-          footer: { text: `GitHub → ${context.repo.owner}/${context.repo.repo}` },
-          timestamp: issue.created_at
-        }]
-      };
+jobs:
+  notify_comment:
+    runs-on: ubuntu-latest
+    
+    # ⬇️ ADD THIS CONDITION TO THE *JOB*
+    # This skips the *entire job* if the commenter is the user you want to ignore.
+    # Replace 'YOUR-USERNAME-TO-IGNORE' with your actual GitHub login.
+    #if: github.event.comment.user.login != 'Eisi05'
 
-      await fetch(process.env.DISCORD_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-  env:
-    DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Send Discord embed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+      
+            let body = issue.body || "No description provided.";
+            if (body.length > 1024) body = body.substring(0,1021) + "...";
+      
+            const payload = {
+              embeds: [{
+                title: `🆕 New Issue #${issue.number}: ${issue.title}`,
+                url: issue.html_url,
+                description: body,
+                color: 5814783,
+                fields: [
+                  { name: "State", value: "Open", inline: true }
+                ],
+                author: {
+                  name: issue.user.login,
+                  url: issue.user.html_url,
+                  icon_url: issue.user.avatar_url
+                },
+                footer: { text: `GitHub → ${context.repo.owner}/${context.repo.repo}` },
+                timestamp: issue.created_at
+              }]
+            };
+      
+            await fetch(process.env.DISCORD_WEBHOOK, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
