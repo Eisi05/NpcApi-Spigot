@@ -101,33 +101,34 @@ public class WrappedEntitySnapshot implements Serializable
     public @NotNull WrappedEntity<?> create(@NotNull World world)
     {
         WrappedEntity<?> entity;
+        WrappedCompoundTag data = getData();
         if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_2))
         {
-            getData().putString("id", type.toLowerCase());
+            data.putString("id", type.toLowerCase());
 
             entity = new WrappedEntity<>(Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a",
-                    getData().getHandle(), Var.getNmsLevel(world), Function.identity()).get());
+                    data.getHandle(), Var.getNmsLevel(world), Function.identity()).get());
         }
         else if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_9))
         {
-            getData().putString("id", type.toLowerCase());
+           data.putString("id", type.toLowerCase());
             entity = new WrappedEntity<>(
                     Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a",
-                            getData().getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get());
+                            data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get());
         }
         else if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_11))
             entity = new WrappedEntity<>(
-                    Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()), getData().getHandle(),
+                    Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()), data.getHandle(),
                             Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get());
         else
             entity = new WrappedEntity<>(
                     Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()),
-                            getData().getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(),
+                            data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(),
                             WrappedEntity.EntityProcessor.NOP).get());
 
         WrappedEntity<?> finalEntity = entityFunction == null ? entity :
                 WrappedEntity.fromEntity(entityFunction.apply(Var.unsafeCast(entity.getBukkitPlayer())), WrappedEntity.class);
-        finalEntity.data = getData().toString();
+        finalEntity.data = data.toString();
         return finalEntity;
     }
 
