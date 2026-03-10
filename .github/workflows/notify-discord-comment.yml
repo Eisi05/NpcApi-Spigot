@@ -54,26 +54,32 @@ jobs:
             core.setOutput('timestamp', comment.created_at);
 
       - name: Send Discord embed
-        # ⬇️ REMOVE THIS 'if' - it's no longer needed.
-        # if: steps.prep.outputs.description != ''
-        run: |
-          curl -H "Content-Type: application/json" \
-          -d "{
-                \"embeds\": [{
-                  \"title\": \"${{ steps.prep.outputs.title }}\",
-                  \"url\": \"${{ steps.prep.outputs.issue_url }}\",
-                  \"description\": \"${{ steps.prep.outputs.description }}\",
-                  \"color\": ${{ steps.prep.outputs.color }},
-                  \"fields\": [
-                    {\"name\": \"Labels\", \"value\": \"${{ steps.prep.outputs.labels }}\", \"inline\": true},
-                    {\"name\": \"State\", \"value\": \"Open\", \"inline\": true}
-                  ],
-                  \"author\": {
-                    \"name\": \"${{ steps.prep.outputs.comment_author }}\",
-                    \"url\": \"${{ steps.prep.outputs.comment_author_url }}\",
-                    \"icon_url\": \"${{ steps.prep.outputs.comment_author_icon }}\"
-                  },
-                  \"timestamp\": \"${{ steps.prep.outputs.timestamp }}\"
-                }]
-              }" \
-          ${{ secrets.DISCORD_WEBHOOK }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const payload = {
+              embeds: [{
+                title: `${{ steps.prep.outputs.title }}`,
+                url: `${{ steps.prep.outputs.issue_url }}`,
+                description: `${{ steps.prep.outputs.description }}`,
+                color: Number(`${{ steps.prep.outputs.color }}`),
+                fields: [
+                  { name: "Labels", value: `${{ steps.prep.outputs.labels }}`, inline: true },
+                  { name: "State", value: "Open", inline: true }
+                ],
+                author: {
+                  name: `${{ steps.prep.outputs.comment_author }}`,
+                  url: `${{ steps.prep.outputs.comment_author_url }}`,
+                  icon_url: `${{ steps.prep.outputs.comment_author_icon }}`
+                },
+                timestamp: `${{ steps.prep.outputs.timestamp }}`
+              }]
+            };
+      
+            await fetch(process.env.WEBHOOK, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
