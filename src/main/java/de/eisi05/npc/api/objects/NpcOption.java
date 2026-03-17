@@ -258,8 +258,10 @@ public class NpcOption<T, S extends Serializable>
             visibility -> visibility, visibility -> visibility, (visibility, npc, player) ->
     {
         String teamName = "trans-" + player.getEntityId();
-        boolean modified = WrappedPlayerTeam.exists(player, teamName);
-        WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, teamName);
+        WrappedPlayerTeam playerTeam = WrappedPlayerTeam.getPlayersTeam(player);
+
+        boolean modified = WrappedPlayerTeam.exists(player, teamName) || playerTeam.getHandle() != null;
+        WrappedPlayerTeam wrappedPlayerTeam = playerTeam.getHandle() != null ? playerTeam : WrappedPlayerTeam.create(player, teamName);
         wrappedPlayerTeam.setCanSeeFriendlyInvisible(true);
         wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.HIDE_FOR_OWN_TEAM);
 
@@ -554,9 +556,14 @@ public class NpcOption<T, S extends Serializable>
                 packets.add(new RemoveEntityPacket(npc.getServerPlayer().getId()));
                 packets.add(entity.getAddEntityPacket());
 
+                WrappedPlayerTeam playerTeam = WrappedPlayerTeam.getPlayersTeam(player);
+                WrappedPlayerTeam.create(player,  npc.getServerPlayer().getName());
+
                 String teamName = (npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT) ? "trans-" + player.getEntityId() : npc.getServerPlayer().getName();
-                boolean modified = WrappedPlayerTeam.exists(player, teamName);
-                WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, teamName);
+                boolean modified =
+                        WrappedPlayerTeam.exists(player, teamName) ||
+                                (playerTeam.getHandle() != null && npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT);
+                WrappedPlayerTeam wrappedPlayerTeam = playerTeam.getHandle() != null ? playerTeam : WrappedPlayerTeam.create(player, teamName);
                 wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.NEVER);
 
                 if(!teamName.startsWith("trans"))
