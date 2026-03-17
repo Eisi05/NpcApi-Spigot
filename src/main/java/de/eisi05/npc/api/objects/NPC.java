@@ -3,6 +3,9 @@ package de.eisi05.npc.api.objects;
 import com.mojang.datafixers.util.Either;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.enums.WalkingResult;
+import de.eisi05.npc.api.events.NpcHideEvent;
+import de.eisi05.npc.api.events.NpcPostShowEvent;
+import de.eisi05.npc.api.events.NpcPreShowEvent;
 import de.eisi05.npc.api.events.NpcStartWalkingEvent;
 import de.eisi05.npc.api.interfaces.NpcClickAction;
 import de.eisi05.npc.api.manager.NpcManager;
@@ -10,8 +13,9 @@ import de.eisi05.npc.api.scheduler.PathTask;
 import de.eisi05.npc.api.utils.ObjectSaver;
 import de.eisi05.npc.api.utils.Var;
 import de.eisi05.npc.api.utils.Versions;
+import de.eisi05.npc.api.wrapper.enums.Pose;
 import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
-import de.eisi05.npc.api.wrapper.objects.WrappedEntityData;
+import de.eisi05.npc.api.wrapper.objects.WrappedEntity;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import de.eisi05.npc.api.wrapper.packets.*;
@@ -19,8 +23,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -42,15 +48,14 @@ import java.util.stream.Collectors;
  */
 public class NPC extends NpcHolder
 {
+    public transient final Map<UUID, String> nameCache = new HashMap<>();
     final Map<String, Integer> toDeleteEntities = new HashMap<>();
-
-    private transient final Map<UUID, String> nameCache = new HashMap<>();
     private final List<UUID> viewers = new ArrayList<>();
-    private final Map<NpcOption<?, ?>, Object> options;
     private final Path npcPath;
     private final Map<UUID, PathTask> pathTasks = new HashMap<>();
+    public WrappedEntity<?> entity;
     WrappedServerPlayer serverPlayer;
-    NpcName name;
+
     private Location location;
     private NpcClickAction clickEvent;
     private Instant createdAt = Instant.now();
@@ -98,11 +103,10 @@ public class NPC extends NpcHolder
     {
         this.name = name;
         this.location = location;
-        this.serverPlayer = WrappedServerPlayer.create(location, uuid, name.isStatic() ? name.getName() : WrappedComponent.create(null), null);
+        this.entity = this.serverPlayer = WrappedServerPlayer.create(location, uuid, name.isStatic() ? name.getName() : WrappedComponent.create(null), null);
 
         npcPath = NpcApi.plugin.getDataFolder().toPath().resolve("NPC").resolve(uuid + ".npc");
 
-        this.options = new HashMap<>();
         for(NpcOption<?, ?> value : NpcOption.values())
             setOption(value, Var.unsafeCast(value.getDefaultValue()));
 
@@ -117,7 +121,7 @@ public class NPC extends NpcHolder
      * @param options    The options map for the NPC. Must not be null.
      * @param clickEvent The click event for the NPC. Can be null.
      */
-    private NPC(@NotNull Location location, @NotNull NpcName name, @NotNull Map<NpcOption<?, ?>, Object> options,
+    private NPC(@NotNull Location location, @NotNull NpcName name, @NotNull Map<UUID, Map<NpcOption<?, ?>, Object>> options,
                 @Nullable NpcClickAction clickEvent)
     {
         this(location, UUID.randomUUID(), name);
@@ -181,6 +185,17 @@ public class NPC extends NpcHolder
 
     /**
      * Sets the click action for this NPC.
+     * <p>
+     * ⚠ <b>Serialization notice:</b><br> The provided {@link NpcClickAction} is serialized when the NPC is saved. Avoid using lambdas or method references that
+     * capture non-serializable objects (e.g. plugin instances, command classes, or {@code this}), as this will cause a
+     * {@link java.io.NotSerializableException}.
+     * <p>
+     * Recommended approaches are:
+     * <ul>
+     *   <li>Stateless lambdas that capture nothing</li>
+     *   <li>Method references to static methods</li>
+     *   <li>Explicit {@link NpcClickAction} implementation classes</li>
+     * </ul>
      *
      * @param event the {@link NpcClickAction} to set, or {@code null} to remove the current action.
      * @return this NPC instance for method chaining. Will not be null.
@@ -198,7 +213,7 @@ public class NPC extends NpcHolder
      */
     public boolean isEnabled()
     {
-        return getOption(NpcOption.ENABLED);
+        return getOption(NpcOption.ENABLED, GLOBAL_UUID);
     }
 
     /**
@@ -221,7 +236,7 @@ public class NPC extends NpcHolder
      */
     public boolean isEditable()
     {
-        return getOption(NpcOption.EDITABLE);
+        return getOption(NpcOption.EDITABLE, GLOBAL_UUID);
     }
 
     /**
@@ -237,52 +252,6 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Sets a specific option for this NPC.
-     *
-     * @param option the {@link NpcOption} to set. Must not be null.
-     * @param value  the value for the option. If {@code null}, the option will be removed (reverting to default).
-     * @param <T>    the type of the option's value.
-     */
-    public <T> void setOption(@NotNull NpcOption<T, ?> option, @Nullable T value)
-    {
-        if(value == null)
-            options.remove(option);
-        else
-            options.put(option, value);
-
-        if(NpcApi.config.autoUpdate())
-        {
-            if(option.equals(NpcOption.SKIN) || option.equals(NpcOption.USE_PLAYER_SKIN))
-            {
-                updateSkin(viewers.stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toArray(Player[]::new));
-                return;
-            }
-
-            viewers.forEach(uuid ->
-            {
-                Player player = Bukkit.getPlayer(uuid);
-                if(player == null)
-                    return;
-
-                option.getPacket(value, this, player).ifPresent(packetWrapper -> WrappedServerPlayer.fromPlayer(player).sendPacket(packetWrapper));
-            });
-        }
-    }
-
-    /**
-     * Gets the value of a specific option for this NPC. If the option has not been explicitly set, its default value will be returned.
-     *
-     * @param option the {@link NpcOption} to get. Must not be null.
-     * @param <T>    the type of the option's value.
-     * @return the value of the option.
-     */
-    @SuppressWarnings("unchecked")
-    public <T> @Nullable T getOption(@NotNull NpcOption<T, ?> option)
-    {
-        return (T) options.getOrDefault(option, option.getDefaultValue());
-    }
-
-    /**
      * Plays an animation for this NPC, visible to the specified player.
      *
      * @param player    the player who will see the animation. Must not be null.
@@ -290,7 +259,12 @@ public class NPC extends NpcHolder
      */
     public void playAnimation(@NotNull Player player, @NotNull AnimatePacket.Animation animation)
     {
-        WrappedServerPlayer.fromPlayer(player).sendPacket(AnimatePacket.create(getServerPlayer(), animation));
+        PacketWrapper packetWrapper = AnimatePacket.create(entity, animation);
+
+        if(packetWrapper == null)
+            return;
+
+        WrappedServerPlayer.fromPlayer(player).sendPacket(packetWrapper);
     }
 
     /**
@@ -323,8 +297,13 @@ public class NPC extends NpcHolder
     {
         this.location = location;
 
-        if(serverPlayer != null)
-            this.serverPlayer.moveTo(location);
+        if(serverPlayer == null)
+            return;
+
+        this.serverPlayer.moveTo(location);
+
+        if(!entity.equals(serverPlayer))
+            this.entity.moveTo(location);
     }
 
     /**
@@ -332,7 +311,8 @@ public class NPC extends NpcHolder
      *
      * @return the {@link UUID} of the NPC. Will not be null.
      */
-    public @NotNull UUID getUUID()
+    @Override
+    public @Nullable UUID getUUID()
     {
         if(serverPlayer != null)
             return serverPlayer.getUUID();
@@ -364,6 +344,7 @@ public class NPC extends NpcHolder
      *
      * @return the {@link WrappedComponent} representing the NPC's name. Will not be null.
      */
+    @Override
     public @NotNull WrappedComponent getName()
     {
         return name.getName();
@@ -374,6 +355,7 @@ public class NPC extends NpcHolder
      *
      * @param name the new {@link WrappedComponent} name for the NPC. Must not be null.
      */
+    @Override
     public void setName(@NotNull NpcName name)
     {
         this.name = name;
@@ -391,7 +373,7 @@ public class NPC extends NpcHolder
      */
     public <K extends Serializable, V extends Serializable> void addCustomData(@NotNull K key, @NotNull V value)
     {
-        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA);
+        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA, GLOBAL_UUID);
         map.put(key, value);
         setOption(NpcOption.CUSTOM_DATA, map);
     }
@@ -405,7 +387,7 @@ public class NPC extends NpcHolder
     @SuppressWarnings("unchecked")
     public <K extends Serializable, T extends Serializable> @Nullable T removeCustomData(@NotNull K key)
     {
-        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA);
+        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA, GLOBAL_UUID);
         T value = (T) map.remove(key);
         setOption(NpcOption.CUSTOM_DATA, map);
         return value;
@@ -420,8 +402,19 @@ public class NPC extends NpcHolder
     @SuppressWarnings("unchecked")
     public <K extends Serializable, T extends Serializable> @Nullable T getCustomData(@NotNull K key)
     {
-        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA);
+        HashMap<Serializable, Serializable> map = getOption(NpcOption.CUSTOM_DATA, GLOBAL_UUID);
         return (T) map.get(key);
+    }
+
+    /**
+     * Retrieves the custom data associated with this NPC. The custom data is stored as a map of serializable key-value pairs.
+     *
+     * @return A {@code HashMap} containing the custom data, or {@code null} if no custom data is set
+     * @see NpcOption#CUSTOM_DATA
+     */
+    public @Nullable HashMap<Serializable, Serializable> getCustomData()
+    {
+        return getOption(NpcOption.CUSTOM_DATA, GLOBAL_UUID);
     }
 
     /**
@@ -453,7 +446,7 @@ public class NPC extends NpcHolder
             if(player == null)
                 continue;
 
-            String name = getName(Bukkit.getPlayer(uuid)).toLegacy(false);
+            String name = getName(player).toLegacy(false);
             if(nameCache.getOrDefault(uuid, "").equals(name))
                 continue;
 
@@ -511,7 +504,7 @@ public class NPC extends NpcHolder
      */
     public void showNPCToPlayer(@NotNull Player player)
     {
-        if(!getOption(NpcOption.ENABLED) && !player.isPermissionSet("npc.admin") && !player.isOp())
+        if(!getOption(NpcOption.ENABLED, GLOBAL_UUID) && !player.isPermissionSet("npc.admin") && !player.isOp())
             return;
 
         if(!player.getWorld().getUID().equals(serverPlayer.getWorld().getUID()))
@@ -523,13 +516,24 @@ public class NPC extends NpcHolder
         if(!serverPlayer.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4))
             return;
 
+        NpcPreShowEvent npcPreShowEvent = new NpcPreShowEvent(player, this, viewers.contains(player.getUniqueId()));
+        Bukkit.getPluginManager().callEvent(npcPreShowEvent);
+        if(npcPreShowEvent.isCancelled())
+            return;
+
         if(!viewers.contains(player.getUniqueId()))
             viewers.add(player.getUniqueId());
+
+        WrappedServerPlayer wrappedServerPlayer = WrappedServerPlayer.fromPlayer(player);
+
+        Team team = player.getScoreboard().getEntryTeam(player.getName());
+        String listName = team == null ? player.getName() : team.getPrefix() + team.getColor() + player.getName() + team.getSuffix();
+        wrappedServerPlayer.setListName(listName);
 
         List<PacketWrapper> packets = new ArrayList<>();
 
         Arrays.stream(NpcOption.values()).filter(NpcOption::loadBefore)
-                .forEach(npcOption -> npcOption.getPacket(getOption(npcOption), this, player).ifPresent(packets::add));
+                .forEach(npcOption -> npcOption.getPacket(getOption(npcOption, player), this, player).ifPresent(packets::add));
 
         if(!name.isStatic() && getOption(NpcOption.SHOW_TAB_LIST))
             setOption(NpcOption.SHOW_TAB_LIST, false);
@@ -543,47 +547,19 @@ public class NPC extends NpcHolder
         if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_2))
             packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, serverPlayer));
 
-        packets.add(serverPlayer.getAddEntityPacket());
-
-        boolean modified = WrappedPlayerTeam.exists(player, getServerPlayer().getName());
-        WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, getServerPlayer().getName());
-        wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.NEVER);
-
-        packets.add(SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified));
-        packets.add(SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, getServerPlayer().getName(), SetPlayerTeamPacket.Action.ADD));
-
-        packets.add(new RotateHeadPacket(serverPlayer, (byte) ((location.getYaw() % 360) * 256 / 360)));
-        packets.add(new MoveEntityPacket.Rot(serverPlayer.getId(), (byte) location.getYaw(), (byte) location.getPitch(), serverPlayer.isOnGround()));
-
-        WrappedEntityData data = serverPlayer.getEntityData();
-        data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2), Optional.of(WrappedComponent.create("NPC").getHandle()));
-        data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), false);
-        packets.add(SetEntityDataPacket.create(serverPlayer.getId(), data));
-
-        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || !getOption(NpcOption.HIDE_NAMETAG))
-        {
-            if(Versions.isCurrentVersionSmallerThan(Versions.V1_21))
-                serverPlayer.getNameTag()
-                        .moveTo(getLocation().clone().add(0, (serverPlayer.getBoundingBox().getYSize() * getOption(NpcOption.SCALE)), 0));
-
-            packets.add(serverPlayer.getNameTag().getAddEntityPacket());
-
-            packets.add(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
-                    Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
-                            WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                                    .append(WrappedComponent.create("\n").append(name.getName(player))))));
-
-            if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
-                packets.add(new SetPassengerPacket(serverPlayer));
-        }
-
         Arrays.stream(NpcOption.values()).filter(npcOption -> !npcOption.equals(NpcOption.ENABLED) && !npcOption.loadBefore())
-                .forEach(npcOption -> npcOption.getPacket(getOption(npcOption), this, player).ifPresent(packets::add));
+                .forEach(npcOption -> npcOption.getPacket(getOption(npcOption, player), this, player).ifPresent(packets::add));
 
         NpcOption.ENABLED.getPacket(isEnabled(), this, player).ifPresent(packets::add);
 
-        WrappedServerPlayer wrappedServerPlayer = WrappedServerPlayer.fromPlayer(player);
+        packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, wrappedServerPlayer));
+
+        if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_3))
+            packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LISTED, wrappedServerPlayer));
+
         packets.forEach(wrappedServerPlayer::sendPacket);
+
+        Bukkit.getPluginManager().callEvent(new NpcPostShowEvent(player, this, npcPreShowEvent.wasViewer()));
     }
 
     /**
@@ -611,8 +587,6 @@ public class NPC extends NpcHolder
         if(WrappedPlayerTeam.exists(player, getServerPlayer().getName()))
         {
             WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, getServerPlayer().getName());
-            wrappedServerPlayer.sendPacket(
-                    SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, getServerPlayer().getName(), SetPlayerTeamPacket.Action.REMOVE));
             wrappedServerPlayer.sendPacket(SetPlayerTeamPacket.createRemovePacket(wrappedPlayerTeam));
             WrappedPlayerTeam.clear(player.getUniqueId(), getServerPlayer().getName());
         }
@@ -625,6 +599,8 @@ public class NPC extends NpcHolder
             wrappedServerPlayer.sendPacket(new PlayerInfoRemovePacket(List.of(getUUID())));
 
         viewers.remove(player.getUniqueId());
+
+        Bukkit.getPluginManager().callEvent(new NpcHideEvent(player, this));
     }
 
     /**
@@ -639,10 +615,37 @@ public class NPC extends NpcHolder
         NpcManager.removeNPC(this);
 
         serverPlayer.remove();
-        serverPlayer = null;
+        entity = serverPlayer = null;
 
         npcPath.toFile().getParentFile().mkdirs();
         Files.deleteIfExists(npcPath);
+    }
+
+    /**
+     * Rotates the NPC's head to the specified yaw and pitch angles. This sends rotation packets to all current viewers.
+     *
+     * @param yaw   The horizontal rotation angle in degrees (0-360)
+     * @param pitch The vertical rotation angle in degrees (-90 to 90)
+     */
+    public void rotateHead(float yaw, float pitch)
+    {
+        rotateHead(yaw, pitch, this.viewers.stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toList());
+    }
+
+    /**
+     * Rotates the NPC's head to the specified yaw and pitch angles. This sends rotation packets only to the specified viewers.
+     *
+     * @param yaw     The horizontal rotation angle in degrees (0-360)
+     * @param pitch   The vertical rotation angle in degrees (-90 to 90)
+     * @param viewers The list of players who should see the rotation. Must not be null.
+     */
+    public void rotateHead(float yaw, float pitch, List<Player> viewers)
+    {
+        RotateHeadPacket head = new RotateHeadPacket(entity, (byte) (yaw * 256 / 360));
+        MoveEntityPacket.Rot body = new MoveEntityPacket.Rot(entity.getId(), (byte) (yaw * 256 / 360), (byte) (pitch * 256 / 360), true);
+
+        sendNpcMovePackets(null, head, viewers.toArray(new Player[0]));
+        sendNpcBodyPackets(body, viewers.toArray(new Player[0]));
     }
 
     /**
@@ -652,15 +655,21 @@ public class NPC extends NpcHolder
      */
     public void lookAtPlayer(@NotNull Player viewer)
     {
-        Location npcLoc = serverPlayer.getBukkitPlayer().getLocation();
+        if(entity == null)
+            return;
+
+        Location npcLoc = entity.getBukkitPlayer().getLocation();
         Location playerLoc = viewer.getLocation();
 
         if(npcLoc.getWorld() != playerLoc.getWorld())
             return;
 
         double dx = playerLoc.getX() - npcLoc.getX();
-        double dy = ((playerLoc.getY() + viewer.getEyeHeight())) -
-                ((npcLoc.getY() + serverPlayer.getBukkitPlayer().getEyeHeight() * getOption(NpcOption.SCALE)));
+
+        double eyeHeight = (entity.getBukkitPlayer() instanceof LivingEntity le ? le.getEyeHeight() :
+                entity.getBukkitPlayer().getHeight()) - (Pose.fromBukkit(getOption(NpcOption.POSE, viewer)) == Pose.SITTING ? 0.625 : 0);
+
+        double dy = (playerLoc.getY() + viewer.getEyeHeight()) - (npcLoc.getY() + (eyeHeight * getOption(NpcOption.SCALE, viewer)));
         double dz = playerLoc.getZ() - npcLoc.getZ();
 
         double distanceXZ = Math.sqrt(dx * dx + dz * dz);
@@ -672,8 +681,8 @@ public class NPC extends NpcHolder
 
         WrappedServerPlayer player = WrappedServerPlayer.fromPlayer(viewer);
 
-        player.sendPacket(new RotateHeadPacket(serverPlayer, yawByte));
-        player.sendPacket(new MoveEntityPacket.Rot(serverPlayer.getId(), yawByte, pitchByte, serverPlayer.isOnGround()));
+        player.sendPacket(new RotateHeadPacket(entity, yawByte));
+        player.sendPacket(new MoveEntityPacket.Rot(entity.getId(), yawByte, pitchByte, serverPlayer.isOnGround()));
     }
 
     /**
@@ -683,11 +692,13 @@ public class NPC extends NpcHolder
      * @param path               The {@link de.eisi05.npc.api.pathfinding.Path} containing the ordered waypoints the NPC should follow.
      * @param walkSpeed          The walking speed of the NPC (clamped between 0.1 and 1).
      * @param changeRealLocation If true, the NPC's actual server-side location will be updated; otherwise only packets are sent.
+     * @param onEnd              A {@link Runnable} to be executed when the NPC reaches the end of the path.
      * @return The {@link BukkitTask} representing the movement task.
      */
-    public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed, boolean changeRealLocation)
+    public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed, boolean changeRealLocation,
+                                      @Nullable Consumer<WalkingResult> onEnd)
     {
-        return walkTo(path, walkSpeed, changeRealLocation, null, (Player[]) null);
+        return walkTo(path, walkSpeed, changeRealLocation, onEnd, null);
     }
 
     /**
@@ -702,15 +713,14 @@ public class NPC extends NpcHolder
      * @return The {@link BukkitTask} representing the movement task.
      */
     public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed,
-                                      boolean changeRealLocation, @Nullable Consumer<WalkingResult> onEnd, @Nullable Player... viewers)
+                                      boolean changeRealLocation, @Nullable Consumer<WalkingResult> onEnd, @Nullable List<Player> viewers)
     {
-        if(viewers != null)
+        viewers = viewers == null || viewers.isEmpty() ? this.viewers.stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toList() : viewers;
+
+        for(Player player : viewers)
         {
-            for(Player player : viewers)
-            {
-                if(isWalking(player))
-                    cancelWalking(player);
-            }
+            if(isWalking(player))
+                cancelWalking(player);
         }
 
         final double speed = Math.max(Math.min(walkSpeed, 1), 0.1);
@@ -722,15 +732,12 @@ public class NPC extends NpcHolder
 
         PathTask pathTask = new PathTask.Builder(this, path)
                 .speed(event.getWalkSpeed())
-                .viewers(viewers)
+                .viewers(viewers.toArray(new Player[0]))
                 .updateRealLocation(event.isChangeRealLocation())
                 .callback(onEnd).build();
 
-        if(viewers != null)
-        {
-            for(Player player : viewers)
-                pathTasks.put(player.getUniqueId(), pathTask);
-        }
+        for(Player player : viewers)
+            pathTasks.put(player.getUniqueId(), pathTask);
 
         return pathTask.runTaskTimer(NpcApi.plugin, 1L, 1L);
     }
@@ -780,6 +787,9 @@ public class NPC extends NpcHolder
         {
             for(var player : players)
             {
+                if(player == null)
+                    continue;
+
                 WrappedServerPlayer serverPlayer = WrappedServerPlayer.fromPlayer(player);
                 if(moveEntityPacket != null)
                     serverPlayer.sendPacket(moveEntityPacket);
@@ -814,6 +824,9 @@ public class NPC extends NpcHolder
         {
             for(Player player : players)
             {
+                if(player == null)
+                    continue;
+
                 WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(player);
                 if(teleportEntityPacket != null)
                     serverPlayer1.sendPacket(teleportEntityPacket);
@@ -853,7 +866,11 @@ public class NPC extends NpcHolder
         Set<UUID> excluded = excludedPlayers == null ? Collections.emptySet() :
                 Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
 
-        TeleportEntityPacket teleport = new TeleportEntityPacket(serverPlayer,
+        TeleportEntityPacket teleport1 = new TeleportEntityPacket(serverPlayer,
+                new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), location.getYaw(), location.getPitch()),
+                Set.of(), true);
+
+        TeleportEntityPacket teleport2 = entity.equals(serverPlayer) ? null : new TeleportEntityPacket(entity,
                 new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), location.getYaw(), location.getPitch()),
                 Set.of(), true);
 
@@ -866,34 +883,117 @@ public class NPC extends NpcHolder
             if(excluded.contains(viewer.getUniqueId()))
                 continue;
 
-            WrappedServerPlayer.fromPlayer(viewer).sendPacket(teleport);
+            WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(viewer);
+            serverPlayer1.sendPacket(teleport1);
+
+            if(teleport2 != null)
+                serverPlayer1.sendPacket(teleport2);
         }
     }
 
     /**
-     * Represents a fully serialized NPC, including its location, orientation, unique ID, name, additional options, click behavior, and creation time.
-     * <p>
-     * The {@code name} field now uses {@link NpcName}, which supports both static and dynamic names. For backward compatibility, a secondary constructor allows
-     * creating a {@code SerializedNPC} from a legacy {@link WrappedComponent.SerializedComponent}.
+     * A serializable representation of an NPC that can be stored and later restored. This class handles the conversion between in-memory {@link NPC} objects
+     * and their persistent storage format.
      *
-     * @param world      the UUID of the world the NPC is in
-     * @param x          the X-coordinate of the NPC
-     * @param y          the Y-coordinate of the NPC
-     * @param z          the Z-coordinate of the NPC
-     * @param yaw        the yaw rotation of the NPC
-     * @param pitch      the pitch rotation of the NPC
-     * @param id         the unique UUID of the NPC
-     * @param name       the serializable NPC name (static or dynamic)
-     * @param options    additional serializable options associated with the NPC
-     * @param clickEvent optional click event behavior for the NPC
-     * @param createdAt  the timestamp when the NPC was created
+     * <p>The serialization includes:
+     * <ul>
+     *   <li>NPC's world and position (x, y, z, yaw, pitch)</li>
+     *   <li>NPC's unique identifier and display name</li>
+     *   <li>Click action handler (if any)</li>
+     *   <li>All configured options and their values</li>
+     *   <li>Creation timestamp</li>
+     * </ul>
+     *
+     * <p>This class supports both legacy (pre-2.0.0) and current serialization formats
+     * through the {@link #readResolve()} method for backward compatibility.
+     *
+     * @see SerializedNPC#serializedNPC(NPC)
+     * @see #deserializedNPC()
      */
-    public record SerializedNPC(@NotNull UUID world, double x, double y, double z, float yaw, float pitch, @NotNull UUID id,
-                                @NotNull Serializable name, @NotNull Map<String, ? extends Serializable> options, @Nullable NpcClickAction clickEvent,
-                                @NotNull Instant createdAt) implements Serializable
+    public static class SerializedNPC implements Serializable
     {
         @Serial
         private static final long serialVersionUID = 1L;
+        private final @NotNull UUID id;
+        private final @NotNull Serializable name;
+        private final @Nullable NpcClickAction clickEvent;
+        private final @NotNull Instant createdAt;
+        private @NotNull UUID world;
+        private double x, y, z;
+        private float yaw, pitch;
+        /**
+         * Legacy options storage (pre-2.0.0).
+         *
+         * @deprecated Replaced by {@link #newOptions} in version 2.0.0
+         */
+        @Deprecated(since = "2.0.0")
+        private @NotNull Map<String, ? extends Serializable> options;
+        private @NotNull Map<String, HashMap<String, Serializable>> newOptions;
+
+        /**
+         * Creates a new serialized NPC instance (legacy constructor).
+         *
+         * @param world      The UUID of the world the NPC is in
+         * @param x          The x-coordinate of the NPC
+         * @param y          The y-coordinate of the NPC
+         * @param z          The z-coordinate of the NPC
+         * @param yaw        The yaw rotation of the NPC
+         * @param pitch      The pitch rotation of the NPC
+         * @param id         The unique identifier of the NPC
+         * @param name       The serialized name of the NPC
+         * @param options    The NPC's options in legacy format
+         * @param clickEvent The click action handler, if any
+         * @param createdAt  When the NPC was created
+         * @deprecated Replaced by
+         * {@link SerializedNPC#SerializedNPC(UUID, double, double, double, float, float, UUID, Serializable, NpcClickAction, Instant, Map)} in version 2.0.0
+         */
+        @Deprecated(since = "2.0.0")
+        private SerializedNPC(@NotNull UUID world, double x, double y, double z, float yaw, float pitch, @NotNull UUID id, @NotNull Serializable name,
+                              @NotNull Map<String, ? extends Serializable> options, @Nullable NpcClickAction clickEvent, @NotNull Instant createdAt)
+        {
+            this.world = world;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.yaw = yaw;
+            this.pitch = pitch;
+            this.id = id;
+            this.name = name;
+            this.options = options;
+            this.clickEvent = clickEvent;
+            this.createdAt = createdAt;
+        }
+
+        /**
+         * Creates a new serialized NPC instance (current format).
+         *
+         * @param world      The UUID of the world the NPC is in
+         * @param x          The x-coordinate of the NPC
+         * @param y          The y-coordinate of the NPC
+         * @param z          The z-coordinate of the NPC
+         * @param yaw        The yaw rotation of the NPC
+         * @param pitch      The pitch rotation of the NPC
+         * @param id         The unique identifier of the NPC
+         * @param name       The serialized name of the NPC
+         * @param clickEvent The click action handler, if any
+         * @param createdAt  When the NPC was created
+         * @param options    The NPC's options in current format
+         */
+        private SerializedNPC(@NotNull UUID world, double x, double y, double z, float yaw, float pitch, @NotNull UUID id, @NotNull Serializable name,
+                              @Nullable NpcClickAction clickEvent, @NotNull Instant createdAt, @NotNull Map<String, HashMap<String, Serializable>> options)
+        {
+            this.world = world;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.yaw = yaw;
+            this.pitch = pitch;
+            this.id = id;
+            this.name = name;
+            this.newOptions = options;
+            this.clickEvent = clickEvent;
+            this.createdAt = createdAt;
+        }
 
         /**
          * Creates a {@link SerializedNPC} instance from an existing {@link NPC} object.
@@ -903,11 +1003,17 @@ public class NPC extends NpcHolder
          */
         public static @NotNull SerializedNPC serializedNPC(@NotNull NPC npc)
         {
+            HashMap<String, HashMap<String, Serializable>> map = npc.options.entrySet()
+                    .stream()
+                    .collect(HashMap::new, (m, e) -> m.put(e.getKey().toString(), e.getValue()
+                                    .entrySet()
+                                    .stream()
+                                    .collect(HashMap::new, (om, oe) -> om.put(oe.getKey().getPath(), oe.getKey().serialize(oe.getValue())), HashMap::putAll)),
+                            HashMap::putAll);
+
             return new SerializedNPC(npc.getLocation().getWorld().getUID(), npc.getLocation().getX(), npc.getLocation().getY(),
                     npc.getLocation().getZ(), npc.getLocation().getYaw(), npc.getLocation().getPitch(), npc.getUUID(),
-                    npc.getNpcName(), npc.options.keySet().stream().collect(
-                    Collectors.toMap(NpcOption::getPath, npcOption -> npcOption.serialize(npc.getOption((NpcOption<?, ?>) npcOption)))),
-                    npc.clickEvent, npc.createdAt);
+                    npc.getNpcName(), npc.clickEvent, npc.createdAt, map);
         }
 
         @Serial
@@ -921,7 +1027,11 @@ public class NPC extends NpcHolder
             else
                 throw new IllegalStateException("Unexpected type for name field: " + name.getClass());
 
-            return new SerializedNPC(world, x, y, z, yaw, pitch, id, fixedName, options, clickEvent, createdAt);
+            Map<String, HashMap<String, Serializable>> fixedOptions = newOptions == null ? new HashMap<>() : newOptions;
+            if(fixedOptions.isEmpty() && options != null)
+                options.forEach((s, serializable) -> fixedOptions.computeIfAbsent(GLOBAL_UUID.toString(), s1 -> new HashMap<>()).put(s, serializable));
+
+            return new SerializedNPC(world, x, y, z, yaw, pitch, id, fixedName, clickEvent, createdAt, fixedOptions);
         }
 
         /**
@@ -938,13 +1048,74 @@ public class NPC extends NpcHolder
             if(world1 == null)
                 return Either.right(world);
 
-            NPC npc = new NPC(new Location(world1, x, y, z, yaw, pitch), id,
-                    (NpcName) name).setClickEvent(
+            NPC npc = new NPC(new Location(world1, x, y, z, yaw, pitch), id, (NpcName) name).setClickEvent(
                     clickEvent == null ? clickEvent : clickEvent.initialize());
-            options.forEach((string, serializable) -> NpcOption.getOption(string)
-                    .ifPresent(npcOption -> npc.setOption((NpcOption<T, S>) npcOption, (T) npcOption.deserialize(Var.unsafeCast(serializable)))));
+
+            if(options != null)
+            {
+                options.forEach((s, serializable) ->
+                {
+                    Map<String, Serializable> map = (Map<String, Serializable>) serializable;
+                    map.forEach((s1, serializable1) -> NpcOption.getOption(s1)
+                            .ifPresent(npcOption -> npc.setOption((NpcOption<T, S>) npcOption, (T) npcOption.deserialize(Var.unsafeCast(serializable1)),
+                                    UUID.fromString(s))));
+                });
+            }
+            if(newOptions != null)
+                newOptions.forEach((s, stringSerializableHashMap) -> stringSerializableHashMap.forEach((s1, serializable) ->
+                        NpcOption.getOption(s1)
+                                .ifPresent(npcOption -> npc.setOption((NpcOption<T, S>) npcOption, (T) npcOption.deserialize(Var.unsafeCast(serializable)),
+                                        UUID.fromString(s)))));
+
             npc.createdAt = createdAt == null ? Instant.now() : createdAt;
             return Either.left(npc);
+        }
+
+        /**
+         * Gets the unique identifier of this NPC.
+         *
+         * @return the non-null UUID of the NPC
+         */
+        public @NotNull UUID getId()
+        {
+            return id;
+        }
+
+        /**
+         * Gets the UUID of the world this NPC belongs to.
+         *
+         * @return the non-null world UUID
+         */
+        public @NotNull UUID getWorld()
+        {
+            return world;
+        }
+
+        /**
+         * Gets the name of this NPC if it is of type {@link NpcName}.
+         *
+         * @return the NPC name, or null if the name is not an instance of {@link NpcName}
+         */
+        public @Nullable NpcName getName()
+        {
+            return name instanceof NpcName npcName ? npcName : null;
+        }
+
+        /**
+         * Updates this NPC's location based on the given {@link Location}.
+         * <p>
+         * This sets the position (x, y, z) and orientation (yaw, pitch).
+         *
+         * @param location the non-null location to copy values from
+         */
+        public void setLocation(@NotNull Location location)
+        {
+            this.world = location.getWorld().getUID();
+            this.x = location.getX();
+            this.y = location.getY();
+            this.z = location.getZ();
+            this.yaw = location.getYaw();
+            this.pitch = location.getPitch();
         }
     }
 }

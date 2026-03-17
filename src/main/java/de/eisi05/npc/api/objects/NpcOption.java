@@ -6,13 +6,16 @@ import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.datafixers.util.Pair;
 import de.eisi05.npc.api.NpcApi;
+import de.eisi05.npc.api.enums.NpcVisibility;
 import de.eisi05.npc.api.enums.SkinParts;
+import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.*;
 import de.eisi05.npc.api.wrapper.enums.ChatFormat;
 import de.eisi05.npc.api.wrapper.objects.*;
 import de.eisi05.npc.api.wrapper.packets.*;
 import org.bukkit.ChatColor;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Pose;
 import org.bukkit.inventory.EquipmentSlot;
@@ -44,7 +47,7 @@ public class NpcOption<T, S extends Serializable>
             aBoolean -> aBoolean, aBoolean -> aBoolean,
             (skin, npc, player) ->
             {
-                if(!skin)
+                if(!skin || !npc.serverPlayer.equals(npc.entity))
                     return null;
 
                 if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_9))
@@ -59,7 +62,9 @@ public class NpcOption<T, S extends Serializable>
                     Property npcProperty = npcTextureProperties.hasNext() ? npcTextureProperties.next() : null;
 
                     if((property == null && npcProperty == null) || (property != null && npcProperty != null &&
-                            Reflections.getField(property, "value").get().equals(Reflections.getField(npcProperty, "value").get())))
+                            Reflections.getField(property, "value")
+                                    .get()
+                                    .equals(Reflections.getField(npcProperty, "value").get())))
                         return null;
 
                     GameProfile profile = Reflections.getInstance(GameProfile.class, npc.getUUID(), "NPC" + npc.getUUID().toString().substring(0, 13),
@@ -67,9 +72,11 @@ public class NpcOption<T, S extends Serializable>
                                     .orElseThrow()).orElseThrow();
 
                     int id = npc.serverPlayer.getId();
+                    NpcManager.removeNPC(npc);
                     npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player),
                             npc.getServerPlayer().getNameTag());
                     npc.serverPlayer.setId(id);
+                    NpcManager.addNPC(npc);
                     return null;
                 }
 
@@ -91,7 +98,7 @@ public class NpcOption<T, S extends Serializable>
             skin -> skin, skin -> skin instanceof Skin skin1 ? NpcSkin.of(skin1) : (NpcSkin) skin,
             (skinData, npc, player) ->
             {
-                if(npc.getOption(USE_PLAYER_SKIN) || skinData == null)
+                if(npc.getOption(USE_PLAYER_SKIN, player) || skinData == null || !npc.serverPlayer.equals(npc.entity))
                     return null;
 
                 Skin skin = skinData.getSkin(player, npc);
@@ -118,16 +125,17 @@ public class NpcOption<T, S extends Serializable>
                             propertyMap).orElseThrow();
 
                     int id = npc.serverPlayer.getId();
+                    NpcManager.removeNPC(npc);
                     npc.serverPlayer = WrappedServerPlayer.create(npc.getLocation(), npc.getUUID(), profile, npc.getName(player),
                             npc.getServerPlayer().getNameTag());
                     npc.serverPlayer.setId(id);
+                    NpcManager.addNPC(npc);
                     return null;
                 }
 
                 npc.getServerPlayer().getGameProfile().getProperties().removeAll("textures");
 
-                npc.getServerPlayer().getGameProfile().getProperties()
-                        .put("textures", new Property("textures", skin.value(), skin.signature()));
+                npc.getServerPlayer().getGameProfile().getProperties().put("textures", new Property("textures", skin.value(), skin.signature()));
                 return null;
             }).loadBefore(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_9));
 
@@ -139,7 +147,7 @@ public class NpcOption<T, S extends Serializable>
             aBoolean -> aBoolean, aBoolean -> aBoolean,
             (show, npc, player) ->
             {
-                if(!show)
+                if(!show || !npc.name.isStatic())
                 {
                     new BukkitRunnable()
                     {
@@ -149,9 +157,8 @@ public class NpcOption<T, S extends Serializable>
                             if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_3) && player != null)
                                 WrappedServerPlayer.fromPlayer(player).sendPacket(
                                         new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.REMOVE_PLAYER, npc.getServerPlayer()));
-                            else if(player != null)
-                                WrappedServerPlayer.fromPlayer(player)
-                                        .sendPacket(new PlayerInfoRemovePacket(List.of(npc.getUUID())));
+                            else if(player != null && npc.getUUID() != null)
+                                WrappedServerPlayer.fromPlayer(player).sendPacket(new PlayerInfoRemovePacket(List.of(npc.getUUID())));
                         }
                     }.runTaskLater(NpcApi.plugin, 50);
                 }
@@ -191,6 +198,7 @@ public class NpcOption<T, S extends Serializable>
 
                 return SetEntityDataPacket.create(npc.getServerPlayer().getNameTag().getId(), data);
             });
+
     /**
      * NPC option to set the equipment worn by the NPC (armor, items in hand). The map uses {@link EquipmentSlot} as keys and {@link ItemStack} as values.
      * Serialized form uses item base64 strings.
@@ -212,8 +220,9 @@ public class NpcOption<T, S extends Serializable>
                 map.forEach((slot, item) -> list.add(
                         new Pair<>(de.eisi05.npc.api.wrapper.enums.EquipmentSlot.values()[slot.ordinal()].getHandle(), Var.toNmsItemStack(item))));
 
-                return new SetEquipmentPacket(npc.getServerPlayer().getId(), list);
+                return new SetEquipmentPacket(npc.entity.getId(), list);
             });
+
     /**
      * NPC option to control which parts of the NPC's skin are visible (e.g., hat, jacket). For a full list look at {@link SkinParts}.
      */
@@ -226,6 +235,7 @@ public class NpcOption<T, S extends Serializable>
                         (byte) Arrays.stream(skinParts).mapToInt(SkinParts::getValue).sum());
                 return SetEntityDataPacket.create(npc.getServerPlayer().getId(), data);
             });
+
     /**
      * NPC option to make the NPC look at the player if they are within a certain distance. The value is the maximum distance in blocks. A value of 0 or less
      * disables this. The actual looking logic is handled by {@link Tasks#lookAtTask()}.
@@ -233,21 +243,94 @@ public class NpcOption<T, S extends Serializable>
     public static final NpcOption<Double, Double> LOOK_AT_PLAYER = new NpcOption<>("look-at-player", 0.0,
             distance -> distance, distance -> distance,
             (distance, npc, player) -> null);
+
+    /**
+     * NPC option to control visibility with three states: fully visible, transparent, or invisible.
+     * <p>
+     * <b>Important Notes:</b>
+     * <ul>
+     *   <li>When TRANSPARENT is enabled, it affects other team-based options (COLLISION, GLOWING) by forcing them
+     *   to use the same transparent team naming convention</li>
+     * </ul>
+     * <p>
+     */
+    public static final NpcOption<NpcVisibility, NpcVisibility> VISIBILITY = new NpcOption<>("visibility", NpcVisibility.FULLY_VISIBLE,
+            visibility -> visibility, visibility -> visibility, (visibility, npc, player) ->
+    {
+        String teamName = "trans-" + player.getEntityId();
+        WrappedPlayerTeam playerTeam = WrappedPlayerTeam.getPlayersTeam(player);
+
+        boolean modified = WrappedPlayerTeam.exists(player, teamName) || playerTeam.getHandle() != null;
+        WrappedPlayerTeam wrappedPlayerTeam = playerTeam.getHandle() != null ? playerTeam : WrappedPlayerTeam.create(player, teamName);
+        wrappedPlayerTeam.setCanSeeFriendlyInvisible(true);
+        wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.HIDE_FOR_OWN_TEAM);
+
+        var teamPacket = SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified);
+
+        WrappedEntityData entityData = npc.entity.getEntityData();
+        WrappedEntityData.EntityDataAccessor<Byte> accessor = WrappedEntityData.EntityDataSerializers.BYTE.create(0);
+        Byte value = entityData.get(accessor);
+        byte flags = value == null ? 0 : value;
+
+        byte modifier = 0x20;
+
+        List<PacketWrapper> packets = new ArrayList<>(List.of(teamPacket));
+
+        var removeNpc = SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, npc.getServerPlayer().getName(),
+                SetPlayerTeamPacket.Action.REMOVE);
+
+        if(wrappedPlayerTeam.getPlayers().remove(npc.getServerPlayer().getName()))
+            packets.add(removeNpc);
+
+        if(visibility == NpcVisibility.FULLY_VISIBLE)
+        {
+            entityData.set(accessor, (byte) (flags & ~modifier));
+            packets.add(SetEntityDataPacket.create(npc.entity.getId(), entityData));
+            return new BundlePacket(packets.toArray(new PacketWrapper[0]));
+        }
+
+        entityData.set(accessor, (byte) (flags | modifier));
+
+        if(visibility == NpcVisibility.INVISIBLE)
+        {
+            packets.add(SetEntityDataPacket.create(npc.entity.getId(), entityData));
+            return new BundlePacket(packets.toArray(new PacketWrapper[0]));
+        }
+
+        wrappedPlayerTeam.getPlayers().add(npc.getServerPlayer().getName());
+        var addNpc = SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, npc.getServerPlayer().getName(), SetPlayerTeamPacket.Action.ADD);
+        var addPlayer = SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, player.getName(), SetPlayerTeamPacket.Action.ADD);
+
+        return new BundlePacket(teamPacket, SetEntityDataPacket.create(npc.entity.getId(), entityData), addNpc, addPlayer);
+    });
+
     /**
      * NPC option to make the NPC glow with a specific color. If null, the glowing effect is removed.
+     * <p>
+     * <b>Important Notes:</b>
+     * <ul>
+     *   <li>If TRANSPARENT is enabled, this option will change glowing for all npc with TRANSPARENT enabled</li>
+     * </ul>
+     * </p>
      */
     public static final NpcOption<ChatColor, ChatColor> GLOWING = new NpcOption<>("glowing", null,
             color -> color, color -> color,
             (color, npc, player) ->
             {
+                WrappedEntityData entityData = npc.entity.getEntityData();
+                WrappedEntityData.EntityDataAccessor<Byte> accessor = WrappedEntityData.EntityDataSerializers.BYTE.create(0);
+                Byte value = entityData.get(accessor);
+                byte flags = value == null ? 0 : value;
+
+                byte modifier = 0x40;
+
                 if(color == null)
                 {
-                    WrappedEntityData entityData = npc.getServerPlayer().getEntityData();
-                    entityData.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0);
-                    return SetEntityDataPacket.create(npc.getServerPlayer().getId(), entityData);
+                    entityData.set(accessor, (byte) (flags & ~modifier));
+                    return SetEntityDataPacket.create(npc.entity.getId(), entityData);
                 }
 
-                String teamName = npc.getServerPlayer().getName();
+                String teamName = (npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT) ? "trans-" + player.getEntityId() : npc.getServerPlayer().getName();
                 boolean modified = WrappedPlayerTeam.exists(player, teamName);
                 WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, teamName);
 
@@ -255,11 +338,33 @@ public class NpcOption<T, S extends Serializable>
 
                 var teamPacket = SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified);
 
-                WrappedEntityData entityData = npc.getServerPlayer().getEntityData();
-                entityData.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0x40);
+                entityData.set(accessor, (byte) (flags | modifier));
 
-                return new BundlePacket(teamPacket, SetEntityDataPacket.create(npc.getServerPlayer().getId(), entityData));
+                return new BundlePacket(teamPacket, SetEntityDataPacket.create(npc.entity.getId(), entityData));
             });
+
+    /**
+     * NPC option to control collision behavior between players and NPCs. When enabled, players can push and collide with NPCs. When disabled, players pass
+     * through NPCs without collision.
+     * <p>
+     * <b>Important Notes:</b>
+     * <ul>
+     *   <li>If TRANSPARENT is enabled, this option will change collisions for all npc with TRANSPARENT enabled</li>
+     * </ul>
+     * <p>
+     */
+    public static final NpcOption<Boolean, Boolean> COLLISION = new NpcOption<>("collision", true,
+            aBoolean -> aBoolean, aBoolean -> aBoolean, (collision, npc, player) ->
+    {
+        String teamName = (npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT) ? "trans-" + player.getEntityId() : npc.getServerPlayer().getName();
+        boolean modified = WrappedPlayerTeam.exists(player, teamName);
+        WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, teamName);
+
+        wrappedPlayerTeam.setCollisionRule(collision ? WrappedPlayerTeam.CollisionRule.ALWAYS : WrappedPlayerTeam.CollisionRule.NEVER);
+
+        return SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified);
+    });
+
     /**
      * NPC option to set the pose of the NPC (e.g., standing, sleeping, swimming). For a full list look at {@link Pose}.
      */
@@ -274,47 +379,54 @@ public class NpcOption<T, S extends Serializable>
 
                 npc.getServerPlayer().setPose(nmsPose);
 
-                WrappedEntityData data = npc.getServerPlayer().getEntityData();
+                WrappedEntityData data = npc.entity.getEntityData();
                 data.set(WrappedEntityData.EntityDataSerializers.ENTITY_POSE.create(6), nmsPose);
+
+                WrappedEntityData.EntityDataAccessor<Byte> accessor = WrappedEntityData.EntityDataSerializers.BYTE.create(0);
+                Byte value = data.get(accessor);
+                byte flags = value == null ? 0 : value;
 
                 PacketWrapper packetWrapper = null;
                 if(pose == Pose.FALL_FLYING)
                 {
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0xC0 : 0x80));
-                    packetWrapper = new MoveEntityPacket.Rot(npc.getServerPlayer().getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
+                    data.set(accessor, (byte) (flags | 0x80));
+                    packetWrapper = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
                             (byte) 0, npc.getServerPlayer().isOnGround());
                 }
                 else if(pose == Pose.SWIMMING)
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0x50 : 0x10));
+                    data.set(accessor, (byte) (flags | 0x10));
                 else
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0x40 : 0));
+                    data.set(accessor, (byte) (flags & ~(0x80 | 0x10)));
 
-                if(pose == Pose.SPIN_ATTACK)
+                if(!npc.entity.getBukkitPlayer().getType().name().equals("ITEM_DISPLAY") &&
+                        !npc.entity.getBukkitPlayer().getType().name().equals("BLOCK_DISPLAY"))
                 {
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x04);
-                    packetWrapper = new MoveEntityPacket.Rot(npc.getServerPlayer().getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
-                            (byte) -90, npc.getServerPlayer().isOnGround());
+                    if(pose == Pose.SPIN_ATTACK)
+                    {
+                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x04);
+                        packetWrapper = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
+                                (byte) -90, npc.getServerPlayer().isOnGround());
+                    }
+                    else
+                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x01);
                 }
-                else
-                    data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x01);
 
                 if(nmsPose == de.eisi05.npc.api.wrapper.enums.Pose.SITTING)
                 {
-                    WrappedTextDisplay textDisplay = WrappedTextDisplay.create(npc.getLocation().getWorld());
-                    textDisplay.moveTo(npc.getLocation());
+                    WrappedTextDisplay textDisplay = WrappedTextDisplay.create(npc.entity.getBukkitPlayer().getLocation().getWorld());
+                    textDisplay.moveTo(npc.entity.getBukkitPlayer().getLocation());
                     npc.toDeleteEntities.put("sit", textDisplay.getId());
 
                     PacketWrapper addEntityPacket = textDisplay.getAddEntityPacket();
 
                     WrappedEntityData wrappedEntityData = textDisplay.getEntityData();
-                    wrappedEntityData.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0),
-                            (byte) (npc.getOption(NpcOption.GLOWING) != null ? 0x60 : 0x20));
+                    wrappedEntityData.set(accessor, (byte) (flags | 0x20));
                     SetEntityDataPacket entityDataPacket = SetEntityDataPacket.create(textDisplay.getId(), wrappedEntityData);
 
-                    textDisplay.setPassengers(npc.getServerPlayer());
+                    textDisplay.setPassengers(npc.entity);
 
                     SetPassengerPacket passengerPacket = new SetPassengerPacket(textDisplay);
-                    RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(npc.getServerPlayer(),
+                    RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(npc.entity,
                             (byte) (npc.getLocation().getYaw() * 256 / 360));
 
                     return new BundlePacket(addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
@@ -324,15 +436,16 @@ public class NpcOption<T, S extends Serializable>
                     Integer toDelete = npc.toDeleteEntities.get("sit");
 
                     if(toDelete == null)
-                        return packetWrapper == null ? SetEntityDataPacket.create(npc.getServerPlayer().getId(), data) :
-                                new BundlePacket(SetEntityDataPacket.create(npc.getServerPlayer().getId(), data), packetWrapper);
+                        return packetWrapper == null ? SetEntityDataPacket.create(npc.entity.getId(), data) :
+                                new BundlePacket(SetEntityDataPacket.create(npc.entity.getId(), data), packetWrapper);
 
                     npc.toDeleteEntities.remove("sit");
                     return packetWrapper == null ?
-                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.getServerPlayer().getId(), data)) :
-                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.getServerPlayer().getId(), data), packetWrapper);
+                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.entity.getId(), data)) :
+                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.entity.getId(), data), packetWrapper);
                 }
             });
+
     /**
      * NPC option to set the scale (size) of the NPC. A value of 1.0 is normal size. Requires Minecraft 1.20.6 or newer.
      */
@@ -340,10 +453,14 @@ public class NpcOption<T, S extends Serializable>
             scale -> scale, scale -> scale,
             (scale, npc, player) ->
             {
+                if(npc.entity.getBukkitPlayer().getType().name().equals("ITEM_DISPLAY") ||
+                        npc.entity.getBukkitPlayer().getType().name().equals("BLOCK_DISPLAY"))
+                    return null;
+
                 WrappedAttributeInstance instance = npc.getServerPlayer().getAttribute(WrappedAttributeInstance.Attributes.SCALE_HOLDER);
                 instance.setBaseValue(scale);
 
-                return new UpdateAttributesPacket(npc.getServerPlayer().getId(), instance);
+                return new UpdateAttributesPacket(npc.entity.getId(), instance);
             }).since(Versions.V1_20_6);
 
     /**
@@ -378,9 +495,11 @@ public class NpcOption<T, S extends Serializable>
                 if(enabled)
                     return null;
 
-                WrappedArmorStand armorStand = WrappedArmorStand.create(npc.getLocation().getWorld());
-                armorStand.moveTo(
-                        npc.getLocation().clone().add(0, (npc.getServerPlayer().getBoundingBox().getYSize() * npc.getOption(SCALE)), 0));
+                WrappedArmorStand armorStand = WrappedArmorStand.create(npc.entity.getBukkitPlayer().getLocation().getWorld());
+                armorStand.moveTo(npc.entity.getBukkitPlayer()
+                        .getLocation()
+                        .clone()
+                        .add(0, (npc.getServerPlayer().getBoundingBox().getYSize() * npc.getOption(SCALE, player)), 0));
 
                 PacketWrapper addPacket = armorStand.getAddEntityPacket();
 
@@ -397,6 +516,101 @@ public class NpcOption<T, S extends Serializable>
 
                 return new BundlePacket(addPacket, SetEntityDataPacket.create(armorStand.getId(), data));
             });
+
+    /**
+     * NPC option to change the entity type of the NPC. This allows transforming the NPC into any Minecraft entity type. The default is a PLAYER entity. When
+     * changed, the NPC will be recreated as the new entity type.
+     *
+     * <p>Note: Some entity types may not work as expected, and certain NPC features may be limited
+     * depending on the entity type. The NPC will maintain its position, name, and other properties when changing entity types.</p>
+     *
+     * <p>Example usage to change to a zombie:
+     * <pre>{@code
+     * npc.setOption(NpcOption.ENTITY, new WrappedEntitySnapshot(EntityType.ZOMBIE));
+     * }</pre>
+     */
+    public static final NpcOption<WrappedEntitySnapshot, WrappedEntitySnapshot> ENTITY = new NpcOption<>("entity",
+            new WrappedEntitySnapshot(EntityType.PLAYER),
+            wrappedEntitySnapshot -> wrappedEntitySnapshot, wrappedEntitySnapshot -> wrappedEntitySnapshot,
+            (wrappedEntitySnapshot, npc, player) ->
+            {
+                WrappedEntity<?> entity;
+                if(wrappedEntitySnapshot.getType() == EntityType.PLAYER || wrappedEntitySnapshot.getType().name().equals("MANNEQUIN") ||
+                        wrappedEntitySnapshot.getType() == EntityType.UNKNOWN)
+                    entity = npc.serverPlayer;
+                else if(wrappedEntitySnapshot.getType() != npc.entity.getBukkitPlayer().getType() ||
+                        !npc.entity.data.equals(wrappedEntitySnapshot.getData().toString()))
+                {
+                    entity = wrappedEntitySnapshot.create(player.getWorld());
+                    entity.moveTo(npc.getLocation());
+                    npc.toDeleteEntities.put("entity", entity.getId());
+                }
+                else
+                    entity = npc.entity;
+
+                npc.entity = entity;
+                NpcManager.addID(npc.entity.getId(), npc);
+
+                List<PacketWrapper> packets = new ArrayList<>();
+
+                packets.add(new RemoveEntityPacket(npc.getServerPlayer().getId()));
+                packets.add(entity.getAddEntityPacket());
+
+                WrappedPlayerTeam playerTeam = WrappedPlayerTeam.getPlayersTeam(player);
+                WrappedPlayerTeam.create(player,  npc.getServerPlayer().getName());
+
+                String teamName = (npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT) ? "trans-" + player.getEntityId() : npc.getServerPlayer().getName();
+                boolean modified =
+                        WrappedPlayerTeam.exists(player, teamName) ||
+                                (playerTeam.getHandle() != null && npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT);
+                WrappedPlayerTeam wrappedPlayerTeam = playerTeam.getHandle() != null ? playerTeam : WrappedPlayerTeam.create(player, teamName);
+                wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.NEVER);
+
+                if(!teamName.startsWith("trans"))
+                    wrappedPlayerTeam.getPlayers().add(npc.getServerPlayer().getName());
+                else
+                    (WrappedPlayerTeam.create(player, npc.getServerPlayer().getName())).getPlayers().remove(npc.getServerPlayer().getName());
+
+                packets.add(SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified));
+                packets.add(SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, npc.getServerPlayer().getName(), SetPlayerTeamPacket.Action.ADD));
+                packets.add(SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, npc.entity.getBukkitPlayer().getUniqueId().toString(),
+                        SetPlayerTeamPacket.Action.ADD));
+
+                packets.add(new RotateHeadPacket(entity, (byte) ((npc.getLocation().getYaw() % 360) * 256 / 360)));
+                packets.add(new MoveEntityPacket.Rot(entity.getId(), (byte) npc.getLocation().getYaw(),
+                        (byte) npc.getLocation().getPitch(), npc.getServerPlayer().isOnGround()));
+
+                WrappedEntityData data = entity.getEntityData();
+
+                data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0),
+                        (byte) (Var.nbtToEntityFlags(wrappedEntitySnapshot.getData()) | Var.extractFlagsFromBukkit(entity.getBukkitPlayer())));
+                data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2), Optional.of(WrappedComponent.create("NPC").getHandle()));
+                data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), false);
+                packets.add(SetEntityDataPacket.create(entity.getId(), data));
+
+                if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || !npc.getOption(NpcOption.HIDE_NAMETAG, player))
+                {
+                    if(Versions.isCurrentVersionSmallerThan(Versions.V1_21))
+                        npc.serverPlayer.getNameTag()
+                                .moveTo(entity.getBukkitPlayer().getLocation().clone().add(0,
+                                        (entity.getBoundingBox().getYSize() * npc.getOption(NpcOption.SCALE, player)), 0));
+
+                    packets.add(npc.serverPlayer.getNameTag().getAddEntityPacket());
+
+                    packets.add(SetEntityDataPacket.create(npc.serverPlayer.getNameTag().getId(), npc.serverPlayer.getNameTag().applyData(
+                            Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || npc.isEnabled() ? npc.name.getName(player) :
+                                    WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
+                                            .append(WrappedComponent.create("\n").append(npc.name.getName(player))))));
+
+                    if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
+                    {
+                        entity.setPassengers(npc.serverPlayer.getNameTag());
+                        packets.add(new SetPassengerPacket(entity));
+                    }
+                }
+
+                return new BundlePacket(packets.toArray(new PacketWrapper[0]));
+            }).loadBefore(true);
 
     /**
      * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
@@ -589,5 +803,20 @@ public class NpcOption<T, S extends Serializable>
             return Optional.empty();
 
         return Optional.ofNullable(packet.apply((T) object, npc, player));
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if(!(obj instanceof NpcOption<?, ?> npcOption))
+            return false;
+
+        return npcOption.getPath().equals(getPath());
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return getPath().hashCode();
     }
 }

@@ -13,6 +13,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -23,7 +24,7 @@ import java.util.UUID;
  */
 public class Tasks
 {
-    private static final Map<UUID, Map<UUID, String>> placeholderCache = new HashMap<>();
+    public static final Map<UUID, Map<UUID, String>> placeholderCache = new HashMap<>();
     private static BukkitTask lookAtTask;
     private static BukkitTask placeholderTask;
 
@@ -59,17 +60,17 @@ public class Tasks
             @Override
             public void run()
             {
-                NpcManager.getList().forEach(npc ->
+                for(NPC npc : NpcManager.getList())
                 {
                     double range = npc.getOption(NpcOption.LOOK_AT_PLAYER);
 
                     if(range <= 0)
-                        return;
+                        continue;
 
-                    npc.getServerPlayer().getBukkitPlayer().getNearbyEntities(range, range, range)
+                    npc.entity.getBukkitPlayer().getNearbyEntities(range, range, range)
                             .stream().filter(entity -> entity instanceof Player)
                             .forEach(entity -> npc.lookAtPlayer((Player) entity));
-                });
+                }
             }
         }.runTaskTimer(NpcApi.plugin, 0, NpcApi.config.lookAtTimer());
     }
@@ -84,16 +85,21 @@ public class Tasks
             @Override
             public void run()
             {
-                NpcManager.getList().stream().filter(npc -> !npc.getNpcName().isStatic()).forEach(NPC::updateNameForAll);
+                Collection<NPC> npcs = NpcManager.getList();
+                for(NPC npc : npcs)
+                {
+                    if(!npc.getNpcName().isStatic())
+                        npc.updateNameForAll();
+                }
 
                 if(!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI"))
                     return;
 
-                NpcManager.getList().forEach(npc ->
+                for(NPC npc : npcs)
                 {
                     NpcSkin npcSkin = npc.getOption(NpcOption.SKIN);
                     if(npcSkin == null || npcSkin.isStatic() || npcSkin.getPlaceholder() == null || npc.getOption(NpcOption.USE_PLAYER_SKIN))
-                        return;
+                        continue;
 
                     for(UUID viewerId : npc.getViewers())
                     {
@@ -106,7 +112,7 @@ public class Tasks
 
                         updateSkin(player, npc, npcSkin);
                     }
-                });
+                }
             }
         }.runTaskTimer(NpcApi.plugin, 10, NpcApi.config.placeholderTimer());
     }

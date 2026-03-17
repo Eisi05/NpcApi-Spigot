@@ -18,6 +18,11 @@ public class WrappedMinecraftServer extends Wrapper
         super(handle);
     }
 
+    public static int getCurrentTick()
+    {
+        return Reflections.getStaticField(INSTANCE.handle.getClass(), "currentTick");
+    }
+
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "vanillaCommandDispatcher")
     public @NotNull WrappedMinecraftServer commands()
     {

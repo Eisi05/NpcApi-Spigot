@@ -1,0 +1,13 @@
+package de.eisi05.npc.api.wrapper.packets;
+
+import de.eisi05.npc.api.utils.Versions;
+import de.eisi05.npc.api.wrapper.Mapping;
+
+@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayInUseItem")
+public class UseItemPacketWrapper extends PacketWrapper.PacketHolder
+{
+    protected UseItemPacketWrapper(Object handle)
+    {
+        super(handle);
+    }
+}

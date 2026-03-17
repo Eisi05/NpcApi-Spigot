@@ -23,6 +23,19 @@ public class WrappedPlayerTeam extends Wrapper
         super(handle);
     }
 
+    public static @NotNull WrappedPlayerTeam getPlayersTeam(@NotNull Player player)
+    {
+        return new WrappedPlayerTeam(Reflections.invokeMethod(player.getScoreboard(), "getHandle")
+                .thanInvoke(switch(Versions.getVersion())
+                {
+                    case NONE -> null;
+                    case V1_17 -> "getPlayerTeam";
+                    case V1_18, V1_18_2, V1_19, V1_19_1, V1_19_3, V1_19_4, V1_20 -> "i";
+                    case V1_20_2 -> "g";
+                    case V1_20_4, V1_20_6, V1_21, V1_21_2, V1_21_4, V1_21_5, V1_21_6, V1_21_9, V1_21_11 -> "e";
+                }, WrappedServerPlayer.fromPlayer(player).getName()));
+    }
+
     public static @NotNull WrappedPlayerTeam create(@NotNull Player player, @NotNull String name)
     {
         if(exists(player, name))
@@ -72,6 +85,20 @@ public class WrappedPlayerTeam extends Wrapper
         invokeWrappedMethod(visibility.getHandle());
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setCollisionRule")
+    public void setCollisionRule(@NotNull CollisionRule collisionRule)
+    {
+        invokeWrappedMethod(collisionRule.getHandle());
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "b")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setCanSeeFriendlyInvisibles")
+    public void setCanSeeFriendlyInvisible(boolean canSeeFriendlyInvisible)
+    {
+        invokeWrappedMethod(canSeeFriendlyInvisible);
+    }
+
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "h")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_4), path = "g")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getPlayerNameSet")
@@ -117,6 +144,29 @@ public class WrappedPlayerTeam extends Wrapper
 
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "d")
         HIDE_FOR_OWN_TEAM;
+
+        @Override
+        public @NotNull Object getHandle()
+        {
+            return cast(this);
+        }
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.scores" +
+            ".ScoreboardTeamBase$EnumTeamPush")
+    public enum CollisionRule implements EnumWrapper
+    {
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
+        ALWAYS,
+
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "b")
+        NEVER,
+
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "c")
+        PUSH_OTHER_TEAMS,
+
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "d")
+        PUSH_OWN_TEAM;
 
         @Override
         public @NotNull Object getHandle()
