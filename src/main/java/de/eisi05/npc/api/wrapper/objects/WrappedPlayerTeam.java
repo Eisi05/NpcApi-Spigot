@@ -33,7 +33,7 @@ public class WrappedPlayerTeam extends Wrapper
                     case V1_18, V1_18_2, V1_19, V1_19_1, V1_19_3, V1_19_4, V1_20 -> "i";
                     case V1_20_2 -> "g";
                     case V1_20_4, V1_20_6, V1_21, V1_21_2, V1_21_4, V1_21_5, V1_21_6, V1_21_9, V1_21_11 -> "e";
-                }, WrappedServerPlayer.fromPlayer(player).getName()));
+                }, WrappedServerPlayer.fromPlayer(player).getName()).get());
     }
 
     public static @NotNull WrappedPlayerTeam create(@NotNull Player player, @NotNull String name)
