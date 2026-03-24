@@ -143,12 +143,12 @@ public class Tasks
         {
             UUID skinUuid = UUID.fromString(newPlaceholder);
             Skin.fetchSkinAsync(skinUuid).thenAccept(skinOpt -> skinOpt.ifPresent(skin ->
-                    Bukkit.getScheduler().runTask(NpcApi.plugin, () -> npc.updateSkin(player))));
+                    Bukkit.getScheduler().runTaskLater(NpcApi.plugin, () -> npc.updateSkin(player), 1)));
         }
         catch(IllegalArgumentException e)
         {
             Skin.fetchSkinAsync(newPlaceholder).thenAccept(skinOpt -> skinOpt.ifPresent(skin ->
-                    Bukkit.getScheduler().runTask(NpcApi.plugin, () -> npc.updateSkin(player))));
+                    Bukkit.getScheduler().runTaskLater(NpcApi.plugin, () -> npc.updateSkin(player), 1)));
         }
     }
 }
