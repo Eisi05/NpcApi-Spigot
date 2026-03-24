@@ -102,19 +102,13 @@ public class NpcOption<T, S extends Serializable>
                     return null;
 
                 Skin skin = skinData.getSkin(player, npc);
-
-                if(skin == null)
-                    return null;
-
                 if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_9))
                 {
                     var npcTextureProperties = ((PropertyMap) Reflections.getField(npc.getServerPlayer().getGameProfile(), "properties")
                             .get()).get("textures").iterator();
 
                     Property npcProperty = npcTextureProperties.hasNext() ? npcTextureProperties.next() : null;
-
-                    if((skin == null && npcProperty == null) ||
-                            (npcProperty != null && skin.value().equals(Reflections.getField(npcProperty, "value").get())))
+                    if(skin != null && npcProperty != null && skin.value().equals(Reflections.getField(npcProperty, "value").get()))
                         return null;
 
                     PropertyMap propertyMap = Reflections.getInstance(PropertyMap.class,
@@ -134,6 +128,9 @@ public class NpcOption<T, S extends Serializable>
                 }
 
                 npc.getServerPlayer().getGameProfile().getProperties().removeAll("textures");
+
+                if(skin == null)
+                    return null;
 
                 npc.getServerPlayer().getGameProfile().getProperties().put("textures", new Property("textures", skin.value(), skin.signature()));
                 return null;
@@ -557,7 +554,7 @@ public class NpcOption<T, S extends Serializable>
                 packets.add(entity.getAddEntityPacket());
 
                 WrappedPlayerTeam playerTeam = WrappedPlayerTeam.getPlayersTeam(player);
-                WrappedPlayerTeam.create(player,  npc.getServerPlayer().getName());
+                WrappedPlayerTeam.create(player, npc.getServerPlayer().getName());
 
                 String teamName = (npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT) ? "trans-" + player.getEntityId() : npc.getServerPlayer().getName();
                 boolean modified =
