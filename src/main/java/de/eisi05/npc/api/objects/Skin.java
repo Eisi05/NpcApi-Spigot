@@ -27,6 +27,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Represents a player's skin, containing its name, value, and signature.
@@ -47,9 +48,9 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
      * A static cache to store fetched skins, mapping UUIDs to Skin objects.
      * This helps reduce redundant API calls to Mojang's servers.
      */
-    private static final Map<String, Skin> skinCacheName = new HashMap<>();
-    private static final Map<UUID, Skin> skinCacheUUID = new HashMap<>();
-    private static final Map<File, Skin> skinCacheFile = new HashMap<>();
+    private static final Map<String, Skin> skinCacheName = new ConcurrentHashMap<>();
+    private static final Map<UUID, Skin> skinCacheUUID = new ConcurrentHashMap<>();
+    private static final Map<File, Skin> skinCacheFile = new ConcurrentHashMap<>();
 
     /**
      * Retrieves the skin data directly from a currently online Bukkit player.

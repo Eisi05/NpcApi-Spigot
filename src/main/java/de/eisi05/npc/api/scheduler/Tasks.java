@@ -14,9 +14,9 @@ import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The {@link Tasks} class manages and starts various recurring tasks related to Non-Player Characters (NPCs) within the Bukkit environment. These tasks often
@@ -24,7 +24,7 @@ import java.util.UUID;
  */
 public class Tasks
 {
-    public static final Map<UUID, Map<UUID, String>> placeholderCache = new HashMap<>();
+    public static final Map<UUID, Map<UUID, String>> placeholderCache = new ConcurrentHashMap<>();
     private static BukkitTask lookAtTask;
     private static BukkitTask placeholderTask;
 
@@ -131,7 +131,7 @@ public class Tasks
         String newPlaceholder = (String) Reflections.invokeStaticMethod("me.clip.placeholderapi.PlaceholderAPI", "setPlaceholders", player,
                 npcSkin.getPlaceholder()).get();
 
-        Map<UUID, String> playerCache = placeholderCache.getOrDefault(npc.getUUID(), new HashMap<>());
+        Map<UUID, String> playerCache = placeholderCache.getOrDefault(npc.getUUID(), new ConcurrentHashMap<>());
         String oldPlaceholder = playerCache.getOrDefault(player.getUniqueId(), null);
         if(newPlaceholder.equals(oldPlaceholder))
             return;
@@ -142,11 +142,14 @@ public class Tasks
         try
         {
             UUID skinUuid = UUID.fromString(newPlaceholder);
-            Skin.fetchSkinAsync(skinUuid).thenAccept(skinOpt -> skinOpt.ifPresent(skin -> npc.updateSkin(player)));
+            Skin.fetchSkinAsync(skinUuid).thenAccept(skinOpt -> skinOpt.ifPresent(skin ->
+                    Bukkit.getScheduler().runTask(NpcApi.plugin, () -> npc.updateSkin(player))));
         }
         catch(IllegalArgumentException e)
         {
-            Skin.fetchSkinAsync(newPlaceholder).thenAccept(skinOpt -> skinOpt.ifPresent(skin -> npc.updateSkin(player)));
+            System.out.println("UPDATE: " + oldPlaceholder + " -> " + newPlaceholder);
+            Skin.fetchSkinAsync(newPlaceholder).thenAccept(skinOpt -> skinOpt.ifPresent(skin ->
+                    Bukkit.getScheduler().runTask(NpcApi.plugin, () -> npc.updateSkin(player))));
         }
     }
 }
