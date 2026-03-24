@@ -147,7 +147,6 @@ public class Tasks
         }
         catch(IllegalArgumentException e)
         {
-            System.out.println("UPDATE: " + oldPlaceholder + " -> " + newPlaceholder);
             Skin.fetchSkinAsync(newPlaceholder).thenAccept(skinOpt -> skinOpt.ifPresent(skin ->
                     Bukkit.getScheduler().runTask(NpcApi.plugin, () -> npc.updateSkin(player))));
         }
