@@ -11,8 +11,8 @@ import org.bukkit.util.Vector;
 
 import java.util.Set;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game" +
-        ".PacketPlayOutEntityTeleport")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket")
+@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutEntityTeleport")
 public class TeleportEntityPacket extends PacketWrapper
 {
     public TeleportEntityPacket(WrappedEntity<?> entity, PositionMoveRotation positionMoveRotation, Set<?> relatives, boolean onGround)
@@ -35,7 +35,7 @@ public class TeleportEntityPacket extends PacketWrapper
         return createInstance(TeleportEntityPacket.class, entity.getId(), positionMoveRotation.getHandle(), relatives, onGround);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_11), path = "net.minecraft.world.entity.PositionMoveRotation")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V26_1), path = "net.minecraft.world.entity.PositionMoveRotation")
     public static class PositionMoveRotation extends Wrapper
     {
         private final Vector position;

@@ -25,6 +25,7 @@ import java.util.function.UnaryOperator;
  * A wrapper class for Minecraft's chat component system, providing a type-safe way to create and manipulate
  * chat messages with formatting, click events, hover events, and other rich text features.
  */
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.Component")
 @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.chat.IChatBaseComponent")
 public class WrappedComponent extends Wrapper
 {
@@ -55,6 +56,7 @@ public class WrappedComponent extends Wrapper
      * @param text The text to display (can be null for empty component)
      * @return A new WrappedComponent containing the specified text
      */
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "literal")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
     public static @NotNull WrappedComponent create(@Nullable String text)
     {
@@ -81,6 +83,7 @@ public class WrappedComponent extends Wrapper
      * @param format One or more ChatFormat values to apply (e.g., BOLD, ITALIC, UNDERLINE)
      * @return This component for method chaining
      */
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "withStyle")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
     public @NotNull WrappedComponent setFormats(@NotNull ChatFormat... format)
     {
@@ -116,6 +119,7 @@ public class WrappedComponent extends Wrapper
      * @param clickEvent The click event to add
      * @return This component for method chaining
      */
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "withStyle")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "format")
     public @NotNull WrappedComponent withClickEvent(@NotNull ClickEvent clickEvent)
@@ -130,6 +134,7 @@ public class WrappedComponent extends Wrapper
      * @param hoverEvent The hover event to add
      * @return This component for method chaining
      */
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "withStyle")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "format")
     public @NotNull WrappedComponent withHoverEvent(@NotNull HoverEvent hoverEvent)
@@ -144,6 +149,7 @@ public class WrappedComponent extends Wrapper
      * @param wrappedComponent The component to append
      * @return This component for method chaining
      */
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "append")
     @Mapping(range = @Mapping.Range(from = Versions.V1_19_1, to = Versions.V1_21_11), path = "b")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_19), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "addSibling")
@@ -158,6 +164,7 @@ public class WrappedComponent extends Wrapper
      *
      * @return A new WrappedComponent that is a copy of this one
      */
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "copy")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "f")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_20_2), path = "e")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "mutableCopy")
@@ -198,10 +205,11 @@ public class WrappedComponent extends Wrapper
         return new SerializedComponent(toLegacy(true));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "net.minecraft.network.chat.CommonComponents")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V26_1), path = "net.minecraft.network.chat.CommonComponents")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_18_2), path = "net.minecraft.network.chat.ChatComponentText")
     private static class CommonComponents extends Wrapper
     {
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "EMPTY")
         @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "a")
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_18_2), path = "d")
         private static final Object EMPTY = getStaticWrappedFieldValue("EMPTY").orElse(null);
@@ -212,6 +220,7 @@ public class WrappedComponent extends Wrapper
         }
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.ClickEvent")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatClickable")
     public static class ClickEvent extends Wrapper
     {
@@ -227,33 +236,41 @@ public class WrappedComponent extends Wrapper
             return action.function.apply(value);
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11),
-                path = "net.minecraft.network.chat.ChatClickable$EnumClickAction")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.ClickEvent$Action")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatClickable$EnumClickAction")
         public enum ClickAction implements EnumWrapper
         {
+            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "OPEN_URL")
             @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
             OPEN_URL(o -> new OpenUrl((URI) o)),
 
+            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "OPEN_FILE")
             @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "b")
             OPEN_FILE(o -> new OpenFile((String) o)),
 
+            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "RUN_COMMAND")
             @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "c")
             RUN_COMMAND(o -> new RunCommand((String) o)),
 
+            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "SUGGEST_COMMAND")
             @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "d")
             SUGGEST_COMMAND(o -> new SuggestCommand((String) o)),
 
+            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "SHOW_DIALOG")
             @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "e")
             SHOW_DIALOG(ShowDialog::new),
 
+            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "CHANGE_PAGE")
             @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "f")
             @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "e")
             CHANGE_PAGE(o -> new ChangePage((int) o)),
 
+            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "COPY_TO_CLIPBOARD")
             @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "g")
             @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_5), path = "f")
             COPY_TO_CLIPBOARD(o -> new CopyToClipboard((String) o)),
 
+            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "CUSTOM")
             @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "h")
             CUSTOM(o -> new Custom(((Object[]) o)[0], (Optional<?>) ((Object[]) o)[1]));
 
@@ -271,8 +288,8 @@ public class WrappedComponent extends Wrapper
             }
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11),
-                path = "net.minecraft.network.chat.ChatClickable$OpenUrl")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.ClickEvent$OpenUrl")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatClickable$OpenUrl")
         private static class OpenUrl extends WrappedComponent.ClickEvent
         {
             private OpenUrl(URI url)
@@ -281,8 +298,8 @@ public class WrappedComponent extends Wrapper
             }
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11),
-                path = "net.minecraft.network.chat.ChatClickable$OpenFile")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.ClickEvent$OpenFile")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatClickable$OpenFile")
         private static class OpenFile extends WrappedComponent.ClickEvent
         {
             private OpenFile(String file)
@@ -291,8 +308,8 @@ public class WrappedComponent extends Wrapper
             }
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11),
-                path = "net.minecraft.network.chat.ChatClickable$RunCommand")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.ClickEvent$RunCommand")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatClickable$RunCommand")
         private static class RunCommand extends WrappedComponent.ClickEvent
         {
             private RunCommand(String command)
@@ -301,8 +318,8 @@ public class WrappedComponent extends Wrapper
             }
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11),
-                path = "net.minecraft.network.chat.ChatClickable$SuggestCommand")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.ClickEvent$SuggestCommand")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatClickable$SuggestCommand")
         private static class SuggestCommand extends WrappedComponent.ClickEvent
         {
             private SuggestCommand(String command)
@@ -311,8 +328,8 @@ public class WrappedComponent extends Wrapper
             }
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11),
-                path = "net.minecraft.network.chat.ChatClickable$ChangePage")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.ClickEvent$ChangePage")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatClickable$ChangePage")
         private static class ChangePage extends WrappedComponent.ClickEvent
         {
             private ChangePage(int page)
@@ -321,8 +338,8 @@ public class WrappedComponent extends Wrapper
             }
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11),
-                path = "net.minecraft.network.chat.ChatClickable$CopyToClipboard")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.ClickEvent$CopyToClipboard")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatClickable$CopyToClipboard")
         private static class CopyToClipboard extends WrappedComponent.ClickEvent
         {
             private CopyToClipboard(String string)
@@ -331,8 +348,8 @@ public class WrappedComponent extends Wrapper
             }
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11),
-                path = "net.minecraft.network.chat.ChatClickable$h")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.ClickEvent$ShowDialog")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatClickable$h")
         private static class ShowDialog extends WrappedComponent.ClickEvent
         {
             private ShowDialog(Object dialogHolder)
@@ -341,8 +358,8 @@ public class WrappedComponent extends Wrapper
             }
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11),
-                path = "net.minecraft.network.chat.ChatClickable$d")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.ClickEvent$Custom")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatClickable$d")
         private static class Custom extends WrappedComponent.ClickEvent
         {
             private Custom(Object key, Optional<?> optionalNbtBase)
@@ -352,6 +369,7 @@ public class WrappedComponent extends Wrapper
         }
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.HoverEvent")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatHoverable")
     public static class HoverEvent extends Wrapper
     {
@@ -367,6 +385,7 @@ public class WrappedComponent extends Wrapper
             return new ShowText(component);
         }
 
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.HoverEvent$ShowText")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatHoverable$e")
         private static class ShowText extends HoverEvent
         {
@@ -376,10 +395,11 @@ public class WrappedComponent extends Wrapper
             }
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11),
-                path = "net.minecraft.network.chat.ChatHoverable$EnumHoverAction")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.HoverEvent$Action")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatHoverable$EnumHoverAction")
         private static class HoverAction extends Wrapper
         {
+            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "SHOW_TEXT")
             @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
             private static final Object SHOW_TEXT = getStaticWrappedFieldValue("SHOW_TEXT").orElse(null);
 
@@ -408,6 +428,7 @@ public class WrappedComponent extends Wrapper
         }
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.chat.Style")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.chat.ChatModifier")
     public static class Style extends Wrapper
     {
@@ -416,6 +437,7 @@ public class WrappedComponent extends Wrapper
             super(handle);
         }
 
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "withClickEvent")
         @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setChatClickable")
         public @NotNull Style withClickEvent(@NotNull ClickEvent clickEvent)
@@ -423,6 +445,7 @@ public class WrappedComponent extends Wrapper
             return new Style(invokeWrappedMethod(clickEvent));
         }
 
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "withHoverEvent")
         @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setChatHoverable")
         public @NotNull Style withHoverEvent(@NotNull HoverEvent hoverEvent)

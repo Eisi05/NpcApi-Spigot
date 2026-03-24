@@ -6,8 +6,8 @@ import de.eisi05.npc.api.wrapper.Wrapper;
 
 import java.util.function.Consumer;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11),
-        path = "net.minecraft.world.entity.ai.attributes.AttributeModifiable")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.world.entity.ai.attributes.AttributeInstance")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.world.entity.ai.attributes.AttributeModifiable")
 public class WrappedAttributeInstance extends Wrapper
 {
     WrappedAttributeInstance(Object handle)
@@ -20,16 +20,18 @@ public class WrappedAttributeInstance extends Wrapper
         super(createInstance(WrappedAttributeInstance.class, holder, consumer));
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "setBaseValue")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
     public void setBaseValue(double value)
     {
         invokeWrappedMethod(value);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11),
-            path = "net.minecraft.world.entity.ai.attributes.GenericAttributes")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.world.entity.ai.attributes.Attributes")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.world.entity.ai.attributes.GenericAttributes")
     public static class Attributes extends Wrapper
     {
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "SCALE")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "A")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_9), path = "z")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_5), path = "y")

@@ -242,127 +242,6 @@ public class NpcOption<T, S extends Serializable>
             (distance, npc, player) -> null);
 
     /**
-     * NPC option to control visibility with three states: fully visible, transparent, or invisible.
-     * <p>
-     * <b>Important Notes:</b>
-     * <ul>
-     *   <li>When TRANSPARENT is enabled, it affects other team-based options (COLLISION, GLOWING) by forcing them
-     *   to use the same transparent team naming convention</li>
-     * </ul>
-     * <p>
-     */
-    public static final NpcOption<NpcVisibility, NpcVisibility> VISIBILITY = new NpcOption<>("visibility", NpcVisibility.FULLY_VISIBLE,
-            visibility -> visibility, visibility -> visibility, (visibility, npc, player) ->
-    {
-        String teamName = "trans-" + player.getEntityId();
-        WrappedPlayerTeam playerTeam = WrappedPlayerTeam.getPlayersTeam(player);
-
-        boolean modified = WrappedPlayerTeam.exists(player, teamName) || playerTeam.getHandle() != null;
-        WrappedPlayerTeam wrappedPlayerTeam = playerTeam.getHandle() != null ? playerTeam : WrappedPlayerTeam.create(player, teamName);
-        wrappedPlayerTeam.setCanSeeFriendlyInvisible(true);
-        wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.HIDE_FOR_OWN_TEAM);
-
-        var teamPacket = SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified);
-
-        WrappedEntityData entityData = npc.entity.getEntityData();
-        WrappedEntityData.EntityDataAccessor<Byte> accessor = WrappedEntityData.EntityDataSerializers.BYTE.create(0);
-        Byte value = entityData.get(accessor);
-        byte flags = value == null ? 0 : value;
-
-        byte modifier = 0x20;
-
-        List<PacketWrapper> packets = new ArrayList<>(List.of(teamPacket));
-
-        var removeNpc = SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, npc.getServerPlayer().getName(),
-                SetPlayerTeamPacket.Action.REMOVE);
-
-        if(wrappedPlayerTeam.getPlayers().remove(npc.getServerPlayer().getName()))
-            packets.add(removeNpc);
-
-        if(visibility == NpcVisibility.FULLY_VISIBLE)
-        {
-            entityData.set(accessor, (byte) (flags & ~modifier));
-            packets.add(SetEntityDataPacket.create(npc.entity.getId(), entityData));
-            return new BundlePacket(packets.toArray(new PacketWrapper[0]));
-        }
-
-        entityData.set(accessor, (byte) (flags | modifier));
-
-        if(visibility == NpcVisibility.INVISIBLE)
-        {
-            packets.add(SetEntityDataPacket.create(npc.entity.getId(), entityData));
-            return new BundlePacket(packets.toArray(new PacketWrapper[0]));
-        }
-
-        wrappedPlayerTeam.getPlayers().add(npc.getServerPlayer().getName());
-        var addNpc = SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, npc.getServerPlayer().getName(), SetPlayerTeamPacket.Action.ADD);
-        var addPlayer = SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, player.getName(), SetPlayerTeamPacket.Action.ADD);
-
-        return new BundlePacket(teamPacket, SetEntityDataPacket.create(npc.entity.getId(), entityData), addNpc, addPlayer);
-    });
-
-    /**
-     * NPC option to make the NPC glow with a specific color. If null, the glowing effect is removed.
-     * <p>
-     * <b>Important Notes:</b>
-     * <ul>
-     *   <li>If TRANSPARENT is enabled, this option will change glowing for all npc with TRANSPARENT enabled</li>
-     * </ul>
-     * </p>
-     */
-    public static final NpcOption<ChatColor, ChatColor> GLOWING = new NpcOption<>("glowing", null,
-            color -> color, color -> color,
-            (color, npc, player) ->
-            {
-                WrappedEntityData entityData = npc.entity.getEntityData();
-                WrappedEntityData.EntityDataAccessor<Byte> accessor = WrappedEntityData.EntityDataSerializers.BYTE.create(0);
-                Byte value = entityData.get(accessor);
-                byte flags = value == null ? 0 : value;
-
-                byte modifier = 0x40;
-
-                if(color == null)
-                {
-                    entityData.set(accessor, (byte) (flags & ~modifier));
-                    return SetEntityDataPacket.create(npc.entity.getId(), entityData);
-                }
-
-                String teamName = (npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT) ? "trans-" + player.getEntityId() : npc.getServerPlayer().getName();
-                boolean modified = WrappedPlayerTeam.exists(player, teamName);
-                WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, teamName);
-
-                wrappedPlayerTeam.setColor(ChatFormat.fromChatColor(color));
-
-                var teamPacket = SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified);
-
-                entityData.set(accessor, (byte) (flags | modifier));
-
-                return new BundlePacket(teamPacket, SetEntityDataPacket.create(npc.entity.getId(), entityData));
-            });
-
-    /**
-     * NPC option to control collision behavior between players and NPCs. When enabled, players can push and collide with NPCs. When disabled, players pass
-     * through NPCs without collision.
-     * <p>
-     * <b>Important Notes:</b>
-     * <ul>
-     *   <li>If TRANSPARENT is enabled, this option will change collisions for all npc with TRANSPARENT enabled</li>
-     * </ul>
-     * <p>
-     */
-    public static final NpcOption<Boolean, Boolean> COLLISION = new NpcOption<>("collision", true,
-            aBoolean -> aBoolean, aBoolean -> aBoolean, (collision, npc, player) ->
-    {
-        String teamName = (npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT) ? "trans-" + player.getEntityId() : npc.getServerPlayer().getName();
-        boolean modified = WrappedPlayerTeam.exists(player, teamName);
-        WrappedPlayerTeam wrappedPlayerTeam = WrappedPlayerTeam.create(player, teamName);
-
-        wrappedPlayerTeam.setCollisionRule(collision ? WrappedPlayerTeam.CollisionRule.ALWAYS : WrappedPlayerTeam.CollisionRule.NEVER);
-
-        return SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified);
-    });
-
-    /**
      * NPC option to set the pose of the NPC (e.g., standing, sleeping, swimming). For a full list look at {@link Pose}.
      */
     public static final NpcOption<Pose, Pose> POSE = new NpcOption<>("pose", Pose.STANDING,
@@ -444,6 +323,65 @@ public class NpcOption<T, S extends Serializable>
             });
 
     /**
+     * NPC option to control visibility with three states: fully visible, transparent, or invisible.
+     * <p>
+     * <b>Important Notes:</b>
+     * <ul>
+     *   <li>When TRANSPARENT is enabled, it affects other team-based options (COLLISION, GLOWING) by forcing them
+     *   to use the same transparent team naming convention</li>
+     * </ul>
+     * <p>
+     */
+    public static final NpcOption<NpcVisibility, NpcVisibility> VISIBILITY = new NpcOption<>("visibility", NpcVisibility.FULLY_VISIBLE,
+            visibility -> visibility, visibility -> visibility, (visibility, npc, player) ->
+    {
+        String teamName = "trans-" + player.getEntityId();
+        WrappedPlayerTeam playerTeam = WrappedPlayerTeam.getPlayersTeam(player);
+
+        boolean modified = WrappedPlayerTeam.exists(player, teamName) || playerTeam.getHandle() != null;
+        WrappedPlayerTeam wrappedPlayerTeam = playerTeam.getHandle() != null ? playerTeam : WrappedPlayerTeam.create(player, teamName);
+        wrappedPlayerTeam.setCanSeeFriendlyInvisible(true);
+        wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.HIDE_FOR_OWN_TEAM);
+
+        var teamPacket = SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified);
+
+        WrappedEntityData entityData = npc.entity.getEntityData();
+        WrappedEntityData.EntityDataAccessor<Byte> accessor = WrappedEntityData.EntityDataSerializers.BYTE.create(0);
+        Byte value = entityData.get(accessor);
+        byte flags = value == null ? 0 : value;
+
+        byte modifier = 0x20;
+
+        List<PacketWrapper> packets = new ArrayList<>(List.of(teamPacket));
+
+        var removeNpc = SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, npc.getServerPlayer().getName(), SetPlayerTeamPacket.Action.REMOVE);
+
+        if(wrappedPlayerTeam.getPlayers().remove(npc.getServerPlayer().getName()))
+            packets.add(removeNpc);
+
+        if(visibility == NpcVisibility.FULLY_VISIBLE)
+        {
+            entityData.set(accessor, (byte) (flags & ~modifier));
+            packets.add(SetEntityDataPacket.create(npc.entity.getId(), entityData));
+            return new BundlePacket(packets.toArray(new PacketWrapper[0]));
+        }
+
+        entityData.set(accessor, (byte) (flags | modifier));
+
+        if(visibility == NpcVisibility.INVISIBLE)
+        {
+            packets.add(SetEntityDataPacket.create(npc.entity.getId(), entityData));
+            return new BundlePacket(packets.toArray(new PacketWrapper[0]));
+        }
+
+        wrappedPlayerTeam.getPlayers().add(npc.getServerPlayer().getName());
+        var addNpc = SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, npc.getServerPlayer().getName(), SetPlayerTeamPacket.Action.ADD);
+        var addPlayer = SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, player.getName(), SetPlayerTeamPacket.Action.ADD);
+
+        return new BundlePacket(teamPacket, SetEntityDataPacket.create(npc.entity.getId(), entityData), addNpc, addPlayer);
+    });
+
+    /**
      * NPC option to set the scale (size) of the NPC. A value of 1.0 is normal size. Requires Minecraft 1.20.6 or newer.
      */
     public static final NpcOption<Double, Double> SCALE = new NpcOption<>("scale", 1.0,
@@ -459,6 +397,44 @@ public class NpcOption<T, S extends Serializable>
 
                 return new UpdateAttributesPacket(npc.entity.getId(), instance);
             }).since(Versions.V1_20_6);
+
+    /**
+     * NPC option to make the NPC glow with a specific color. If null, the glowing effect is removed.
+     * <p>
+     * <b>Important Notes:</b>
+     * <ul>
+     *   <li>If TRANSPARENT is enabled, this option will change glowing for all npc with TRANSPARENT enabled</li>
+     * </ul>
+     * </p>
+     */
+    public static final NpcOption<ChatColor, ChatColor> GLOWING = new NpcOption<>("glowing", null,
+            color -> color, color -> color,
+            (color, npc, player) ->
+            {
+                WrappedEntityData entityData = npc.entity.getEntityData();
+                WrappedEntityData.EntityDataAccessor<Byte> accessor = WrappedEntityData.EntityDataSerializers.BYTE.create(0);
+                Byte value = entityData.get(accessor);
+                byte flags = value == null ? 0 : value;
+
+                byte modifier = 0x40;
+
+                if(color == null)
+                {
+                    entityData.set(accessor, (byte) (flags & ~modifier));
+                    return SetEntityDataPacket.create(npc.entity.getId(), entityData);
+                }
+
+                var teamPair = getTeam(player, npc);
+                WrappedPlayerTeam team = teamPair.getFirst();
+
+                team.setColor(ChatFormat.fromChatColor(color));
+
+                var teamPacket = SetPlayerTeamPacket.createAddOrModifyPacket(team, !teamPair.getSecond());
+
+                entityData.set(accessor, (byte) (flags | modifier));
+
+                return new BundlePacket(teamPacket, SetEntityDataPacket.create(npc.entity.getId(), entityData));
+            });
 
     /**
      * NPC option to control the position of the NPC in the TAB list.
@@ -477,6 +453,25 @@ public class NpcOption<T, S extends Serializable>
 
                 return new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, npc.getServerPlayer());
             }).since(Versions.V1_21_2);
+
+    /**
+     * NPC option to control collision behavior between players and NPCs. When enabled, players can push and collide with NPCs. When disabled, players pass
+     * through NPCs without collision.
+     * <p>
+     * <b>Important Notes:</b>
+     * <ul>
+     *   <li>If TRANSPARENT is enabled, this option will change collisions for all npc with TRANSPARENT enabled</li>
+     * </ul>
+     * <p>
+     */
+    public static final NpcOption<Boolean, Boolean> COLLISION = new NpcOption<>("collision", true,
+            aBoolean -> aBoolean, aBoolean -> aBoolean, (collision, npc, player) ->
+    {
+        var teamPair = getTeam(player, npc);
+        WrappedPlayerTeam team = teamPair.getFirst();
+        team.setCollisionRule(collision ? WrappedPlayerTeam.CollisionRule.ALWAYS : WrappedPlayerTeam.CollisionRule.NEVER);
+        return SetPlayerTeamPacket.createAddOrModifyPacket(team, !teamPair.getSecond());
+    });
 
     /**
      * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
@@ -513,6 +508,23 @@ public class NpcOption<T, S extends Serializable>
 
                 return new BundlePacket(addPacket, SetEntityDataPacket.create(armorStand.getId(), data));
             });
+
+    /**
+     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
+     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
+     */
+    static final NpcOption<Boolean, Boolean> EDITABLE = new NpcOption<>("editable", false,
+            aBoolean -> aBoolean, aBoolean -> aBoolean,
+            (enabled, npc, player) -> null);
+
+    /**
+     * NPC option to store custom data for the NPC. This is an internal option, typically not directly set by users but controlled by
+     * {@link NPC#addCustomData(Serializable, Serializable)}.
+     */
+    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data",
+            new HashMap<>(),
+            aHashMap -> aHashMap, aHashMap -> aHashMap,
+            (customData, npc, player) -> null);
 
     /**
      * NPC option to change the entity type of the NPC. This allows transforming the NPC into any Minecraft entity type. The default is a PLAYER entity. When
@@ -553,24 +565,18 @@ public class NpcOption<T, S extends Serializable>
                 packets.add(new RemoveEntityPacket(npc.getServerPlayer().getId()));
                 packets.add(entity.getAddEntityPacket());
 
-                WrappedPlayerTeam playerTeam = WrappedPlayerTeam.getPlayersTeam(player);
-                WrappedPlayerTeam.create(player, npc.getServerPlayer().getName());
+                var teamPair = getTeam(player, npc);
+                WrappedPlayerTeam team = teamPair.getFirst();
+                team.setNameTagVisibility(WrappedPlayerTeam.Visibility.NEVER);
 
-                String teamName = (npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT) ? "trans-" + player.getEntityId() : npc.getServerPlayer().getName();
-                boolean modified =
-                        WrappedPlayerTeam.exists(player, teamName) ||
-                                (playerTeam.getHandle() != null && npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT);
-                WrappedPlayerTeam wrappedPlayerTeam = playerTeam.getHandle() != null ? playerTeam : WrappedPlayerTeam.create(player, teamName);
-                wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.NEVER);
-
-                if(!teamName.startsWith("trans"))
-                    wrappedPlayerTeam.getPlayers().add(npc.getServerPlayer().getName());
+                if(!team.getName().startsWith("trans"))
+                    team.getPlayers().add(npc.getServerPlayer().getName());
                 else
                     (WrappedPlayerTeam.create(player, npc.getServerPlayer().getName())).getPlayers().remove(npc.getServerPlayer().getName());
 
-                packets.add(SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified));
-                packets.add(SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, npc.getServerPlayer().getName(), SetPlayerTeamPacket.Action.ADD));
-                packets.add(SetPlayerTeamPacket.createPlayerPacket(wrappedPlayerTeam, npc.entity.getBukkitPlayer().getUniqueId().toString(),
+                packets.add(SetPlayerTeamPacket.createAddOrModifyPacket(team, !teamPair.getSecond()));
+                packets.add(SetPlayerTeamPacket.createPlayerPacket(team, npc.getServerPlayer().getName(), SetPlayerTeamPacket.Action.ADD));
+                packets.add(SetPlayerTeamPacket.createPlayerPacket(team, npc.entity.getBukkitPlayer().getUniqueId().toString(),
                         SetPlayerTeamPacket.Action.ADD));
 
                 packets.add(new RotateHeadPacket(entity, (byte) ((npc.getLocation().getYaw() % 360) * 256 / 360)));
@@ -609,23 +615,6 @@ public class NpcOption<T, S extends Serializable>
                 return new BundlePacket(packets.toArray(new PacketWrapper[0]));
             }).loadBefore(true);
 
-    /**
-     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
-     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
-     */
-    static final NpcOption<Boolean, Boolean> EDITABLE = new NpcOption<>("editable", false,
-            aBoolean -> aBoolean, aBoolean -> aBoolean,
-            (enabled, npc, player) -> null);
-
-    /**
-     * NPC option to store custom data for the NPC. This is an internal option, typically not directly set by users but controlled by
-     * {@link NPC#addCustomData(Serializable, Serializable)}.
-     */
-    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data",
-            new HashMap<>(),
-            aHashMap -> aHashMap, aHashMap -> aHashMap,
-            (customData, npc, player) -> null);
-
     private final String path;
     private final T defaultValue;
     private final Function<T, S> serializer;
@@ -651,6 +640,16 @@ public class NpcOption<T, S extends Serializable>
         this.serializer = serializer;
         this.deserializer = deserializer;
         this.packet = packet;
+    }
+
+    private static @NotNull Pair<WrappedPlayerTeam, Boolean> getTeam(@NotNull Player player, @NotNull NPC npc)
+    {
+        boolean isTransparent = npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT;
+        WrappedPlayerTeam playerTeam = WrappedPlayerTeam.getPlayersTeam(player);
+        String teamName = isTransparent ? "trans-" + player.getEntityId() : npc.getServerPlayer().getName();
+        boolean modified = WrappedPlayerTeam.exists(player, teamName) || (playerTeam.getHandle() != null && isTransparent);
+        WrappedPlayerTeam wrappedPlayerTeam = playerTeam.getHandle() != null && isTransparent ? playerTeam : WrappedPlayerTeam.create(player, teamName);
+        return new Pair<>(wrappedPlayerTeam, modified);
     }
 
     /**

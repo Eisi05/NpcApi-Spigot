@@ -260,7 +260,21 @@ public abstract class Wrapper implements HandleHolder
             String callingMethodName = CallerUtils.getCallerMethodName();
             Class<?> callerClass = CallerUtils.getCallerClass();
 
-            Class<?> targetClass = getTargetClass(callerClass.getAnnotation(Mapping.class));
+            Mapping[] classAnnotations = callerClass.getAnnotationsByType(Mapping.class);
+            if(classAnnotations.length == 0)
+                throw new IllegalStateException("Missing @WrapData on class: " + callerClass.getName());
+
+            Class<?> targetClass = null;
+            for(Mapping classData : classAnnotations)
+            {
+                if(!Versions.containsCurrentVersion(classData))
+                    continue;
+
+                targetClass = getTargetClass(classData);
+            }
+
+            if(targetClass == null)
+                throw new VersionNotFound(callerClass.getName() + " -> " + callingMethodName);
 
             Method callingMethod = null;
             Class<?> clazz = callerClass;
@@ -290,11 +304,12 @@ public abstract class Wrapper implements HandleHolder
                         Arrays.toString(Arrays.stream(newArgs)
                                 .map(a -> a == null ? "null" : a.getClass().getName()).toArray());
 
+                Class<?> finalTargetClass = targetClass;
                 MethodHandle handle = methodCache.computeIfAbsent(key, k ->
                 {
                     try
                     {
-                        Method method = Arrays.stream(targetClass.getMethods())
+                        Method method = Arrays.stream(finalTargetClass.getMethods())
                                 .filter(m -> m.getName().equals(methodPath))
                                 .filter(m ->
                                 {

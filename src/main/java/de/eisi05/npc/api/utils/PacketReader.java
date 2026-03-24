@@ -8,10 +8,7 @@ import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.wrapper.enums.InteractionHand;
 import de.eisi05.npc.api.wrapper.objects.WrappedMinecraftServer;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
-import de.eisi05.npc.api.wrapper.packets.AnimatePacket;
-import de.eisi05.npc.api.wrapper.packets.PacketWrapper;
-import de.eisi05.npc.api.wrapper.packets.UseEntityPacketWrapper;
-import de.eisi05.npc.api.wrapper.packets.UseItemPacketWrapper;
+import de.eisi05.npc.api.wrapper.packets.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -95,9 +92,6 @@ public class PacketReader
         if(!PacketWrapper.PacketHolder.is(packet, PacketWrapper.PacketHolder.class))
             return;
 
-        if(!PacketWrapper.PacketHolder.is(packet, UseEntityPacketWrapper.class))
-            return;
-
         if(PacketWrapper.PacketHolder.is(packet, UseItemPacketWrapper.class))
         {
             int currentTick = WrappedMinecraftServer.getCurrentTick();
@@ -115,6 +109,22 @@ public class PacketReader
             });
         }
 
+        int currentTick = WrappedMinecraftServer.getCurrentTick();
+        if(!Versions.isCurrentVersionSmallerThan(Versions.V26_1) && PacketWrapper.PacketHolder.is(packet, AttackPacket.class))
+        {
+            NPC npc = NpcManager.fromId(PacketWrapper.PacketHolder.wrap(packet, AttackPacket.class).getId()).orElse(null);
+            if(npc == null)
+                return;
+
+            Bukkit.getScheduler().scheduleSyncDelayedTask(NpcApi.plugin,
+                    () -> Bukkit.getPluginManager().callEvent(new NpcInteractEvent(player, npc, ClickActionType.LEFT)), 0);
+            cancelUseUntilTick.put(player.getUniqueId(), currentTick + 10);
+            return;
+        }
+
+        if(!PacketWrapper.PacketHolder.is(packet, UseEntityPacketWrapper.class))
+            return;
+
         UseEntityPacketWrapper useEntityPacketWrapper = PacketWrapper.PacketHolder.wrap(packet, UseEntityPacketWrapper.class);
 
         int id = useEntityPacketWrapper.getId();
@@ -123,9 +133,18 @@ public class PacketReader
         if(npc == null)
             return;
 
-        UseEntityPacketWrapper.Action action = useEntityPacketWrapper.getAction();
+        if(!Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+        {
+            if(useEntityPacketWrapper.usingSecondaryAction() || useEntityPacketWrapper.getHand() == InteractionHand.OFF_HAND)
+                return;
 
-        int currentTick = WrappedMinecraftServer.getCurrentTick();
+            Bukkit.getScheduler().scheduleSyncDelayedTask(NpcApi.plugin,
+                    () -> Bukkit.getPluginManager().callEvent(new NpcInteractEvent(player, npc, ClickActionType.RIGHT)), 0);
+            cancelUseUntilTick.put(player.getUniqueId(), currentTick + 10);
+            return;
+        }
+
+        UseEntityPacketWrapper.Action action = useEntityPacketWrapper.getAction();
         if(action.getActionType() == UseEntityPacketWrapper.ActionType.ATTACK)
         {
             Bukkit.getScheduler().scheduleSyncDelayedTask(NpcApi.plugin,

@@ -8,6 +8,7 @@ import org.bukkit.entity.ArmorStand;
 
 import java.util.Optional;
 
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.world.entity.decoration.ArmorStand")
 @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.entity.decoration.EntityArmorStand")
 public class WrappedArmorStand extends WrappedEntity.WrappedNameTag<ArmorStand>
 {

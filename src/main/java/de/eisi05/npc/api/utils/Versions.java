@@ -90,7 +90,11 @@ public enum Versions
     /**
      * Minecraft 1.21.11 version.
      */
-    V1_21_11("v1_21_R7");
+    V1_21_11("v1_21_R7"),
+    /**
+     * Minecraft 26.1 version.
+     */
+    V26_1("v26_1");
 
     /**
      * Caches the determined current server version to avoid repeated lookups.
@@ -125,6 +129,9 @@ public enum Versions
     {
         if(VERSION != null)
             return VERSION;
+
+        if(Bukkit.getServer().getBukkitVersion().startsWith("26.1"))
+            return V26_1;
 
         String nmsVersion = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
 

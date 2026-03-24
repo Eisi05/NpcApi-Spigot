@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.server.level.ServerEntity")
 @Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_11), path = "net.minecraft.server.level.EntityTrackerEntry")
 public class WrappedEntityTrackerEntry extends Wrapper
 {

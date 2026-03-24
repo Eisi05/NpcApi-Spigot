@@ -122,7 +122,7 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
             }
         } catch(IOException e)
         {
-            skinCacheUUID.put(uuid, null);
+            skinCacheUUID.remove(uuid);
             return Optional.empty();
         }
     }
@@ -155,7 +155,7 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
             }
         } catch(IOException e)
         {
-            skinCacheName.put(name, null);
+            skinCacheName.remove(name);
             return Optional.empty();
         }
     }
@@ -230,6 +230,7 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
             if(NpcApi.config.debug())
                 e.printStackTrace();
 
+            skinCacheFile.remove(skinFile);
             return Optional.empty();
         }
     }

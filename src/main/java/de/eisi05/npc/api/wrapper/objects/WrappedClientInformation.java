@@ -5,7 +5,7 @@ import de.eisi05.npc.api.wrapper.Mapping;
 import de.eisi05.npc.api.wrapper.Wrapper;
 import org.jetbrains.annotations.NotNull;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_20_2, to = Versions.V1_21_11), path = "net.minecraft.server.level.ClientInformation")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_2, to = Versions.V26_1), path = "net.minecraft.server.level.ClientInformation")
 public class WrappedClientInformation extends Wrapper
 {
     private WrappedClientInformation(Object handle)
@@ -13,6 +13,7 @@ public class WrappedClientInformation extends Wrapper
         super(handle);
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "createDefault")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_2, to = Versions.V1_21_11), path = "a")
     public static @NotNull WrappedClientInformation createDefault()
     {

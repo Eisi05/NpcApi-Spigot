@@ -6,8 +6,8 @@ import de.eisi05.npc.api.wrapper.objects.WrappedAttributeInstance;
 
 import java.util.List;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11),
-        path = "net.minecraft.network.protocol.game.PacketPlayOutUpdateAttributes")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutUpdateAttributes")
 public class UpdateAttributesPacket extends PacketWrapper
 {
     public UpdateAttributesPacket(int id, WrappedAttributeInstance instance)

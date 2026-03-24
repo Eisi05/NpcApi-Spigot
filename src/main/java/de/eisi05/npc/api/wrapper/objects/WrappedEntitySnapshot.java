@@ -111,7 +111,7 @@ public class WrappedEntitySnapshot implements Serializable
         }
         else if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_9))
         {
-           data.putString("id", type.toLowerCase());
+            data.putString("id", type.toLowerCase());
             entity = new WrappedEntity<>(
                     Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a",
                             data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get());
@@ -120,10 +120,15 @@ public class WrappedEntitySnapshot implements Serializable
             entity = new WrappedEntity<>(
                     Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()), data.getHandle(),
                             Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get());
-        else
+        else if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
             entity = new WrappedEntity<>(
                     Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()),
                             data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(),
+                            WrappedEntity.EntityProcessor.NOP).get());
+        else
+            entity = new WrappedEntity<>(
+                    Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityType", "loadEntityRecursive",
+                            Var.toNmsEntityType(getType()), data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(),
                             WrappedEntity.EntityProcessor.NOP).get());
 
         WrappedEntity<?> finalEntity = entityFunction == null ? entity :
@@ -136,6 +141,7 @@ public class WrappedEntitySnapshot implements Serializable
     /**
      * A wrapper for Minecraft's NBT (Named Binary Tag) compound tag system, providing a type-safe way to read and write NBT data.
      */
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.nbt.CompoundTag")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.nbt.NBTTagCompound")
     public static class WrappedCompoundTag extends Wrapper
     {
@@ -168,6 +174,9 @@ public class WrappedEntitySnapshot implements Serializable
         {
             try
             {
+                if(!Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+                    return new WrappedCompoundTag(Reflections.invokeStaticMethod("net.minecraft.nbt.TagParser", "parseCompoundFully", s).get());
+
                 String methodName = Versions.isCurrentVersionSmallerThan(Versions.V1_18) ? "parse" : "a";
                 return new WrappedCompoundTag(Reflections.invokeStaticMethod("net.minecraft.nbt.MojangsonParser", methodName, s).get());
             }
@@ -191,8 +200,13 @@ public class WrappedEntitySnapshot implements Serializable
                 return new WrappedCompoundTag(
                         Reflections.invokeStaticMethod("net.minecraft.nbt.NBTCompressedStreamTools", "a", new ByteArrayInputStream(bytes)).get());
 
+            if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+                return new WrappedCompoundTag(
+                        Reflections.invokeStaticMethod("net.minecraft.nbt.NBTCompressedStreamTools", "a", new ByteArrayInputStream(bytes),
+                                NbtAccounter.unlimitedHeap().getHandle()).get());
+
             return new WrappedCompoundTag(
-                    Reflections.invokeStaticMethod("net.minecraft.nbt.NBTCompressedStreamTools", "a", new ByteArrayInputStream(bytes),
+                    Reflections.invokeStaticMethod("net.minecraft.nbt.NbtIo", "readCompressed", new ByteArrayInputStream(bytes),
                             NbtAccounter.unlimitedHeap().getHandle()).get());
         }
 
@@ -202,6 +216,7 @@ public class WrappedEntitySnapshot implements Serializable
          * @param key   The key to store the value under
          * @param value The string value to store
          */
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "putString")
         @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setString")
         public void putString(@NotNull String key, @NotNull String value)
@@ -215,6 +230,7 @@ public class WrappedEntitySnapshot implements Serializable
          * @param key The key of the boolean value
          * @return The boolean value, or false if the key doesn't exist
          */
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getBooleanOr")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "b")
         @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_4), path = "q")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getBoolean")
@@ -228,7 +244,10 @@ public class WrappedEntitySnapshot implements Serializable
         private byte[] getData()
         {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Reflections.invokeStaticMethod("net.minecraft.nbt.NBTCompressedStreamTools", "a", getHandle(), baos);
+            if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+                Reflections.invokeStaticMethod("net.minecraft.nbt.NBTCompressedStreamTools", "a", getHandle(), baos);
+            else
+                Reflections.invokeStaticMethod("net.minecraft.nbt.NbtIo", "writeCompressed", getHandle(), baos);
             return baos.toByteArray();
         }
 
@@ -239,6 +258,7 @@ public class WrappedEntitySnapshot implements Serializable
         }
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.nbt.NbtAccounter")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.nbt.NBTReadLimiter")
     public static class NbtAccounter extends Wrapper
     {
@@ -247,7 +267,8 @@ public class WrappedEntitySnapshot implements Serializable
             super(handle);
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "c")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "unlimitedHeap")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "c")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_2, to = Versions.V1_21_9), path = "a")
         public static NbtAccounter unlimitedHeap()
         {

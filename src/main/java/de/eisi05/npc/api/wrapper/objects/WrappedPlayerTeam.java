@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.world.scores.PlayerTeam")
 @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.scores.ScoreboardTeam")
 public class WrappedPlayerTeam extends Wrapper
 {
@@ -33,6 +34,7 @@ public class WrappedPlayerTeam extends Wrapper
                     case V1_18, V1_18_2, V1_19, V1_19_1, V1_19_3, V1_19_4, V1_20 -> "i";
                     case V1_20_2 -> "g";
                     case V1_20_4, V1_20_6, V1_21, V1_21_2, V1_21_4, V1_21_5, V1_21_6, V1_21_9, V1_21_11 -> "e";
+                    case V26_1 -> "getPlayersTeam";
                 }, WrappedServerPlayer.fromPlayer(player).getName()).get());
     }
 
@@ -78,6 +80,7 @@ public class WrappedPlayerTeam extends Wrapper
         return teams.getOrDefault(player.getUniqueId(), new HashMap<>()).containsKey(name);
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "setNameTagVisibility")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setNameTagVisibility")
     public void setNameTagVisibility(@NotNull Visibility visibility)
@@ -85,6 +88,7 @@ public class WrappedPlayerTeam extends Wrapper
         invokeWrappedMethod(visibility.getHandle());
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "setCollisionRule")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setCollisionRule")
     public void setCollisionRule(@NotNull CollisionRule collisionRule)
@@ -92,6 +96,7 @@ public class WrappedPlayerTeam extends Wrapper
         invokeWrappedMethod(collisionRule.getHandle());
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "setSeeFriendlyInvisibles")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "b")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setCanSeeFriendlyInvisibles")
     public void setCanSeeFriendlyInvisible(boolean canSeeFriendlyInvisible)
@@ -99,6 +104,7 @@ public class WrappedPlayerTeam extends Wrapper
         invokeWrappedMethod(canSeeFriendlyInvisible);
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getPlayers")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "h")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_4), path = "g")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getPlayerNameSet")
@@ -107,6 +113,7 @@ public class WrappedPlayerTeam extends Wrapper
         return invokeWrappedMethod();
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getName")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "c")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_4), path = "b")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getName")
@@ -115,6 +122,7 @@ public class WrappedPlayerTeam extends Wrapper
         return invokeWrappedMethod();
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "setColor")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setColor")
     public void setColor(@NotNull ChatFormat color)
@@ -122,6 +130,7 @@ public class WrappedPlayerTeam extends Wrapper
         invokeWrappedMethod(color);
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "setPlayerPrefix")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setPrefix")
     public void setPrefix(@NotNull WrappedComponent prefix)
@@ -129,19 +138,23 @@ public class WrappedPlayerTeam extends Wrapper
         invokeWrappedMethod(prefix);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.scores" +
-            ".ScoreboardTeamBase$EnumNameTagVisibility")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.world.scores.Team$Visibility")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.scores.ScoreboardTeamBase$EnumNameTagVisibility")
     public enum Visibility implements EnumWrapper
     {
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "ALWAYS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
         ALWAYS,
 
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "NEVER")
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "b")
         NEVER,
 
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "HIDE_FOR_OTHER_TEAMS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "c")
         HIDE_FOR_OTHER_TEAMS,
 
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "HIDE_FOR_OWN_TEAM")
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "d")
         HIDE_FOR_OWN_TEAM;
 
@@ -152,19 +165,23 @@ public class WrappedPlayerTeam extends Wrapper
         }
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.scores" +
-            ".ScoreboardTeamBase$EnumTeamPush")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.world.scores.Team$CollisionRule")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.scores.ScoreboardTeamBase$EnumTeamPush")
     public enum CollisionRule implements EnumWrapper
     {
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "ALWAYS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
         ALWAYS,
 
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "NEVER")
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "b")
         NEVER,
 
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "PUSH_OTHER_TEAMS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "c")
         PUSH_OTHER_TEAMS,
 
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "PUSH_OWN_TEAM")
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "d")
         PUSH_OWN_TEAM;
 

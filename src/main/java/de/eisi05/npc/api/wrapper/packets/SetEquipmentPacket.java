@@ -7,8 +7,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game" +
-        ".PacketPlayOutEntityEquipment")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket")
+@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutEntityEquipment")
 public class SetEquipmentPacket extends PacketWrapper
 {
     public SetEquipmentPacket(int entity, @NotNull List<Pair<?, ?>> list)

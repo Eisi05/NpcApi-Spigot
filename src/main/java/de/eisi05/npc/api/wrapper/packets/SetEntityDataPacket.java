@@ -8,8 +8,8 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game" +
-        ".PacketPlayOutEntityMetadata")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket")
+@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutEntityMetadata")
 public class SetEntityDataPacket extends PacketWrapper
 {
     public List<?> data;
@@ -20,7 +20,7 @@ public class SetEntityDataPacket extends PacketWrapper
         super(SetEntityDataPacket.class, id, data, nonDefaults);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V1_21_11), path = "")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V26_1), path = "")
     private SetEntityDataPacket(int id, @NotNull List<?> data)
     {
         super(SetEntityDataPacket.class, id, data);

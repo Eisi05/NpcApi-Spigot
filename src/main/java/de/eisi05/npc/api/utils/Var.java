@@ -28,8 +28,11 @@ public class Var
      */
     public static @NotNull Object toNmsItemStack(@NotNull ItemStack itemStack)
     {
-        return Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".inventory.CraftItemStack",
-                "asNMSCopy", itemStack).get();
+        if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+            return Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".inventory.CraftItemStack",
+                    "asNMSCopy", itemStack).get();
+
+        return Reflections.invokeStaticMethod("org.bukkit.craftbukkit.inventory.CraftItemStack", "asNMSCopy", itemStack).get();
     }
 
     /**
@@ -42,7 +45,10 @@ public class Var
      */
     public static @NotNull Object toNmsEntityType(@NotNull EntityType entityType)
     {
-        return Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".entity.CraftEntityType",
+        if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+            return Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".entity.CraftEntityType",
+                    "bukkitToMinecraft", entityType).get();
+        return Reflections.invokeStaticMethod("org.bukkit.craftbukkit.entity.CraftEntityType",
                 "bukkitToMinecraft", entityType).get();
     }
 
@@ -69,8 +75,12 @@ public class Var
      */
     public static @NotNull WrappedComponent fromString(@NotNull String text)
     {
+        if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+            return WrappedComponent.fromHandle(
+                    Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".util.CraftChatMessage",
+                            "fromStringOrNull", text, true).get());
         return WrappedComponent.fromHandle(
-                Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".util.CraftChatMessage",
+                Reflections.invokeStaticMethod("org.bukkit.craftbukkit.util.CraftChatMessage",
                         "fromStringOrNull", text, true).get());
     }
 
@@ -84,7 +94,10 @@ public class Var
      */
     public static @NotNull String toString(@NotNull WrappedComponent component)
     {
-        return (String) Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".util.CraftChatMessage",
+        if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+            return (String) Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".util.CraftChatMessage",
+                    "fromComponent", component.getHandle()).get();
+        return (String) Reflections.invokeStaticMethod("org.bukkit.craftbukkit.util.CraftChatMessage",
                 "fromComponent", component.getHandle()).get();
     }
 
