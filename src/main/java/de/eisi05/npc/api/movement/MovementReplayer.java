@@ -15,7 +15,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,13 +33,14 @@ public class MovementReplayer
     /**
      * Starts replaying recorded movements on an NPC.
      *
-     * @param npc             The NPC to control
-     * @param recording       The movement recording
-     * @param speedMultiplier Speed multiplier (speed up or slows down the replay), normal speed = 1
-     * @param onComplete      Callback when replay completes
+     * @param npc                The NPC to control
+     * @param recording          The movement recording
+     * @param speedMultiplier    Speed multiplier (speed up or slows down the replay), normal speed = 1
+     * @param changeRealLocation Whether to change the real location of the NPC
+     * @param onComplete         Callback when replay completes
      * @return The replay session ID
      */
-    public static long startReplay(@NotNull Function<NPC, NPC> npc, @NotNull MovementRecording recording, double speedMultiplier,
+    public static long startReplay(@NotNull Function<NPC, NPC> npc, @NotNull MovementRecording recording, double speedMultiplier, boolean changeRealLocation,
                                    @Nullable Consumer<ReplayResult> onComplete, @NotNull Player... viewers)
     {
         if(recording.movements().isEmpty())
@@ -51,7 +51,7 @@ public class MovementReplayer
         }
 
         long replayId = replayIdCounter.incrementAndGet();
-        ReplaySession session = new ReplaySession(npc, recording, speedMultiplier, onComplete, replayId, viewers);
+        ReplaySession session = new ReplaySession(npc, recording, speedMultiplier, changeRealLocation, onComplete, replayId, viewers);
 
         session.start();
         return replayId;
@@ -126,6 +126,7 @@ public class MovementReplayer
         private final Function<NPC, NPC> npcFunction;
         private final MovementRecording recording;
         private final double speedMultiplier;
+        private final boolean changeRealLocation;
         private final Consumer<ReplayResult> onComplete;
         private final long replayId;
         private final long startTime;
@@ -136,12 +137,13 @@ public class MovementReplayer
         private int currentIndex;
         private long lastTimestamp;
 
-        private ReplaySession(@NotNull Function<NPC, NPC> npcFunction, @NotNull MovementRecording recording, double speedMultiplier,
+        private ReplaySession(@NotNull Function<NPC, NPC> npcFunction, @NotNull MovementRecording recording, double speedMultiplier, boolean changeRealLocation,
                               @Nullable Consumer<ReplayResult> onComplete, long replayId, @NotNull Player... viewers)
         {
             this.npcFunction = npcFunction;
             this.recording = recording;
             this.speedMultiplier = Math.max(0.1, speedMultiplier); // Minimum 0.1x speed
+            this.changeRealLocation = changeRealLocation;
             this.onComplete = onComplete;
             this.replayId = replayId;
             this.startTime = System.currentTimeMillis();
@@ -169,13 +171,18 @@ public class MovementReplayer
             }
 
             Location startLocation = firstMovement.toLocation(world);
-            npc = npcFunction.apply(new NPC(startLocation));
+            NPC newNpc = new NPC(startLocation);
+            newNpc.addCustomData("movement-replayer", "delete");
+            npc = npcFunction.apply(newNpc);
 
             npc.setEnabled(true);
             for(Player p : viewers)
                 npc.showNPCToPlayer(p);
 
+            Location currentLocation = npc.getLocation();
             npc.changeRealLocation(startLocation);
+            if(!changeRealLocation)
+                npc.setLocation(currentLocation);
 
             activeReplays.put(npc.getUUID(), this);
 
@@ -237,7 +244,7 @@ public class MovementReplayer
                     TeleportEntityPacket teleport1 = new TeleportEntityPacket(npc.entity,
                             new TeleportEntityPacket.PositionMoveRotation(targetLocation.toVector(), new Vector(0, 0, 0), targetLocation.getYaw(),
                                     targetLocation.getPitch()), Set.of(), true);
-                    npc.sendNpcMovePackets(teleport1, head, npc.getViewers().stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toArray(Player[]::new));
+                    npc.sendNpcMovePackets(teleport1, head, viewers);
                 }
                 else
                 {
@@ -245,10 +252,11 @@ public class MovementReplayer
                             new TeleportEntityPacket.PositionMoveRotation(previousMovement.toLocation(world).toVector(),
                                     movement.toLocation(world).toVector(), targetLocation.getYaw(), targetLocation.getPitch()), Set.of(), true);
 
-                    npc.sendNpcMovePackets(teleport, head, npc.getViewers().stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toArray(Player[]::new));
+                    npc.sendNpcMovePackets(teleport, head, viewers);
 
                     // Update NPC's internal location
-                    npc.setLocation(targetLocation);
+                    if(changeRealLocation)
+                     npc.setLocation(targetLocation);
                 }
             }
             else
@@ -257,7 +265,7 @@ public class MovementReplayer
                 TeleportEntityPacket teleport1 = new TeleportEntityPacket(npc.entity,
                         new TeleportEntityPacket.PositionMoveRotation(targetLocation.toVector(), new Vector(0, 0, 0), targetLocation.getYaw(),
                                 targetLocation.getPitch()), Set.of(), true);
-                npc.sendNpcMovePackets(teleport1, head, npc.getViewers().stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toArray(Player[]::new));
+                npc.sendNpcMovePackets(teleport1, head, viewers);
             }
 
             lastTimestamp = movement.getTimestamp();
@@ -284,6 +292,10 @@ public class MovementReplayer
             if(npc != null)
             {
                 activeReplays.remove(npc.getUUID());
+
+                if(!"delete".equals(npc.getCustomData("movement-replayer")))
+                    return;
+
                 try
                 {
                     npc.delete();
