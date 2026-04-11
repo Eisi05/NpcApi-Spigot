@@ -1,7 +1,6 @@
 package de.eisi05.npc.api.movement;
 
 import de.eisi05.npc.api.utils.ObjectSaver;
-import de.eisi05.npc.api.utils.Var;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -10,8 +9,6 @@ import java.io.IOException;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -60,7 +57,7 @@ public record MovementRecording(@NotNull ArrayList<MovementData> movements, long
      */
     public void saveToFile(@NotNull File file) throws IOException
     {
-        new ObjectSaver(file).write(this);
+        new ObjectSaver(file).write(this, false);
     }
 
     /**
