@@ -14,13 +14,11 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * Replays recorded movements on NPCs with precise timing and smooth transitions. Supports different replay modes and provides callbacks for completion.
@@ -40,7 +38,7 @@ public class MovementReplayer
      * @param onComplete         Callback when replay completes
      * @return The replay session ID
      */
-    public static long startReplay(@NotNull Function<NPC, NPC> npc, @NotNull MovementRecording recording, double speedMultiplier, boolean changeRealLocation,
+    public static long startReplay(@NotNull NPC npc, @NotNull MovementRecording recording, double speedMultiplier, boolean changeRealLocation,
                                    @Nullable Consumer<ReplayResult> onComplete, @NotNull Player... viewers)
     {
         if(recording.movements().isEmpty())
@@ -123,7 +121,7 @@ public class MovementReplayer
      */
     private static class ReplaySession
     {
-        private final Function<NPC, NPC> npcFunction;
+        private final NPC npc;
         private final MovementRecording recording;
         private final double speedMultiplier;
         private final boolean changeRealLocation;
@@ -132,15 +130,14 @@ public class MovementReplayer
         private final long startTime;
         private final Player[] viewers;
 
-        private NPC npc;
         private BukkitTask replayTask;
         private int currentIndex;
         private long lastTimestamp;
 
-        private ReplaySession(@NotNull Function<NPC, NPC> npcFunction, @NotNull MovementRecording recording, double speedMultiplier, boolean changeRealLocation,
+        private ReplaySession(@NotNull NPC npc, @NotNull MovementRecording recording, double speedMultiplier, boolean changeRealLocation,
                               @Nullable Consumer<ReplayResult> onComplete, long replayId, @NotNull Player... viewers)
         {
-            this.npcFunction = npcFunction;
+            this.npc = npc;
             this.recording = recording;
             this.speedMultiplier = Math.max(0.1, speedMultiplier); // Minimum 0.1x speed
             this.changeRealLocation = changeRealLocation;
@@ -171,9 +168,6 @@ public class MovementReplayer
             }
 
             Location startLocation = firstMovement.toLocation(world);
-            NPC newNpc = new NPC(startLocation);
-            newNpc.addCustomData("movement-replayer", "delete");
-            npc = npcFunction.apply(newNpc);
 
             npc.setEnabled(true);
             for(Player p : viewers)
@@ -253,10 +247,6 @@ public class MovementReplayer
                                     movement.toLocation(world).toVector(), targetLocation.getYaw(), targetLocation.getPitch()), Set.of(), true);
 
                     npc.sendNpcMovePackets(teleport, head, viewers);
-
-                    // Update NPC's internal location
-                    if(changeRealLocation)
-                     npc.setLocation(targetLocation);
                 }
             }
             else
@@ -267,6 +257,9 @@ public class MovementReplayer
                                 targetLocation.getPitch()), Set.of(), true);
                 npc.sendNpcMovePackets(teleport1, head, viewers);
             }
+
+            if(changeRealLocation)
+                npc.setLocation(targetLocation);
 
             lastTimestamp = movement.getTimestamp();
         }
@@ -290,20 +283,7 @@ public class MovementReplayer
             }
 
             if(npc != null)
-            {
                 activeReplays.remove(npc.getUUID());
-
-                if(!"delete".equals(npc.getCustomData("movement-replayer")))
-                    return;
-
-                try
-                {
-                    npc.delete();
-                }
-                catch(IOException e)
-                {
-                }
-            }
 
             if(onComplete != null)
                 onComplete.accept(result);
