@@ -33,7 +33,7 @@ public class SetEntityDataPacket extends PacketWrapper
             return new SetEntityDataPacket(id, data, true);
         else
         {
-            List<?> dataList = data.getAll();
+            List<?> dataList = data.packDirty();
             return new SetEntityDataPacket(id, dataList == null ? new ArrayList<>() : dataList);
         }
     }

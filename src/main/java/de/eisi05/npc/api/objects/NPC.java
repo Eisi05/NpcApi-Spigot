@@ -2,6 +2,8 @@ package de.eisi05.npc.api.objects;
 
 import com.mojang.datafixers.util.Either;
 import de.eisi05.npc.api.NpcApi;
+import de.eisi05.npc.api.ai.Goal;
+import de.eisi05.npc.api.ai.GoalSelector;
 import de.eisi05.npc.api.enums.WalkingResult;
 import de.eisi05.npc.api.events.NpcHideEvent;
 import de.eisi05.npc.api.events.NpcPostShowEvent;
@@ -23,6 +25,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
@@ -59,6 +62,7 @@ public class NPC extends NpcHolder
     private Location location;
     private NpcClickAction clickEvent;
     private Instant createdAt = Instant.now();
+    private GoalSelector goalSelector;
 
     /**
      * Creates an NPC at the specified location with a random UUID and default name. The default name is an empty component.
@@ -111,6 +115,7 @@ public class NPC extends NpcHolder
             setOption(value, Var.unsafeCast(value.getDefaultValue()));
 
         NpcManager.addNPC(this);
+        startGoals();
     }
 
     /**
@@ -127,6 +132,8 @@ public class NPC extends NpcHolder
         this(location, UUID.randomUUID(), name);
         this.options.putAll(options);
         this.clickEvent = clickEvent;
+
+        startGoals();
     }
 
     /**
@@ -430,7 +437,7 @@ public class NPC extends NpcHolder
                 .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
                         Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
                                 WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                                        .append(WrappedComponent.create("\n").append(name.getName(player))))));
+                                .append(WrappedComponent.create("\n").append(name.getName(player))))));
     }
 
     /**
@@ -611,6 +618,7 @@ public class NPC extends NpcHolder
         if(serverPlayer == null)
             return;
 
+        stopGoals();
         hideNpcFromAllPlayers();
         NpcManager.removeNPC(this);
 
@@ -675,6 +683,49 @@ public class NPC extends NpcHolder
         double distanceXZ = Math.sqrt(dx * dx + dz * dz);
         float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
         float pitch = (float) Math.toDegrees(-Math.atan2(dy, distanceXZ));
+
+        byte yawByte = (byte) (yaw * 256 / 360);
+        byte pitchByte = (byte) (pitch * 256 / 360);
+
+        WrappedServerPlayer player = WrappedServerPlayer.fromPlayer(viewer);
+
+        player.sendPacket(new RotateHeadPacket(entity, yawByte));
+        player.sendPacket(new MoveEntityPacket.Rot(entity.getId(), yawByte, pitchByte, serverPlayer.isOnGround()));
+    }
+
+    /**
+     * Makes the NPC look at a specific player. This calculates the required yaw and pitch and sends update packets to the viewing player.
+     *
+     * @param targetEntity the entity the NPC should look at. Must not be null.
+     * @param viewer the player to send the packets to. Must not be null.
+     * @param force If true, the NPC's location will be updated; otherwise only packets are sent.
+     */
+    public void lookAtEntity(@NotNull Entity targetEntity, @NotNull Player viewer, boolean force)
+    {
+        if(entity == null)
+            return;
+
+        Location npcLoc = this.location;
+        Location targetLoc = targetEntity.getLocation();
+
+        if(npcLoc.getWorld() != targetLoc.getWorld())
+            return;
+
+        double dx = targetLoc.getX() - npcLoc.getX();
+
+        double eyeHeight = (entity.getBukkitPlayer() instanceof LivingEntity le ? le.getEyeHeight() :
+                entity.getBukkitPlayer().getHeight()) - (Pose.fromBukkit(getOption(NpcOption.POSE, viewer)) == Pose.SITTING ? 0.625 : 0);
+
+        double dy = (targetLoc.getY() + (targetEntity instanceof LivingEntity le ? le.getEyeHeight() : targetEntity.getHeight())) - (npcLoc.getY() + (eyeHeight * getOption(NpcOption.SCALE, viewer)));
+        double dz = targetLoc.getZ() - npcLoc.getZ();
+
+        double distanceXZ = Math.sqrt(dx * dx + dz * dz);
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        float pitch = (float) Math.toDegrees(-Math.atan2(dy, distanceXZ));
+
+        Location newLoc = new Location(npcLoc.getWorld(), npcLoc.getX(), npcLoc.getY(), npcLoc.getZ(), yaw, pitch);
+        if(force)
+            setLocation(newLoc);
 
         byte yawByte = (byte) (yaw * 256 / 360);
         byte pitchByte = (byte) (pitch * 256 / 360);
@@ -849,6 +900,80 @@ public class NPC extends NpcHolder
                     serverPlayer1.sendPacket(rotateHeadPacket);
             }
         }
+    }
+
+    /**
+     * Gets the goal selector for this NPC. Creates a new one if it doesn't exist.
+     *
+     * @return The goal selector for this NPC
+     */
+    private @NotNull GoalSelector getGoalSelector()
+    {
+        if(goalSelector == null)
+            goalSelector = new GoalSelector(this);
+        return goalSelector;
+    }
+
+    /**
+     * Saves the goal selector state to the NPC's options.
+     * Call this after modifying the goal selector to persist changes.
+     */
+    private void saveGoals()
+    {
+        setOption(NpcOption.GOALS, getGoalSelector().getGoals());
+    }
+
+    /**
+     * Adds a goal to this NPC's goal selector.
+     *
+     * @param goal The goal to add
+     * @return This NPC for method chaining
+     */
+    public @NotNull NPC addGoal(@NotNull Goal goal)
+    {
+        getGoalSelector().addGoal(goal);
+        saveGoals();
+        return this;
+    }
+
+    /**
+     * Removes a goal from this NPC's goal selector.
+     *
+     * @param goal The goal to remove
+     * @return This NPC for method chaining
+     */
+    public @NotNull NPC removeGoal(@NotNull Goal goal)
+    {
+        getGoalSelector().removeGoal(goal);
+        saveGoals();
+        return this;
+    }
+
+    /**
+     * Starts the goal system for this NPC. The goal selector will begin evaluating and executing goals.
+     */
+    public void startGoals()
+    {
+        if(!isGoalSystemRunning())
+            getGoalSelector().start();
+    }
+
+    /**
+     * Stops the goal system for this NPC. The goal selector will stop evaluating and executing goals.
+     */
+    public void stopGoals()
+    {
+        getGoalSelector().stop();
+    }
+
+    /**
+     * Checks whether the goal system is currently running for this NPC.
+     *
+     * @return true if the goal system is running, false otherwise
+     */
+    public boolean isGoalSystemRunning()
+    {
+        return goalSelector != null && goalSelector.isRunning();
     }
 
     /**

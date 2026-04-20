@@ -6,6 +6,7 @@ import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.datafixers.util.Pair;
 import de.eisi05.npc.api.NpcApi;
+import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.enums.NpcVisibility;
 import de.eisi05.npc.api.enums.SkinParts;
 import de.eisi05.npc.api.manager.NpcManager;
@@ -277,14 +278,17 @@ public class NpcOption<T, S extends Serializable>
                 if(!npc.entity.getBukkitPlayer().getType().name().equals("ITEM_DISPLAY") &&
                         !npc.entity.getBukkitPlayer().getType().name().equals("BLOCK_DISPLAY"))
                 {
+                    Byte handValue = data.get(WrappedEntityData.EntityDataSerializers.BYTE.create(8));
+                    byte handFlag = handValue == null ? 0 : handValue;
+
                     if(pose == Pose.SPIN_ATTACK)
                     {
-                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x04);
+                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) (handFlag |  0x04));
                         packetWrapper = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
                                 (byte) -90, npc.getServerPlayer().isOnGround());
                     }
                     else
-                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) 0x01);
+                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) (handFlag & ~0x04));
                 }
 
                 if(nmsPose == de.eisi05.npc.api.wrapper.enums.Pose.SITTING)
@@ -510,23 +514,6 @@ public class NpcOption<T, S extends Serializable>
             });
 
     /**
-     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
-     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
-     */
-    static final NpcOption<Boolean, Boolean> EDITABLE = new NpcOption<>("editable", false,
-            aBoolean -> aBoolean, aBoolean -> aBoolean,
-            (enabled, npc, player) -> null);
-
-    /**
-     * NPC option to store custom data for the NPC. This is an internal option, typically not directly set by users but controlled by
-     * {@link NPC#addCustomData(Serializable, Serializable)}.
-     */
-    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data",
-            new HashMap<>(),
-            aHashMap -> aHashMap, aHashMap -> aHashMap,
-            (customData, npc, player) -> null);
-
-    /**
      * NPC option to change the entity type of the NPC. This allows transforming the NPC into any Minecraft entity type. The default is a PLAYER entity. When
      * changed, the NPC will be recreated as the new entity type.
      *
@@ -603,7 +590,7 @@ public class NpcOption<T, S extends Serializable>
                     packets.add(SetEntityDataPacket.create(npc.serverPlayer.getNameTag().getId(), npc.serverPlayer.getNameTag().applyData(
                             Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || npc.isEnabled() ? npc.name.getName(player) :
                                     WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                                            .append(WrappedComponent.create("\n").append(npc.name.getName(player))))));
+                                    .append(WrappedComponent.create("\n").append(npc.name.getName(player))))));
 
                     if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
                     {
@@ -614,6 +601,33 @@ public class NpcOption<T, S extends Serializable>
 
                 return new BundlePacket(packets.toArray(new PacketWrapper[0]));
             }).loadBefore(true);
+
+    /**
+     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
+     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
+     */
+    static final NpcOption<Boolean, Boolean> EDITABLE = new NpcOption<>("editable", false,
+            aBoolean -> aBoolean, aBoolean -> aBoolean,
+            (enabled, npc, player) -> null);
+
+    /**
+     * NPC option to store custom data for the NPC. This is an internal option, typically not directly set by users but controlled by
+     * {@link NPC#addCustomData(Serializable, Serializable)}.
+     */
+    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data",
+            new HashMap<>(),
+            aHashMap -> aHashMap, aHashMap -> aHashMap,
+            (customData, npc, player) -> null);
+
+    /**
+     * NPC option to store the goal selector for the NPC. This allows saving and restoring the NPC's AI behavior. The serialized form stores the running state,
+     * tick interval, and goal configurations. Note: Goals themselves are not fully serialized - only their class names and any serializable configuration. On
+     * deserialization, goals must be re-instantiated by the plugin.
+     */
+    static final NpcOption<ArrayList<Goal>, ArrayList<Goal>> GOALS = new NpcOption<>("goals", null,
+            goals -> goals,
+            goals -> goals,
+            (data, npc, player) -> null);
 
     private final String path;
     private final T defaultValue;

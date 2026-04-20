@@ -1,0 +1,83 @@
+package de.eisi05.npc.api.ai.goals;
+
+import de.eisi05.npc.api.ai.Goal;
+import de.eisi05.npc.api.objects.NPC;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.Serial;
+
+/**
+ * A goal that makes the NPC wait/idle for a specified duration. This is useful for creating pauses between actions.
+ */
+public class WaitGoal implements Goal
+{
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    private final int durationTicks;
+    private transient int ticksRemaining;
+
+    /**
+     * Creates a WaitGoal with the specified duration.
+     *
+     * @param durationTicks The duration to wait in ticks (20 ticks = 1 second)
+     */
+    public WaitGoal(int durationTicks)
+    {
+        this.durationTicks = Math.max(1, durationTicks);
+    }
+
+    @Override
+    public boolean canUse(@NotNull NPC npc)
+    {
+        return ticksRemaining > 0 || durationTicks > 0;
+    }
+
+    @Override
+    public void start(@NotNull NPC npc)
+    {
+        ticksRemaining = durationTicks;
+    }
+
+    @Override
+    public void tick(@NotNull NPC npc)
+    {
+        ticksRemaining--;
+    }
+
+    @Override
+    public void stop(@NotNull NPC npc)
+    {
+        ticksRemaining = 0;
+    }
+
+    @Override
+    public int getPriority()
+    {
+        return 0;
+    }
+
+    @Override
+    public boolean canContinue(@NotNull NPC npc)
+    {
+        return ticksRemaining > 0;
+    }
+
+    /**
+     * Gets the remaining ticks.
+     *
+     * @return The remaining ticks
+     */
+    public int getTicksRemaining()
+    {
+        return ticksRemaining;
+    }
+
+    /**
+     * Resets the wait duration.
+     */
+    public void reset()
+    {
+        ticksRemaining = durationTicks;
+    }
+}
