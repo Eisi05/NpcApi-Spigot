@@ -14,7 +14,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * A goal that makes the NPC wander randomly to nearby locations. The NPC will pick a random location within a specified radius and walk to it.
  */
-public class WanderGoal implements Goal
+public class WanderGoal extends Goal
 {
     @Serial
     private static final long serialVersionUID = 1L;
@@ -61,6 +61,7 @@ public class WanderGoal implements Goal
      */
     public WanderGoal(int radius, int minDelay, int maxDelay, double speed)
     {
+        super(Priority.MID_CHANCE);
         this.radius = radius;
         this.minDelay = minDelay;
         this.maxDelay = maxDelay;
@@ -114,12 +115,6 @@ public class WanderGoal implements Goal
         }
         delayTicks = 0;
         targetLocation = null;
-    }
-
-    @Override
-    public int getPriority()
-    {
-        return 1;
     }
 
     @Override

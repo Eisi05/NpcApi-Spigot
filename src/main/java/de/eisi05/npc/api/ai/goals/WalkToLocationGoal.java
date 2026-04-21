@@ -23,11 +23,11 @@ import java.util.concurrent.CompletableFuture;
 /**
  * A goal that makes the NPC walk to a specific location using pathfinding.
  */
-public class WalkToLocationGoal implements Goal
+public class WalkToLocationGoal extends Goal
 {
+    static final int RECALCULATION_COOLDOWN = 20;
     @Serial
     private static final long serialVersionUID = 1L;
-
     private static final int DEFAULT_MAX_ITERATIONS = 5000;
     private static final double DEFAULT_SPEED = 0.4;
 
@@ -36,8 +36,8 @@ public class WalkToLocationGoal implements Goal
     private final int maxIterations;
     private final boolean allowDiagonal;
     private final SerializableConsumer<WalkingResult> completionCallback;
-    private transient Location targetLocation;
 
+    private transient Location targetLocation;
     private transient CompletableFuture<Void> pathfindingFuture;
     private transient Path currentPath;
     private transient boolean isWalking;
@@ -75,6 +75,7 @@ public class WalkToLocationGoal implements Goal
     public WalkToLocationGoal(@NotNull Location targetLocation, double speed, int maxIterations, boolean allowDiagonal,
                               @NotNull SerializableConsumer<WalkingResult> completionCallback)
     {
+        super(Priority.MID_CHANCE);
         this.targetLocation = targetLocation.clone();
         this.serializableLocation = new Path.SerializablePath.SerializableLocation(targetLocation);
         this.speed = Math.max(0.1, Math.min(1.0, speed));
@@ -132,12 +133,6 @@ public class WalkToLocationGoal implements Goal
 
         isWalking = false;
         currentPath = null;
-    }
-
-    @Override
-    public int getPriority()
-    {
-        return 3;
     }
 
     @Override

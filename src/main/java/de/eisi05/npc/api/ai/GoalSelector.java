@@ -8,8 +8,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Manages and selects goals for an NPC. The goal selector evaluates all available goals each tick and selects the highest priority goal that can be used.
@@ -175,16 +175,68 @@ public class GoalSelector
      */
     private void tick()
     {
-        Goal selectedGoal = goals.stream()
+        List<Goal> usableGoals = goals.stream()
                 .filter(goal -> goal.canUse(npc))
-                .max(Comparator.comparingInt(Goal::getPriority))
-                .orElse(null);
+                .toList();
+
+        if(usableGoals.isEmpty())
+        {
+            if(currentGoal != null)
+            {
+                currentGoal.stop(npc);
+                currentGoal = null;
+            }
+            return;
+        }
+
+        List<Goal> alwaysGoals = usableGoals.stream()
+                .filter(goal -> goal.getPriority() == Goal.Priority.ALWAYS)
+                .toList();
+
+        Goal selectedGoal;
+        if(!alwaysGoals.isEmpty())
+            selectedGoal = alwaysGoals.get(ThreadLocalRandom.current().nextInt(alwaysGoals.size()));
+        else
+        {
+            if(usableGoals.isEmpty())
+                selectedGoal = null;
+            else if(usableGoals.size() == 1)
+                selectedGoal = usableGoals.get(0);
+            else
+            {
+                int totalWeight = usableGoals.stream()
+                        .mapToInt(goal -> goal.getPriority().weight)
+                        .sum();
+
+                if(totalWeight == 0)
+                    selectedGoal = usableGoals.get(ThreadLocalRandom.current().nextInt(usableGoals.size()));
+                else
+                {
+                    int randomWeight = ThreadLocalRandom.current().nextInt(totalWeight);
+                    int currentWeight = 0;
+
+                    selectedGoal = null;
+                    for(Goal goal : usableGoals)
+                    {
+                        currentWeight += goal.getPriority().weight;
+                        if(randomWeight < currentWeight)
+                        {
+                            selectedGoal = goal;
+                            break;
+                        }
+                    }
+
+                    if(selectedGoal == null)
+                        selectedGoal = usableGoals.get(usableGoals.size() - 1);
+                }
+            }
+        }
 
         if(currentGoal != null)
         {
             if(selectedGoal != null && selectedGoal != currentGoal)
             {
-                if(selectedGoal.getPriority() >= currentGoal.getPriority())
+                if(selectedGoal.getPriority().weight >= currentGoal.getPriority().weight)
                 {
                     currentGoal.stop(npc);
                     currentGoal = selectedGoal;

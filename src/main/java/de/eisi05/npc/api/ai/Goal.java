@@ -7,13 +7,48 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * Base interface for NPC AI goals. Goals represent specific behaviors that an NPC can perform, such as walking to a location, attacking an entity, or looking
- * around.
+ * Base abstract class for NPC AI goals. Goals represent specific behaviors that an NPC can perform, such as walking to a location, attacking an entity, or
+ * looking around. Extend this class to create custom goal behaviors.
  */
-public interface Goal extends Serializable
+public abstract class Goal implements Serializable
 {
     @Serial
-    long serialVersionUID = 1L;
+    private final static long serialVersionUID = 1L;
+    private Priority priority;
+
+    /**
+     * Creates a new goal with the specified priority.
+     *
+     * @param priority The priority level for this goal
+     */
+    protected Goal(@NotNull Priority priority)
+    {
+        this.priority = priority;
+    }
+
+    private Goal()
+    {
+    }
+
+    /**
+     * Gets the priority of this goal.
+     *
+     * @return The priority of this goal
+     */
+    public final @NotNull Priority getPriority()
+    {
+        return priority;
+    }
+
+    /**
+     * Sets the priority of this goal.
+     *
+     * @param priority The new priority for this goal
+     */
+    public final void setPriority(@NotNull Priority priority)
+    {
+        this.priority = priority;
+    }
 
     /**
      * Checks whether this goal can be used right now. This is called each tick to determine if the goal should be considered for execution.
@@ -21,36 +56,28 @@ public interface Goal extends Serializable
      * @param npc The NPC to check for
      * @return true if this goal can be used, false otherwise
      */
-    boolean canUse(@NotNull NPC npc);
+    protected abstract boolean canUse(@NotNull NPC npc);
 
     /**
      * Called when this goal starts executing. Use this to initialize any state needed for the goal.
      *
      * @param npc The NPC starting this goal
      */
-    void start(@NotNull NPC npc);
+    protected abstract void start(@NotNull NPC npc);
 
     /**
      * Called each tick while this goal is active. Use this to update the goal's behavior.
      *
      * @param npc The NPC executing this goal
      */
-    void tick(@NotNull NPC npc);
+    protected abstract void tick(@NotNull NPC npc);
 
     /**
      * Called when this goal stops executing. Use this to clean up any state or cancel ongoing tasks.
      *
      * @param npc The NPC stopping this goal
      */
-    void stop(@NotNull NPC npc);
-
-    /**
-     * Gets the priority of this goal. Higher priority goals will be selected over lower priority ones. Minecraft uses values like 0-8 typically, with higher
-     * being more important.
-     *
-     * @return The priority of this goal
-     */
-    int getPriority();
+    protected abstract void stop(@NotNull NPC npc);
 
     /**
      * Checks whether this goal can continue executing. If this returns false, the goal will be stopped and a new goal will be selected.
@@ -58,18 +85,44 @@ public interface Goal extends Serializable
      * @param npc The NPC to check for
      * @return true if this goal can continue, false otherwise
      */
-    default boolean canContinue(@NotNull NPC npc)
+    protected boolean canContinue(@NotNull NPC npc)
     {
         return canUse(npc);
     }
 
     /**
-     * Gets whether this goal should be exclusive (no other goals can run simultaneously). By default, goals are exclusive.
-     *
-     * @return true if this goal is exclusive, false otherwise
+     * Priority levels for goal selection. Higher priority goals are more likely to be selected. ALWAYS priority goals are always preferred over other goals.
+     * Other priorities use weighted random selection where higher weight = higher chance of being selected.
      */
-    default boolean isExclusive()
+    public enum Priority implements Serializable
     {
-        return true;
+        /**
+         * This goal is always preferred over other goals and will be selected deterministically.
+         */
+        ALWAYS(100),
+
+        /**
+         * High chance of being selected when among non-ALWAYS goals.
+         */
+        HIGH_CHANCE(3),
+
+        /**
+         * Medium chance of being selected when among non-ALWAYS goals.
+         */
+        MID_CHANCE(2),
+
+        /**
+         * Low chance of being selected when among non-ALWAYS goals.
+         */
+        LOW_CHANCE(1);
+
+        @Serial
+        private final static long serialVersionUID = 1L;
+        final int weight;
+
+        Priority(int weight)
+        {
+            this.weight = weight;
+        }
     }
 }

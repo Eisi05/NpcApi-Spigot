@@ -9,7 +9,7 @@ import java.io.Serial;
 /**
  * A goal that makes the NPC wait/idle for a specified duration. This is useful for creating pauses between actions.
  */
-public class WaitGoal implements Goal
+public class WaitGoal extends Goal
 {
     @Serial
     private static final long serialVersionUID = 1L;
@@ -24,6 +24,7 @@ public class WaitGoal implements Goal
      */
     public WaitGoal(int durationTicks)
     {
+        super(Priority.LOW_CHANCE);
         this.durationTicks = Math.max(1, durationTicks);
     }
 
@@ -49,12 +50,6 @@ public class WaitGoal implements Goal
     public void stop(@NotNull NPC npc)
     {
         ticksRemaining = 0;
-    }
-
-    @Override
-    public int getPriority()
-    {
-        return 0;
     }
 
     @Override

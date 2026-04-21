@@ -14,7 +14,7 @@ import java.util.UUID;
 /**
  * A goal that makes the NPC follow a target entity. The NPC will maintain a specified distance from the target and pathfind to them if too far.
  */
-public class FollowEntityGoal implements Goal
+public class FollowEntityGoal extends Goal
 {
     @Serial
     private static final long serialVersionUID = 1L;
@@ -30,6 +30,7 @@ public class FollowEntityGoal implements Goal
 
     private transient WalkToLocationGoal currentWalkGoal;
     private transient LivingEntity target;
+    private transient int pathRecalculationCooldown;
 
     /**
      * Creates a FollowEntityGoal with a fixed target entity ID and default distances.
@@ -51,6 +52,7 @@ public class FollowEntityGoal implements Goal
      */
     public FollowEntityGoal(@NotNull UUID targetEntityId, double followDistance, double stopDistance, double speed)
     {
+        super(Priority.HIGH_CHANCE);
         this.targetEntityId = targetEntityId;
         this.followDistance = Math.max(stopDistance + 0.5, followDistance);
         this.stopDistance = Math.max(0.5, stopDistance);
@@ -91,6 +93,7 @@ public class FollowEntityGoal implements Goal
             return;
 
         this.target = le;
+        this.pathRecalculationCooldown = 0;
         if(target != null && target.isValid())
         {
             currentWalkGoal = new WalkToLocationGoal(target.getLocation(), speed);
@@ -128,9 +131,32 @@ public class FollowEntityGoal implements Goal
         {
             currentWalkGoal = new WalkToLocationGoal(target.getLocation(), speed);
             currentWalkGoal.start(npc);
+            pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;
         }
         else
-            currentWalkGoal.tick(npc);
+        {
+            Location currentTarget = currentWalkGoal.getTargetLocation();
+            boolean shouldRecalculate = currentTarget.distance(target.getLocation()) > 5.0;
+
+            if(!shouldRecalculate && pathRecalculationCooldown <= 0)
+            {
+                shouldRecalculate = true;
+                pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;
+            }
+
+            if(shouldRecalculate)
+            {
+                currentWalkGoal.stop(npc);
+                currentWalkGoal = new WalkToLocationGoal(target.getLocation(), speed);
+                currentWalkGoal.start(npc);
+                pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;
+            }
+            else
+            {
+                currentWalkGoal.tick(npc);
+                pathRecalculationCooldown--;
+            }
+        }
     }
 
     @Override
@@ -142,12 +168,6 @@ public class FollowEntityGoal implements Goal
             currentWalkGoal = null;
         }
         target = null;
-    }
-
-    @Override
-    public int getPriority()
-    {
-        return 5;
     }
 
     @Override

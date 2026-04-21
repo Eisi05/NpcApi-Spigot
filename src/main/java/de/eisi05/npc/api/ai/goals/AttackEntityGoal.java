@@ -11,6 +11,7 @@ import de.eisi05.npc.api.wrapper.objects.WrappedEntityData;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import de.eisi05.npc.api.wrapper.packets.AnimatePacket;
 import de.eisi05.npc.api.wrapper.packets.PacketWrapper;
+import de.eisi05.npc.api.wrapper.packets.RemoveEntityPacket;
 import de.eisi05.npc.api.wrapper.packets.SetEntityDataPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -25,17 +26,14 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.Serial;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.OptionalInt;
+import java.util.*;
 
 /**
  * A goal that makes the NPC attack nearby entities that match a predicate. The attack behavior varies based on the item in the NPC's main hand: -
  * Bow/Trident/Crossbow: Long range attacks - Sword/Axe: Short range attacks - Other: Short range attacks Only activates when a valid target is in range and
  * line of sight. Once a target is locked, the NPC continues attacking until the target becomes unreachable or invalid.
  */
-public class AttackEntityGoal implements Goal
+public class AttackEntityGoal extends Goal
 {
     @Serial
     private static final long serialVersionUID = 1L;
@@ -55,8 +53,9 @@ public class AttackEntityGoal implements Goal
     private transient boolean isAttacking;
     private transient WalkToLocationGoal movementGoal;
     private transient boolean isUsing;
-    private transient java.util.List<Player> cachedViewers;
+    private transient List<Player> cachedViewers;
     private transient int lineOfSightCheckCooldown;
+    private transient int pathRecalculationCooldown;
 
     /**
      * Creates an AttackEntityGoal with a filter for valid targets.
@@ -76,6 +75,7 @@ public class AttackEntityGoal implements Goal
      */
     public AttackEntityGoal(@NotNull SerializablePredicate<LivingEntity> targetFilter, double customAttackRange)
     {
+        super(Priority.ALWAYS);
         this.targetFilter = targetFilter;
         this.customAttackRange = customAttackRange;
     }
@@ -102,6 +102,7 @@ public class AttackEntityGoal implements Goal
         movementGoal = null;
         isUsing = false;
         lineOfSightCheckCooldown = 0;
+        pathRecalculationCooldown = 0;
         setUsingItemState(npc, false);
         updateCachedViewers(npc);
     }
@@ -147,10 +148,24 @@ public class AttackEntityGoal implements Goal
             else
             {
                 Location currentTarget = movementGoal.getTargetLocation();
-                if(currentTarget.distance(target.getLocation()) > 2.0)
+                boolean shouldRecalculate = currentTarget.distance(target.getLocation()) > 5.0;
+
+                if(!shouldRecalculate && pathRecalculationCooldown <= 0)
+                {
+                    shouldRecalculate = true;
+                    pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;
+                }
+
+                if(shouldRecalculate)
+                {
                     startMovement(npc, target.getLocation());
+                    pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;
+                }
                 else
+                {
                     movementGoal.tick(npc);
+                    pathRecalculationCooldown--;
+                }
 
                 distance = npc.getLocation().distance(target.getLocation());
                 if(distance <= attackRange)
@@ -184,12 +199,6 @@ public class AttackEntityGoal implements Goal
         attackCooldown = 0;
         isUsing = false;
         setUsingItemState(npc, false);
-    }
-
-    @Override
-    public int getPriority()
-    {
-        return 7;
     }
 
     @Override
@@ -323,7 +332,7 @@ public class AttackEntityGoal implements Goal
             return;
 
         double eyeHeight = (npc.entity.getBukkitPlayer() instanceof LivingEntity le ? le.getEyeHeight() : npc.entity.getBukkitPlayer().getHeight()) -
-                (de.eisi05.npc.api.wrapper.enums.Pose.fromBukkit(npc.getOption(NpcOption.POSE)) == Pose.SITTING ? 0.625 : 0);
+                (Pose.fromBukkit(npc.getOption(NpcOption.POSE)) == Pose.SITTING ? 0.625 : 0);
 
         Location npcLoc = npc.getLocation().clone().add(0, eyeHeight * npc.getOption(NpcOption.SCALE), 0);
 
@@ -360,19 +369,25 @@ public class AttackEntityGoal implements Goal
                 arrow.setOwner(((CraftPlayer) player).getHandle());
 
                 world.addFreshEntity(arrow);
+
+
                  */
 
+                AbstractArrow arrow;
                 if(mainHand == null || mainHand.getType() == Material.TRIDENT)
-                {
-                    Trident trident = npcLoc.getWorld().spawnArrow(npcLoc, direction, speed, 0, Trident.class);
-                    trident.setShooter(npcLoc.getWorld().getPlayers().stream().findFirst().orElse(null));
-                    trident.setDamage(getAttackDamage(npc));
-                }
+                    arrow = npcLoc.getWorld().spawnArrow(npcLoc, direction, speed, 0, Trident.class);
                 else
+                    arrow = npcLoc.getWorld().spawnArrow(npcLoc, direction, speed, 0, Arrow.class);
+                arrow.setShooter(npc.getServerPlayer().getBukkitPlayer());
+                arrow.setDamage(getAttackDamage(npc));
+                arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+                arrow.setShotFromCrossbow(mainHand.getType() == Material.CROSSBOW);
+
+                PacketWrapper removePacket = new RemoveEntityPacket(arrow.getEntityId());
+                for(Player player : npcLoc.getWorld().getPlayers())
                 {
-                    Arrow arrow = npcLoc.getWorld().spawnArrow(npcLoc, direction, speed, 0, Arrow.class);
-                    arrow.setShooter(npcLoc.getWorld().getPlayers().stream().findFirst().orElse(null));
-                    arrow.setDamage(getAttackDamage(npc));
+                    if(!npc.getViewers().contains(player.getUniqueId()))
+                        WrappedServerPlayer.fromPlayer(player).sendPacket(removePacket);
                 }
             }, BOW_DRAW_DELAY_TICKS);
         }

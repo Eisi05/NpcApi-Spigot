@@ -30,7 +30,7 @@ import java.util.function.Function;
 public final class NpcApi
 {
     private static final List<Listener> listeners = List.of(new ChangeWorldListener(), new ConnectionListener(), new NpcInteractListener(),
-            new WorldLoadListener(), new ServerReadyListener());
+            new WorldLoadListener(), new ServerReadyListener(), new ProjectileHitListener());
     /**
      * A static reference to the Bukkit plugin instance that is using this API.
      * This is set during the API's initialization.
