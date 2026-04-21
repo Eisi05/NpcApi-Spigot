@@ -236,7 +236,7 @@ public class GoalSelector
         {
             if(selectedGoal != null && selectedGoal != currentGoal)
             {
-                if(selectedGoal.getPriority().weight >= currentGoal.getPriority().weight)
+                if(selectedGoal.getPriority() == Goal.Priority.ALWAYS || currentGoal.canBeInterrupted(npc))
                 {
                     currentGoal.stop(npc);
                     currentGoal = selectedGoal;

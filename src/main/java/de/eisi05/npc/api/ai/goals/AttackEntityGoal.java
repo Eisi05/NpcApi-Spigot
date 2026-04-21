@@ -41,9 +41,9 @@ public class AttackEntityGoal extends Goal
     private static final double BOW_ATTACK_RANGE = 15.0;
     private static final double MELEE_ATTACK_RANGE = 3.0;
     private static final double LINE_OF_SIGHT_RANGE = 25.0;
-    private static final int ATTACK_COOLDOWN_TICKS = 15;
     private static final int BOW_DRAW_DELAY_TICKS = 25;
-    private static final double ATTACK_SPEED_MULTIPLIER = 0.5;
+    private static final double KITING_DISTANCE = 3.0;
+    private static final double OPTIMAL_RANGED_DISTANCE = 6.0;
 
     private final SerializablePredicate<LivingEntity> targetFilter;
     private final double customAttackRange;
@@ -56,6 +56,7 @@ public class AttackEntityGoal extends Goal
     private transient List<Player> cachedViewers;
     private transient int lineOfSightCheckCooldown;
     private transient int pathRecalculationCooldown;
+    private transient boolean isKiting;
 
     /**
      * Creates an AttackEntityGoal with a filter for valid targets.
@@ -80,6 +81,12 @@ public class AttackEntityGoal extends Goal
         this.customAttackRange = customAttackRange;
     }
 
+    /**
+     * Checks if this goal can be used by the NPC.
+     *
+     * @param npc the NPC to check
+     * @return true if a valid target is found or an existing target is still valid
+     */
     @Override
     public boolean canUse(@NotNull NPC npc)
     {
@@ -94,6 +101,11 @@ public class AttackEntityGoal extends Goal
         return true;
     }
 
+    /**
+     * Starts the attack goal, initializing all necessary state.
+     *
+     * @param npc the NPC starting this goal
+     */
     @Override
     public void start(@NotNull NPC npc)
     {
@@ -103,10 +115,16 @@ public class AttackEntityGoal extends Goal
         isUsing = false;
         lineOfSightCheckCooldown = 0;
         pathRecalculationCooldown = 0;
+        isKiting = false;
         setUsingItemState(npc, false);
         updateCachedViewers(npc);
     }
 
+    /**
+     * Ticks the attack goal, handling movement, targeting, and attacks.
+     *
+     * @param npc the NPC to update
+     */
     @Override
     public void tick(@NotNull NPC npc)
     {
@@ -174,6 +192,31 @@ public class AttackEntityGoal extends Goal
                     return;
             }
         }
+        else if(isUsingRangedWeapon(npc))
+        {
+            if(distance < KITING_DISTANCE && !isKiting)
+                startKiting(npc);
+            else if(isKiting && distance >= OPTIMAL_RANGED_DISTANCE)
+                stopKiting(npc);
+            else if(isKiting)
+            {
+                if(movementGoal != null)
+                {
+                    movementGoal.tick(npc);
+                    pathRecalculationCooldown--;
+                    if(pathRecalculationCooldown <= 0)
+                    {
+                        startKiting(npc);
+                        pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;
+                    }
+                }
+                else
+                    isKiting = false;
+                return;
+            }
+            else
+                stopMovement(npc);
+        }
         else
             stopMovement(npc);
 
@@ -190,6 +233,11 @@ public class AttackEntityGoal extends Goal
         }
     }
 
+    /**
+     * Stops the attack goal and cleans up state.
+     *
+     * @param npc the NPC stopping this goal
+     */
     @Override
     public void stop(@NotNull NPC npc)
     {
@@ -201,6 +249,12 @@ public class AttackEntityGoal extends Goal
         setUsingItemState(npc, false);
     }
 
+    /**
+     * Checks if this goal should continue running.
+     *
+     * @param npc the NPC to check
+     * @return true if the target is still valid and in range
+     */
     @Override
     public boolean canContinue(@NotNull NPC npc)
     {
@@ -299,14 +353,22 @@ public class AttackEntityGoal extends Goal
         Map<EquipmentSlot, ItemStack> equipment = npc.getOption(NpcOption.EQUIPMENT);
         ItemStack mainHand = equipment != null ? equipment.get(EquipmentSlot.HAND) : null;
 
-        if(mainHand == null)
-            return ATTACK_COOLDOWN_TICKS;
+        if(mainHand == null || !mainHand.hasItemMeta())
+            return 5;
 
-        Material type = mainHand.getType();
-        if(isRangedWeapon(type))
-            return ATTACK_COOLDOWN_TICKS;
-        else
-            return (int) (ATTACK_COOLDOWN_TICKS * ATTACK_SPEED_MULTIPLIER);
+        ItemMeta meta = mainHand.getItemMeta();
+        if(meta == null)
+            return 5;
+
+        Collection<AttributeModifier> modifiers = meta.getAttributeModifiers(Attribute.GENERIC_ATTACK_SPEED);
+        if(modifiers == null)
+            return 5;
+
+        double speed = 0;
+        for(AttributeModifier modifier : modifiers)
+            speed += modifier.getAmount();
+
+        return (int) (20 / speed);
     }
 
     /**
@@ -393,6 +455,12 @@ public class AttackEntityGoal extends Goal
         }
     }
 
+    /**
+     * Sets the NPC's item usage state (e.g., drawing a bow).
+     *
+     * @param npc   the NPC to update
+     * @param using true if the NPC is using an item, false otherwise
+     */
     private void setUsingItemState(@NotNull NPC npc, boolean using)
     {
         WrappedEntityData data = npc.getServerPlayer().getEntityData();
@@ -435,7 +503,11 @@ public class AttackEntityGoal extends Goal
         double knockbackResistance = getKnockbackResistance(target);
         double effectiveKnockback = knockbackStrength * (1 - knockbackResistance);
 
-        Vector knockback = targetLoc.toVector().subtract(npcLoc.toVector()).normalize().multiply(effectiveKnockback);
+        Vector direction = targetLoc.toVector().subtract(npcLoc.toVector());
+        if(direction.lengthSquared() > Vector.getEpsilon())
+            direction = direction.normalize();
+
+        Vector knockback = direction.multiply(effectiveKnockback);
         knockback.setY(effectiveKnockback * 0.4);
         target.setVelocity(knockback);
     }
@@ -449,6 +521,16 @@ public class AttackEntityGoal extends Goal
     }
 
     /**
+     * Checks if the NPC is currently using a ranged weapon.
+     */
+    private boolean isUsingRangedWeapon(@NotNull NPC npc)
+    {
+        Map<EquipmentSlot, ItemStack> equipment = npc.getOption(NpcOption.EQUIPMENT);
+        ItemStack mainHand = equipment != null ? equipment.get(EquipmentSlot.HAND) : null;
+        return mainHand != null && isRangedWeapon(mainHand.getType());
+    }
+
+    /**
      * Gets the attack damage based on the NPC's held item.
      */
     private double getAttackDamage(@NotNull NPC npc)
@@ -458,6 +540,12 @@ public class AttackEntityGoal extends Goal
         return getAttackDamage(mainHand);
     }
 
+    /**
+     * Gets the attack damage from an item stack.
+     *
+     * @param item the item to check
+     * @return the attack damage value
+     */
     private double getAttackDamage(ItemStack item)
     {
         if(item == null || !item.hasItemMeta())
@@ -478,6 +566,12 @@ public class AttackEntityGoal extends Goal
         return damage == 0 ? 0.5 : damage;
     }
 
+    /**
+     * Gets the attack knockback strength from the NPC's held item.
+     *
+     * @param npc the NPC to check
+     * @return the knockback strength
+     */
     private double getAttackKnockback(@NotNull NPC npc)
     {
         Map<EquipmentSlot, ItemStack> equipment = npc.getOption(NpcOption.EQUIPMENT);
@@ -485,6 +579,12 @@ public class AttackEntityGoal extends Goal
         return getAttackKnockback(mainHand);
     }
 
+    /**
+     * Gets the attack knockback strength from an item stack.
+     *
+     * @param item the item to check
+     * @return the knockback strength
+     */
     private double getAttackKnockback(ItemStack item)
     {
         if(item == null || !item.hasItemMeta())
@@ -505,6 +605,12 @@ public class AttackEntityGoal extends Goal
         return knockback == 0 ? 0.5 : knockback;
     }
 
+    /**
+     * Gets the knockback resistance of a target entity.
+     *
+     * @param target the entity to check
+     * @return the knockback resistance value (0-1)
+     */
     private double getKnockbackResistance(@NotNull LivingEntity target)
     {
         if(target.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE) == null)
@@ -525,6 +631,55 @@ public class AttackEntityGoal extends Goal
             targetLoc = new Location(targetLoc.getWorld(), targetLoc.getX(), safeY.getAsInt(), targetLoc.getZ());
         movementGoal = new WalkToLocationGoal(targetLoc, 0.4);
         movementGoal.start(npc);
+    }
+
+    /**
+     * Starts kiting by moving away from the target to optimal distance.
+     */
+    private void startKiting(@NotNull NPC npc)
+    {
+        if(target == null || !target.isValid())
+            return;
+
+        Location npcLoc = npc.getLocation();
+        Location targetLoc = target.getLocation();
+
+        Vector direction = npcLoc.toVector().subtract(targetLoc.toVector()).normalize();
+
+        Vector retreatPos = targetLoc.toVector().add(direction.multiply(OPTIMAL_RANGED_DISTANCE));
+
+        retreatPos.setX(retreatPos.getX() + (Math.random() - 0.5) * 3);
+        retreatPos.setZ(retreatPos.getZ() + (Math.random() - 0.5) * 3);
+
+        Location retreatLoc = new Location(npcLoc.getWorld(), retreatPos.getX(), npcLoc.getY(), retreatPos.getZ());
+
+        OptionalInt safeY = LocationUtils.findSafeY(retreatLoc);
+        if(safeY.isPresent())
+            retreatLoc = new Location(retreatLoc.getWorld(), retreatLoc.getX(), safeY.getAsInt(), retreatLoc.getZ());
+
+        stopMovement(npc);
+
+        WalkToLocationGoal newGoal = new WalkToLocationGoal(retreatLoc, 0.3, 5000, true, result ->
+        {
+            isKiting = false;
+            movementGoal = null;
+        });
+
+        movementGoal = newGoal;
+        newGoal.start(npc);
+
+        isKiting = true;
+        pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;
+    }
+
+    /**
+     * Stops kiting and prepares to attack.
+     */
+    private void stopKiting(@NotNull NPC npc)
+    {
+        isKiting = false;
+        stopMovement(npc);
+        attackCooldown = 0;
     }
 
     /**

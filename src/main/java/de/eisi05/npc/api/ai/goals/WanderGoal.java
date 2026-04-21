@@ -20,8 +20,8 @@ public class WanderGoal extends Goal
     private static final long serialVersionUID = 1L;
 
     private static final int DEFAULT_RADIUS = 10;
-    private static final int DEFAULT_MIN_DELAY = 60; // 3 seconds
-    private static final int DEFAULT_MAX_DELAY = 200; // 10 seconds
+    private static final int DEFAULT_MIN_DELAY = 40; // 2 seconds
+    private static final int DEFAULT_MAX_DELAY = 140; // 7 seconds
     private static final double DEFAULT_SPEED = 0.3;
 
     private final int radius;
@@ -68,18 +68,34 @@ public class WanderGoal extends Goal
         this.speed = Math.max(0.1, Math.min(1.0, speed));
     }
 
+    /**
+     * Checks if this goal can be used by the NPC.
+     *
+     * @param npc the NPC to check
+     * @return true always (this goal can always be used)
+     */
     @Override
     public boolean canUse(@NotNull NPC npc)
     {
         return true;
     }
 
+    /**
+     * Starts the wander goal by picking a new target.
+     *
+     * @param npc the NPC starting this goal
+     */
     @Override
     public void start(@NotNull NPC npc)
     {
         pickNewTarget(npc);
     }
 
+    /**
+     * Ticks the wander goal, handling movement and delays.
+     *
+     * @param npc the NPC to update
+     */
     @Override
     public void tick(@NotNull NPC npc)
     {
@@ -105,6 +121,11 @@ public class WanderGoal extends Goal
         pickNewTarget(npc);
     }
 
+    /**
+     * Stops the wander goal and cleans up state.
+     *
+     * @param npc the NPC stopping this goal
+     */
     @Override
     public void stop(@NotNull NPC npc)
     {
@@ -117,10 +138,28 @@ public class WanderGoal extends Goal
         targetLocation = null;
     }
 
+    /**
+     * Checks if this goal should continue running.
+     *
+     * @param npc the NPC to check
+     * @return true if a target location is set
+     */
     @Override
     public boolean canContinue(@NotNull NPC npc)
     {
         return targetLocation != null;
+    }
+
+    /**
+     * Checks if this goal can be interrupted by a new goal selection.
+     *
+     * @param npc the NPC to check
+     * @return true if the NPC is currently waiting (delayTicks == 1)
+     */
+    @Override
+    public boolean canBeInterrupted(@NotNull NPC npc)
+    {
+        return delayTicks == 1;
     }
 
     /**

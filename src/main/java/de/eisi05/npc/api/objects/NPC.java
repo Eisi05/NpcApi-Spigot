@@ -116,6 +116,7 @@ public class NPC extends NpcHolder
 
         NpcManager.addNPC(this);
         startGoals();
+        serverPlayer.stopAdvancementListening();
     }
 
     /**
@@ -132,8 +133,6 @@ public class NPC extends NpcHolder
         this(location, UUID.randomUUID(), name);
         this.options.putAll(options);
         this.clickEvent = clickEvent;
-
-        startGoals();
     }
 
     /**

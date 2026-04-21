@@ -91,6 +91,18 @@ public abstract class Goal implements Serializable
     }
 
     /**
+     * Checks whether this goal can be interrupted by a new goal selection. If this returns true, the goal selector may switch to a different goal even if this
+     * goal can continue. This is useful for goals that have natural break points (e.g., waiting periods).
+     *
+     * @param npc The NPC to check for
+     * @return true if this goal can be interrupted, false otherwise
+     */
+    protected boolean canBeInterrupted(@NotNull NPC npc)
+    {
+        return false;
+    }
+
+    /**
      * Priority levels for goal selection. Higher priority goals are more likely to be selected. ALWAYS priority goals are always preferred over other goals.
      * Other priorities use weighted random selection where higher weight = higher chance of being selected.
      */

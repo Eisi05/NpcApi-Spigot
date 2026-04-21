@@ -28,30 +28,57 @@ public class WaitGoal extends Goal
         this.durationTicks = Math.max(1, durationTicks);
     }
 
+    /**
+     * Checks if this goal can be used by the NPC.
+     *
+     * @param npc the NPC to check
+     * @return true if there are remaining ticks or duration is set
+     */
     @Override
     public boolean canUse(@NotNull NPC npc)
     {
         return ticksRemaining > 0 || durationTicks > 0;
     }
 
+    /**
+     * Starts the wait goal, initializing the tick counter.
+     *
+     * @param npc the NPC starting this goal
+     */
     @Override
     public void start(@NotNull NPC npc)
     {
         ticksRemaining = durationTicks;
     }
 
+    /**
+     * Ticks the wait goal, decrementing the remaining ticks.
+     *
+     * @param npc the NPC to update
+     */
     @Override
     public void tick(@NotNull NPC npc)
     {
         ticksRemaining--;
     }
 
+    /**
+     * Stops the wait goal and resets the tick counter.
+     *
+     * @param npc the NPC stopping this goal
+     */
     @Override
     public void stop(@NotNull NPC npc)
     {
         ticksRemaining = 0;
     }
 
+    /**
+     * Checks if this goal should continue running.
+     *
+     * @param npc the NPC to check
+     * @return true if there are remaining ticks
+     */
     @Override
     public boolean canContinue(@NotNull NPC npc)
     {

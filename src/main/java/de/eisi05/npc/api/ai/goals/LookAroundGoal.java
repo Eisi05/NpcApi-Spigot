@@ -25,8 +25,11 @@ public class LookAroundGoal extends Goal
     private static final float YAW_CHANGE_MAX = 120f;
     private static final float PITCH_CHANGE_MAX = 40f;
     private static final double ENTITY_LOOK_RANGE = 8.0;
-    private static final double ENTITY_LOOK_CHANCE = 0.15;
+    private static final double ENTITY_LOOK_CHANCE = 0.25;
     private static final double STARING_CHANCE = 0.2;
+    private static final float PITCH_MIN_MAX = 50f;
+    private static final int MIN_STARE_DURATION = 60; // 2 seconds
+    private static final int MAX_STARE_DURATION = 120; // 5 seconds
 
     private final int minDuration;
     private final int maxDuration;
@@ -36,6 +39,7 @@ public class LookAroundGoal extends Goal
     private transient float targetPitch;
     private transient boolean isLooking;
     private transient float rotationSpeed;
+    private transient LivingEntity staringEntity;
 
     /**
      * Creates a LookAroundGoal with default duration.
@@ -58,12 +62,23 @@ public class LookAroundGoal extends Goal
         this.maxDuration = maxDuration;
     }
 
+    /**
+     * Checks if this goal can be used by the NPC.
+     *
+     * @param npc the NPC to check
+     * @return true always (this goal can always be used)
+     */
     @Override
     public boolean canUse(@NotNull NPC npc)
     {
         return true;
     }
 
+    /**
+     * Starts the look around goal, initializing rotation state.
+     *
+     * @param npc the NPC starting this goal
+     */
     @Override
     public void start(@NotNull NPC npc)
     {
@@ -73,34 +88,71 @@ public class LookAroundGoal extends Goal
         pickNewLookDirection(npc);
     }
 
+    /**
+     * Ticks the look around goal, updating head rotation.
+     *
+     * @param npc the NPC to update
+     */
     @Override
     public void tick(@NotNull NPC npc)
     {
-        if(ticksRemaining <= 0)
+        if(ticksRemaining <= 0 && staringEntity == null)
         {
             decideNextAction(npc);
             ticksRemaining = minDuration + ThreadLocalRandom.current().nextInt(maxDuration - minDuration);
         }
 
+        if(staringEntity != null && ticksRemaining > 0)
+            lookAtEntity(npc, staringEntity);
+        else if(staringEntity != null)
+            staringEntity = null;
+
         Location currentLoc = npc.getLocation();
         float currentYaw = currentLoc.getYaw();
         float currentPitch = currentLoc.getPitch();
 
-        float newYaw = lerpAngle(currentYaw, targetYaw, rotationSpeed);
-        float newPitch = lerp(currentPitch, targetPitch, rotationSpeed);
+        float newYaw, newPitch;
+        if(staringEntity != null && ticksRemaining > 0)
+        {
+            newYaw = targetYaw;
+            newPitch = targetPitch;
+        }
+        else
+        {
+            newYaw = lerpAngle(currentYaw, targetYaw, rotationSpeed);
+            newPitch = lerp(currentPitch, targetPitch, rotationSpeed);
+        }
+
+        newPitch = Math.max(-PITCH_MIN_MAX, Math.min(PITCH_MIN_MAX, newPitch));
+
+        currentLoc.setYaw(newYaw);
+        currentLoc.setPitch(newPitch);
 
         npc.rotateHead(newYaw, newPitch);
+        npc.setLocation(currentLoc);
 
         ticksRemaining--;
     }
 
+    /**
+     * Stops the look around goal and cleans up state.
+     *
+     * @param npc the NPC stopping this goal
+     */
     @Override
     public void stop(@NotNull NPC npc)
     {
         isLooking = false;
         ticksRemaining = 0;
+        staringEntity = null;
     }
 
+    /**
+     * Checks if this goal should continue running.
+     *
+     * @param npc the NPC to check
+     * @return true if the NPC is still looking
+     */
     @Override
     public boolean canContinue(@NotNull NPC npc)
     {
@@ -117,6 +169,8 @@ public class LookAroundGoal extends Goal
             LivingEntity nearbyEntity = findNearbyEntity(npc);
             if(nearbyEntity != null)
             {
+                staringEntity = nearbyEntity;
+                ticksRemaining = MIN_STARE_DURATION + ThreadLocalRandom.current().nextInt(MAX_STARE_DURATION - MIN_STARE_DURATION);
                 lookAtEntity(npc, nearbyEntity);
                 rotationSpeed = 0.1f + ThreadLocalRandom.current().nextFloat() * 0.1f;
                 return;
@@ -165,6 +219,8 @@ public class LookAroundGoal extends Goal
         double distanceXZ = Math.sqrt(dx * dx + dz * dz);
         targetYaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
         targetPitch = (float) Math.toDegrees(-Math.atan2(dy, distanceXZ));
+
+        targetPitch = Math.max(-PITCH_MIN_MAX, Math.min(PITCH_MIN_MAX, targetPitch));
     }
 
     /**
@@ -178,7 +234,17 @@ public class LookAroundGoal extends Goal
 
         float yawMultiplier = ThreadLocalRandom.current().nextDouble() < 0.3 ? 1.5f : 1.0f;
         targetYaw = currentYaw + (ThreadLocalRandom.current().nextFloat() * 2 - 1) * YAW_CHANGE_MAX * yawMultiplier;
-        targetPitch = Math.max(-60, Math.min(60, currentPitch + (ThreadLocalRandom.current().nextFloat() * 2 - 1) * PITCH_CHANGE_MAX));
+
+        float pitchUpAvailable = PITCH_MIN_MAX - currentPitch;
+        float pitchDownAvailable = currentPitch - (-PITCH_MIN_MAX);
+        float maxPitchChange = Math.min(PITCH_CHANGE_MAX, Math.min(pitchUpAvailable, pitchDownAvailable) * 2f);
+
+        if(pitchUpAvailable < 5f)
+            targetPitch = currentPitch - ThreadLocalRandom.current().nextFloat() * PITCH_CHANGE_MAX;
+        else if(pitchDownAvailable < 5f)
+            targetPitch = currentPitch + ThreadLocalRandom.current().nextFloat() * PITCH_CHANGE_MAX;
+        else
+            targetPitch = currentPitch + (ThreadLocalRandom.current().nextFloat() * 2 - 1) * maxPitchChange;
     }
 
     /**

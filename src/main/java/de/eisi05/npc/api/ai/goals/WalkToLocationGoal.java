@@ -26,8 +26,10 @@ import java.util.concurrent.CompletableFuture;
 public class WalkToLocationGoal extends Goal
 {
     static final int RECALCULATION_COOLDOWN = 20;
+
     @Serial
     private static final long serialVersionUID = 1L;
+
     private static final int DEFAULT_MAX_ITERATIONS = 5000;
     private static final double DEFAULT_SPEED = 0.4;
 
@@ -84,6 +86,12 @@ public class WalkToLocationGoal extends Goal
         this.completionCallback = completionCallback;
     }
 
+    /**
+     * Checks if this goal can be used by the NPC.
+     *
+     * @param npc the NPC to check
+     * @return true if the NPC is not already walking and target is valid
+     */
     @Override
     public boolean canUse(@NotNull NPC npc)
     {
@@ -96,6 +104,11 @@ public class WalkToLocationGoal extends Goal
         return npc.getLocation().distance(targetLocation) > 1.0;
     }
 
+    /**
+     * Starts the walk to location goal, calculating the path.
+     *
+     * @param npc the NPC starting this goal
+     */
     @Override
     public void start(@NotNull NPC npc)
     {
@@ -105,12 +118,22 @@ public class WalkToLocationGoal extends Goal
         calculatePath(npc);
     }
 
+    /**
+     * Ticks the walk to location goal (no-op, walking is handled by path task).
+     *
+     * @param npc the NPC to update
+     */
     @Override
     public void tick(@NotNull NPC npc)
     {
         // No dynamic target updates needed
     }
 
+    /**
+     * Stops the walk to location goal and cancels pathfinding.
+     *
+     * @param npc the NPC stopping this goal
+     */
     @Override
     public void stop(@NotNull NPC npc)
     {
@@ -135,6 +158,12 @@ public class WalkToLocationGoal extends Goal
         currentPath = null;
     }
 
+    /**
+     * Checks if this goal should continue running.
+     *
+     * @param npc the NPC to check
+     * @return true if the NPC is still walking and not at target
+     */
     @Override
     public boolean canContinue(@NotNull NPC npc)
     {
@@ -151,6 +180,11 @@ public class WalkToLocationGoal extends Goal
         return targetLocation.clone();
     }
 
+    /**
+     * Calculates the path to the target location asynchronously.
+     *
+     * @param npc the NPC to calculate path for
+     */
     private void calculatePath(@NotNull NPC npc)
     {
         Location start = npc.getLocation();
@@ -159,9 +193,12 @@ public class WalkToLocationGoal extends Goal
         if(!end.getWorld().equals(start.getWorld()))
             return;
 
+        isWalking = true;
+
         PathfindingUtils.findPathAsync(List.of(start, end), maxIterations, allowDiagonal, null)
                 .thenAcceptAsync(path ->
                 {
+                    isWalking = false;
                     if(path != null)
                     {
                         currentPath = path;
@@ -176,11 +213,17 @@ public class WalkToLocationGoal extends Goal
                     {
                         if(completionCallback != null)
                             completionCallback.accept(WalkingResult.CANCELLED);
+                        isWalking = false;
                     });
                     return null;
                 });
     }
 
+    /**
+     * Starts the actual walking animation along the calculated path.
+     *
+     * @param npc the NPC to start walking
+     */
     private void startWalking(@NotNull NPC npc)
     {
         List<Player> viewers = npc.getViewers().stream()
@@ -193,17 +236,32 @@ public class WalkToLocationGoal extends Goal
             isWalking = false;
             if(completionCallback != null)
                 completionCallback.accept(result);
+            if(result == WalkingResult.SUCCESS)
+                npc.changeRealLocation(targetLocation);
         }, viewers);
 
         isWalking = true;
     }
 
+    /**
+     * Serializes the goal for storage.
+     *
+     * @param out the output stream
+     * @throws IOException if serialization fails
+     */
     @Serial
     private void writeObject(@NotNull ObjectOutputStream out) throws IOException
     {
         out.defaultWriteObject();
     }
 
+    /**
+     * Deserializes the goal from storage.
+     *
+     * @param in the input stream
+     * @throws IOException            if deserialization fails
+     * @throws ClassNotFoundException if class is not found
+     */
     @Serial
     private void readObject(@NotNull ObjectInputStream in) throws IOException, ClassNotFoundException
     {

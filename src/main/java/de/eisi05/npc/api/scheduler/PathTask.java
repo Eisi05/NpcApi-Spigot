@@ -476,6 +476,9 @@ public class PathTask extends BukkitRunnable
                 Set.of(), onGround);
 
         npc.sendNpcMovePackets(teleport, head, viewers);
+
+        if(updateRealLocation)
+            npc.setLocation(currentPos.toLocation(npc.getLocation().getWorld()));
     }
 
     /**

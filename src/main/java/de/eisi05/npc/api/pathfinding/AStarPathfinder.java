@@ -17,10 +17,9 @@ public class AStarPathfinder
 {
     private final int maxIterations;
     private final boolean allowDiagonal;
-    private World world;
-
     private final PriorityQueue<Node> openSet = new PriorityQueue<>();
     private final Map<Long, Node> allNodes = new HashMap<>();
+    private World world;
 
     public AStarPathfinder(int maxIterations, boolean allowDiagonal)
     {
@@ -38,13 +37,13 @@ public class AStarPathfinder
         this.world = start.getWorld();
 
         int startOffset = Math.abs(start.getY() - start.getBlockY()) > 0 ? 0 : 1;
-        Block startFloor = world.getBlockAt(start.getBlockX(), start.getBlockY() - startOffset, start.getBlockZ());
-        if(NpcApi.config.checkValidPath() && !isSafeFloor(startFloor))
+        Block startFloor = findSafeFloor(start.getBlockX(), start.getBlockY() - startOffset, start.getBlockZ());
+        if(NpcApi.config.checkValidPath() && startFloor == null)
             throw new PathfindingUtils.PathfindingException("Start not on a valid floor: " + start);
 
         int endOffset = Math.abs(end.getY() - end.getBlockY()) > 0 ? 0 : 1;
-        Block endFloor = world.getBlockAt(end.getBlockX(), end.getBlockY() - endOffset, end.getBlockZ());
-        if(NpcApi.config.checkValidPath() && !isSafeFloor(endFloor))
+        Block endFloor = findSafeFloor(end.getBlockX(), end.getBlockY() - endOffset, end.getBlockZ());
+        if(NpcApi.config.checkValidPath() && endFloor == null)
             throw new PathfindingUtils.PathfindingException("End not on a valid floor: " + end);
 
         Node startNode = new Node(start.getBlockX(), start.getBlockY(), start.getBlockZ(), null);
@@ -118,8 +117,7 @@ public class AStarPathfinder
     }
 
     /**
-     * Advanced physics check.
-     * Checks if we can move from (fx, fy, fz) to (tx, ty, tz).
+     * Advanced physics check. Checks if we can move from (fx, fy, fz) to (tx, ty, tz).
      */
     private boolean canWalk(int fx, int fy, int fz, int tx, int ty, int tz)
     {
@@ -160,6 +158,51 @@ public class AStarPathfinder
             return false;
 
         return true;
+    }
+
+    /**
+     * Finds a safe floor block at or below the given coordinates. Searches downward from the starting Y level to find a solid, passable block. Includes edge
+     * detection to handle cases where the entity is standing near a block edge.
+     *
+     * @param x The X coordinate
+     * @param y The Y coordinate to start searching from
+     * @param z The Z coordinate
+     * @return The safe floor block, or null if none found
+     */
+    private @Nullable Block findSafeFloor(int x, int y, int z)
+    {
+        Block directBlock = findSafeFloorDirect(x, y, z);
+        if(directBlock != null)
+            return directBlock;
+
+        int[][] offsets = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+        for(int[] offset : offsets)
+        {
+            Block neighborBlock = findSafeFloorDirect(x + offset[0], y, z + offset[1]);
+            if(neighborBlock != null)
+                return neighborBlock;
+        }
+
+        return null;
+    }
+
+    /**
+     * Finds a safe floor block directly at the given coordinates by searching downward.
+     *
+     * @param x The X coordinate
+     * @param y The Y coordinate to start searching from
+     * @param z The Z coordinate
+     * @return The safe floor block, or null if none found
+     */
+    private @Nullable Block findSafeFloorDirect(int x, int y, int z)
+    {
+        for(int searchY = y; searchY >= y - 3; searchY--)
+        {
+            Block block = world.getBlockAt(x, searchY, z);
+            if(isSafeFloor(block))
+                return block;
+        }
+        return null;
     }
 
     /**
