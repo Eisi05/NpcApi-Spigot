@@ -24,7 +24,7 @@ public class WaitGoal extends Goal
      */
     public WaitGoal(int durationTicks)
     {
-        super(Priority.LOW_CHANCE);
+        super(Priority.LOW);
         this.durationTicks = Math.max(1, durationTicks);
     }
 

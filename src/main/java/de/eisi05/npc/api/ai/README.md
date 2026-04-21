@@ -4,17 +4,17 @@ The NPC API now includes a flexible goal-based AI system similar to Minecraft's 
 
 ## Architecture
 
-### Goal Interface
-All goals implement the `Goal` interface with the following methods:
+### Goal Abstract Class
+All goals extend the `Goal` abstract class with the following methods:
 - `canUse(NPC)` - Whether this goal can be used right now
 - `start(NPC)` - Called when the goal starts executing
 - `tick(NPC)` - Called each tick while the goal is active
 - `stop(NPC)` - Called when the goal stops executing
-- `getPriority()` - Priority of this goal (higher = more important)
+- `getPriority()` - Returns the Priority enum of this goal
 - `canContinue(NPC)` - Whether this goal can continue executing
 
 ### GoalSelector
-The `GoalSelector` manages and selects which goal to execute based on priority and conditions. It evaluates all goals each tick and selects the highest priority goal that can be used.
+The `GoalSelector` manages and selects which goal to execute based on priority and conditions. It evaluates all goals each tick and selects a goal based on the priority system.
 
 ## Available Goals
 
@@ -118,9 +118,9 @@ FollowEntityGoal followGoal = new FollowEntityGoal(
 NPC npc = new NPC(location);
 
 // Add goals
-npc.addGoal(new WanderGoal(10));              // Priority 1
-npc.addGoal(new LookAroundGoal());            // Priority 0
-npc.addGoal(new WalkToLocationGoal(target));  // Priority 3
+npc.addGoal(new WanderGoal(10));
+npc.addGoal(new LookAroundGoal());
+npc.addGoal(new WalkToLocationGoal(target));
 
 // Start goal system (goals auto-save when added)
 npc.startGoals();
@@ -135,9 +135,9 @@ Map<EquipmentSlot, ItemStack> equipment = new HashMap<>();
 equipment.put(EquipmentSlot.HAND, new ItemStack(Material.IRON_SWORD));
 guard.setOption(NpcOption.EQUIPMENT, equipment);
 
-// Add goals - attack has highest priority
+// Add goals - attack has ALWAYS priority, others are randomizable
 guard.addGoal(new AttackEntityGoal(entity -> entity instanceof Monster));
-guard.addGoal(new WanderGoal(8));  // Wander when no enemies nearby
+guard.addGoal(new WanderGoal(8));
 guard.addGoal(new LookAroundGoal());
 
 guard.startGoals();
@@ -170,13 +170,16 @@ npc.stopGoals();
 
 ## Priority System
 
-Goals are selected based on priority (higher = more important):
-- 0: Lowest (idle behaviors like LookAroundGoal, WaitGoal)
-- 1-3: Low-Medium (WanderGoal, WalkToLocationGoal)
-- 4-6: Medium (FollowEntityGoal)
-- 7-9: High (AttackEntityGoal, combat-related)
+Goals use a priority-based selection system with the following levels:
 
-The goal selector evaluates all goals each tick and selects the highest priority goal that can be used (`canUse()` returns true).
+- **ALWAYS** - Always preferred over other goals and selected deterministically (e.g., AttackEntityGoal)
+- **HIGH_CHANCE** - High chance of being selected when among non-ALWAYS goals (e.g., FollowEntityGoal)
+- **MID_CHANCE** - Medium chance of being selected when among non-ALWAYS goals (e.g., WanderGoal, WalkToLocationGoal)
+- **LOW_CHANCE** - Low chance of being selected when among non-ALWAYS goals (e.g., LookAroundGoal, WaitGoal)
+
+The goal selector evaluates all goals each tick:
+1. If any goal has `ALWAYS` priority, one is randomly selected from those
+2. Otherwise, weighted random selection is used among available goals based on their priority weights (higher weight = higher chance)
 
 ## Best Practices
 
@@ -186,9 +189,9 @@ The goal selector evaluates all goals each tick and selects the highest priority
 
 3. **Use predicates for target filtering**: AttackEntityGoal uses predicates to dynamically discover targets within range, making it more flexible than fixed target suppliers.
 
-4. **Combine goals strategically**: Use a mix of high-priority reactive goals (like AttackEntityGoal) and low-priority idle goals (like WanderGoal, LookAroundGoal).
+4. **Combine goals strategically**: Use a mix of ALWAYS priority reactive goals (like AttackEntityGoal) and randomizable idle goals (like WanderGoal, LookAroundGoal).
 
-5. **Set appropriate priorities**: Ensure important behaviors (like combat) have higher priorities than idle behaviors.
+5. **Set appropriate priorities**: Use ALWAYS for critical behaviors that should always execute (like combat), and use HIGH/MID/LOW_CHANCE for behaviors that can be randomly selected.
 
 6. **Test pathfinding**: The WalkToLocationGoal uses A* pathfinding which can be CPU-intensive. Adjust `maxIterations` based on your server's performance.
 

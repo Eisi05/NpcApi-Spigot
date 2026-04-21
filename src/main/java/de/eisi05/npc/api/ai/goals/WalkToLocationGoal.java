@@ -75,7 +75,7 @@ public class WalkToLocationGoal extends Goal
     public WalkToLocationGoal(@NotNull Location targetLocation, double speed, int maxIterations, boolean allowDiagonal,
                               @NotNull SerializableConsumer<WalkingResult> completionCallback)
     {
-        super(Priority.MID_CHANCE);
+        super(Priority.MID);
         this.targetLocation = targetLocation.clone();
         this.serializableLocation = new Path.SerializablePath.SerializableLocation(targetLocation);
         this.speed = Math.max(0.1, Math.min(1.0, speed));

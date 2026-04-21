@@ -104,17 +104,17 @@ public abstract class Goal implements Serializable
         /**
          * High chance of being selected when among non-ALWAYS goals.
          */
-        HIGH_CHANCE(3),
+        HIGH(3),
 
         /**
          * Medium chance of being selected when among non-ALWAYS goals.
          */
-        MID_CHANCE(2),
+        MID(2),
 
         /**
          * Low chance of being selected when among non-ALWAYS goals.
          */
-        LOW_CHANCE(1);
+        LOW(1);
 
         @Serial
         private final static long serialVersionUID = 1L;

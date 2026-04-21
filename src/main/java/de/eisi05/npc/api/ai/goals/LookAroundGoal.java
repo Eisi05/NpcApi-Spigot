@@ -53,7 +53,7 @@ public class LookAroundGoal extends Goal
      */
     public LookAroundGoal(int minDuration, int maxDuration)
     {
-        super(Priority.LOW_CHANCE);
+        super(Priority.LOW);
         this.minDuration = minDuration;
         this.maxDuration = maxDuration;
     }

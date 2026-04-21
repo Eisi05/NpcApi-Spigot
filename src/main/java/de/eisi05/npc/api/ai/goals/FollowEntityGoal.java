@@ -52,7 +52,7 @@ public class FollowEntityGoal extends Goal
      */
     public FollowEntityGoal(@NotNull UUID targetEntityId, double followDistance, double stopDistance, double speed)
     {
-        super(Priority.HIGH_CHANCE);
+        super(Priority.HIGH);
         this.targetEntityId = targetEntityId;
         this.followDistance = Math.max(stopDistance + 0.5, followDistance);
         this.stopDistance = Math.max(0.5, stopDistance);
