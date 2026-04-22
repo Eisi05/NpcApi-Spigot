@@ -644,7 +644,7 @@ public class NpcOption<T, S extends Serializable>
 
     private static @NotNull Pair<WrappedPlayerTeam, Boolean> getTeam(@NotNull Player player, @NotNull NPC npc)
     {
-        boolean isTransparent = npc.getOption(VISIBILITY) == NpcVisibility.TRANSPARENT;
+        boolean isTransparent = npc.getOption(VISIBILITY, player) == NpcVisibility.TRANSPARENT;
         WrappedPlayerTeam playerTeam = WrappedPlayerTeam.getPlayersTeam(player);
         String teamName = isTransparent ? "trans-" + player.getEntityId() : npc.getServerPlayer().getName();
         boolean modified = WrappedPlayerTeam.exists(player, teamName) || (playerTeam.getHandle() != null && isTransparent);
