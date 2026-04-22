@@ -935,14 +935,6 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Saves the goal selector state to the NPC's options. Call this after modifying the goal selector to persist changes.
-     */
-    private void saveGoals()
-    {
-        setOption(NpcOption.GOALS, getGoalSelector().getGoals());
-    }
-
-    /**
      * Adds a goal to this NPC's goal selector.
      *
      * @param goal The goal to add
@@ -950,8 +942,9 @@ public class NPC extends NpcHolder
      */
     public @NotNull NPC addGoal(@NotNull Goal goal)
     {
-        getGoalSelector().addGoal(goal);
-        saveGoals();
+        ArrayList<Goal> goals = getOption(NpcOption.GOALS);
+        goals.add(goal);
+        setOption(NpcOption.GOALS, goals);
         return this;
     }
 
@@ -963,9 +956,21 @@ public class NPC extends NpcHolder
      */
     public @NotNull NPC removeGoal(@NotNull Goal goal)
     {
-        getGoalSelector().removeGoal(goal);
-        saveGoals();
+        ArrayList<Goal> goals = getOption(NpcOption.GOALS);
+        goals.remove(goal);
+        setOption(NpcOption.GOALS, goals);
+        getGoalSelector().stopGoalIfRunning(goal);
         return this;
+    }
+
+    /**
+     * Gets the list of goals associated with this NPC.
+     *
+     * @return A list of goals, or an empty list if no goals are set
+     */
+    public @NotNull List<Goal> getGoals()
+    {
+        return getOption(NpcOption.GOALS);
     }
 
     /**

@@ -17,7 +17,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class GoalSelector
 {
     private final NPC npc;
-    private final List<Goal> goals;
     private Goal currentGoal;
     private BukkitTask task;
     private boolean running;
@@ -31,7 +30,6 @@ public class GoalSelector
     public GoalSelector(@NotNull NPC npc)
     {
         this.npc = npc;
-        this.goals = new ArrayList<>();
         this.tickInterval = 1L;
     }
 
@@ -43,7 +41,7 @@ public class GoalSelector
      */
     public @NotNull GoalSelector addGoal(@NotNull Goal goal)
     {
-        goals.add(goal);
+        npc.addGoal(goal);
         return this;
     }
 
@@ -55,7 +53,18 @@ public class GoalSelector
      */
     public @NotNull GoalSelector removeGoal(@NotNull Goal goal)
     {
-        goals.remove(goal);
+        npc.removeGoal(goal);
+        return this;
+    }
+
+    /**
+     * Stops the goal if it is running
+     *
+     * @param goal The goal to check
+     * @return This selector for method chaining
+     */
+    public @NotNull GoalSelector stopGoalIfRunning(@NotNull Goal goal)
+    {
         if(currentGoal == goal)
         {
             currentGoal.stop(npc);
@@ -71,7 +80,7 @@ public class GoalSelector
      */
     public @NotNull ArrayList<Goal> getGoals()
     {
-        return new ArrayList<>(goals);
+        return new ArrayList<>(npc.getGoals());
     }
 
     /**
@@ -160,7 +169,7 @@ public class GoalSelector
      */
     public void forceGoal(@NotNull Goal goal)
     {
-        if(!goals.contains(goal))
+        if(!getGoals().contains(goal))
             return;
 
         if(currentGoal != null)
@@ -175,7 +184,7 @@ public class GoalSelector
      */
     private void tick()
     {
-        List<Goal> usableGoals = goals.stream()
+        List<Goal> usableGoals = getGoals().stream()
                 .filter(goal -> goal.canUse(npc))
                 .toList();
 

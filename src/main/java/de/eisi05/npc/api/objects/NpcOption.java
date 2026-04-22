@@ -624,7 +624,7 @@ public class NpcOption<T, S extends Serializable>
      * tick interval, and goal configurations. Note: Goals themselves are not fully serialized - only their class names and any serializable configuration. On
      * deserialization, goals must be re-instantiated by the plugin.
      */
-    static final NpcOption<ArrayList<Goal>, ArrayList<Goal>> GOALS = new NpcOption<>("goals", null,
+    static final NpcOption<ArrayList<Goal>, ArrayList<Goal>> GOALS = new NpcOption<>("goals", new ArrayList<>(),
             goals -> goals,
             goals -> goals,
             (data, npc, player) -> null);
