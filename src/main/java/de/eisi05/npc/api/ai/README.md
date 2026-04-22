@@ -22,28 +22,28 @@ The `GoalSelector` manages and selects which goal to execute based on priority a
 Makes the NPC walk to a specific location using pathfinding.
 
 ```java
-// Fixed location
 Location target = new Location(world, 100, 64, 100);
-WalkToLocationGoal walkGoal = new WalkToLocationGoal(target, 0.4);
+WalkToLocationGoal walkGoal = new WalkToLocationGoal.Builder(target)
+    .speed(0.4)
+    .build();
 
 // With custom settings
-WalkToLocationGoal walkGoal = new WalkToLocationGoal(
-    targetLocation,
-    0.4,                    // speed (0.1-1.0)
-    5000,                   // max pathfinding iterations
-    true,                   // allow diagonal movement
-    false,                  // update real location
-    result -> {             // completion callback
+WalkToLocationGoal walkGoal = new WalkToLocationGoal.Builder(targetLocation)
+    .speed(0.4)                    // speed (0.1-1.0)
+    .maxIterations(5000)          // max pathfinding iterations
+    .allowDiagonal(true)          // allow diagonal movement
+    .withRotation(true)           // include rotation packets
+    .completionCallback(result -> { // completion callback
         if(result == WalkingResult.SUCCESS) {
             Bukkit.broadcastMessage("NPC reached destination!");
         }
-    }
-);
+    })
+    .build();
 ```
 
 ### 2. AttackEntityGoal
 Makes the NPC attack nearby entities that match a predicate. Behavior varies based on held item:
-- Bow/Crossbow/Trident: Long range (20 blocks)
+- Bow/Crossbow/Trident: Long range (15 blocks)
 - Sword/Axe/Other: Short range (3 blocks)
 - Only activates when target is in line of sight
 - Dynamically discovers targets within range
@@ -68,7 +68,7 @@ AttackEntityGoal attackGoal = new AttackEntityGoal(
 Makes the NPC look around randomly. Can serve as an idle/wait behavior.
 
 ```java
-// Default settings (2-5 seconds)
+// Default settings (1-4 seconds)
 LookAroundGoal lookGoal = new LookAroundGoal();
 
 // Custom duration
@@ -98,8 +98,8 @@ WanderGoal wanderGoal = new WanderGoal(15, 60, 200, 0.3);
 Makes the NPC follow a target entity by UUID, maintaining a specified distance.
 
 ```java
-// Default settings (3 block follow distance, 1.5 block stop distance)
-FollowEntityGoal followGoal = new FollowEntityGoal(playerToFollow.getUniqueId(), 3.0, 1.5, 0.4);
+// Default settings (10 block follow distance, 1.5 block stop distance)
+FollowEntityGoal followGoal = new FollowEntityGoal(playerToFollow.getUniqueId());
 
 // Custom settings
 FollowEntityGoal followGoal = new FollowEntityGoal(
@@ -120,7 +120,7 @@ NPC npc = new NPC(location);
 // Add goals
 npc.addGoal(new WanderGoal(10));
 npc.addGoal(new LookAroundGoal());
-npc.addGoal(new WalkToLocationGoal(target));
+npc.addGoal(new WalkToLocationGoal.Builder(target).build());
 
 // Start goal system (goals auto-save when added)
 npc.startGoals();
@@ -172,8 +172,7 @@ npc.stopGoals();
 
 Goals use a priority-based selection system with the following levels:
 
-- **ALWAYS** - Always preferred over other goals and selected deterministically (e.g., AttackEntityGoal)
-- **HIGH_CHANCE** - High chance of being selected when among non-ALWAYS goals (e.g., FollowEntityGoal)
+- **ALWAYS** - Always preferred over other goals and selected deterministically (e.g., AttackEntityGoal, FollowEntityGoal)
 - **MID_CHANCE** - Medium chance of being selected when among non-ALWAYS goals (e.g., WanderGoal, WalkToLocationGoal)
 - **LOW_CHANCE** - Low chance of being selected when among non-ALWAYS goals (e.g., LookAroundGoal, WaitGoal)
 

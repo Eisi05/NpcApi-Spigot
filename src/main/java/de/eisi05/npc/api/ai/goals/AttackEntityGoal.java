@@ -420,21 +420,6 @@ public class AttackEntityGoal extends Goal
                 Location targetLoc = target.getLocation().clone().add(0, target.getEyeHeight(), 0);
                 Vector direction = targetLoc.toVector().subtract(npcLoc.toVector()).normalize();
 
-                //TODO: Maybe Packets/NMS and also make the arrows invisible
-
-                /*
-                Arrow arrow = new Arrow(world, startLocation.getX(), startLocation.getY(), startLocation.getZ()); // net.minecraft.world.entity.projectile.Arrow
-                arrow.setDeltaMovement(directionX, directionY, directionZ);
-                arrow.setBaseDamage(getAttackDamage(npc));
-
-                // set shooter
-                arrow.setOwner(((CraftPlayer) player).getHandle());
-
-                world.addFreshEntity(arrow);
-
-
-                 */
-
                 AbstractArrow arrow;
                 if(mainHand == null || mainHand.getType() == Material.TRIDENT)
                     arrow = npcLoc.getWorld().spawnArrow(npcLoc, direction, speed, 0, Trident.class);
@@ -629,7 +614,7 @@ public class AttackEntityGoal extends Goal
         OptionalInt safeY = LocationUtils.findSafeY(targetLoc);
         if(safeY.isPresent())
             targetLoc = new Location(targetLoc.getWorld(), targetLoc.getX(), safeY.getAsInt(), targetLoc.getZ());
-        movementGoal = new WalkToLocationGoal(targetLoc, 0.4);
+        movementGoal = new WalkToLocationGoal.Builder(targetLoc).speed(0.35).build();
         movementGoal.start(npc);
     }
 

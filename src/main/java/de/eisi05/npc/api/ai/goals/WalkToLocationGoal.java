@@ -46,39 +46,6 @@ public class WalkToLocationGoal extends Goal
     private transient boolean isWalking;
 
     /**
-     * Creates a WalkToLocationGoal with a fixed target location.
-     *
-     * @param targetLocation The location to walk to
-     */
-    public WalkToLocationGoal(@NotNull Location targetLocation)
-    {
-        this(targetLocation, DEFAULT_SPEED, true);
-    }
-
-    /**
-     * Creates a WalkToLocationGoal with a fixed target location and custom speed.
-     *
-     * @param targetLocation The location to walk to
-     * @param speed          The walking speed (0.1 to 1.0)
-     */
-    public WalkToLocationGoal(@NotNull Location targetLocation, double speed)
-    {
-        this(targetLocation, speed, DEFAULT_MAX_ITERATIONS, true, null, true);
-    }
-
-    /**
-     * Creates a WalkToLocationGoal with a fixed target location and custom speed.
-     *
-     * @param targetLocation The location to walk to
-     * @param speed          The walking speed (0.1 to 1.0)
-     * @param withRotation   If true, includes rotation packets in the movement; otherwise only position packets are sent.
-     */
-    public WalkToLocationGoal(@NotNull Location targetLocation, double speed, boolean withRotation)
-    {
-        this(targetLocation, speed, DEFAULT_MAX_ITERATIONS, true, null, withRotation);
-    }
-
-    /**
      * Creates a WalkToLocationGoal with full configuration options.
      *
      * @param targetLocation     The location to walk to
@@ -282,5 +249,100 @@ public class WalkToLocationGoal extends Goal
     {
         in.defaultReadObject();
         this.targetLocation = serializableLocation.toLocation();
+    }
+
+    // --- Builder Class ---
+
+    /**
+     * Builder class for creating WalkToLocationGoal instances with a fluent API.
+     */
+    public static class Builder
+    {
+        private final Location targetLocation;
+        private double speed = DEFAULT_SPEED;
+        private int maxIterations = DEFAULT_MAX_ITERATIONS;
+        private boolean allowDiagonal = true;
+        private SerializableConsumer<WalkingResult> completionCallback;
+        private boolean withRotation = true;
+
+        /**
+         * Creates a new Builder with the required target location.
+         *
+         * @param targetLocation The location to walk to
+         */
+        public Builder(@NotNull Location targetLocation)
+        {
+            this.targetLocation = targetLocation;
+        }
+
+        /**
+         * Sets the walking speed.
+         *
+         * @param speed The walking speed (0.1 to 1.0)
+         * @return this builder for chaining
+         */
+        public Builder speed(double speed)
+        {
+            this.speed = Math.max(0.1, Math.min(1.0, speed));
+            return this;
+        }
+
+        /**
+         * Sets the maximum iterations for pathfinding.
+         *
+         * @param maxIterations Maximum iterations for pathfinding
+         * @return this builder for chaining
+         */
+        public Builder maxIterations(int maxIterations)
+        {
+            this.maxIterations = maxIterations;
+            return this;
+        }
+
+        /**
+         * Sets whether diagonal movement is allowed.
+         *
+         * @param allowDiagonal Whether diagonal movement is allowed
+         * @return this builder for chaining
+         */
+        public Builder allowDiagonal(boolean allowDiagonal)
+        {
+            this.allowDiagonal = allowDiagonal;
+            return this;
+        }
+
+        /**
+         * Sets the completion callback.
+         *
+         * @param completionCallback Callback called when walking completes
+         * @return this builder for chaining
+         */
+        public Builder completionCallback(@NotNull SerializableConsumer<WalkingResult> completionCallback)
+        {
+            this.completionCallback = completionCallback;
+            return this;
+        }
+
+        /**
+         * Sets whether rotation packets should be sent.
+         *
+         * @param withRotation If true, includes rotation packets in the movement; otherwise only position packets are sent.
+         * @return this builder for chaining
+         */
+        public Builder withRotation(boolean withRotation)
+        {
+            this.withRotation = withRotation;
+            return this;
+        }
+
+        /**
+         * Builds the WalkToLocationGoal instance.
+         *
+         * @return A new WalkToLocationGoal instance
+         */
+        public WalkToLocationGoal build()
+        {
+            return new WalkToLocationGoal(targetLocation, speed, maxIterations, allowDiagonal, completionCallback, withRotation);
+        }
     }
 }

@@ -115,7 +115,7 @@ public class FollowEntityGoal extends Goal
         this.lastTargetLocation = target.getLocation().clone();
         if(target != null && target.isValid())
         {
-            currentWalkGoal = new WalkToLocationGoal(target.getLocation(), speed, false);
+            currentWalkGoal = new WalkToLocationGoal.Builder(target.getLocation()).speed(speed).withRotation(false).build();
             currentWalkGoal.start(npc);
         }
     }
@@ -166,7 +166,7 @@ public class FollowEntityGoal extends Goal
 
         if(currentWalkGoal == null)
         {
-            currentWalkGoal = new WalkToLocationGoal(targetLoc, speed);
+            currentWalkGoal = new WalkToLocationGoal.Builder(targetLoc).speed(speed).withRotation(false).build();
             currentWalkGoal.start(npc);
             pathRecalculationCooldown = 10;
             lastTargetLocation = targetLoc.clone();
@@ -192,7 +192,7 @@ public class FollowEntityGoal extends Goal
             if(shouldRecalculate)
             {
                 currentWalkGoal.stop(npc);
-                currentWalkGoal = new WalkToLocationGoal(targetLoc, speed);
+                currentWalkGoal = new WalkToLocationGoal.Builder(targetLoc).speed(speed).withRotation(false).build();
                 currentWalkGoal.start(npc);
                 pathRecalculationCooldown = 10;
                 lastTargetLocation = targetLoc.clone();

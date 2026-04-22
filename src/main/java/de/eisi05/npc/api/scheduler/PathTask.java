@@ -34,7 +34,7 @@ public class PathTask extends BukkitRunnable
     private static final double gravity = -0.08;
     private static final double jumpVelocity = 0.5;
     private static final double terminalVelocity = -0.5;
-    private static final double stepHeight = 0.5;
+    private static final double stepHeight = 0.55;
 
     private final NPC npc;
     private final Path path;

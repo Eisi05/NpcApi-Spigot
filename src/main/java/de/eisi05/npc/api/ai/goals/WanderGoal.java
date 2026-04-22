@@ -188,7 +188,7 @@ public class WanderGoal extends Goal
             if(y.isPresent())
             {
                 targetLocation = new Location(world, x, y.getAsInt(), z);
-                currentWalkGoal = new WalkToLocationGoal(targetLocation, speed);
+                currentWalkGoal = new WalkToLocationGoal.Builder(targetLocation).speed(speed).build();
                 currentWalkGoal.start(npc);
                 return;
             }
