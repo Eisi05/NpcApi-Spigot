@@ -31,13 +31,14 @@ public class WalkToLocationGoal extends Goal
     private static final long serialVersionUID = 1L;
 
     private static final int DEFAULT_MAX_ITERATIONS = 5000;
-    private static final double DEFAULT_SPEED = 0.4;
+    private static final double DEFAULT_SPEED = 0.25;
 
     private final Path.SerializablePath.SerializableLocation serializableLocation;
     private final double speed;
     private final int maxIterations;
     private final boolean allowDiagonal;
     private final SerializableConsumer<WalkingResult> completionCallback;
+    private final boolean withRotation;
 
     private transient Location targetLocation;
     private transient CompletableFuture<Void> pathfindingFuture;
@@ -51,7 +52,7 @@ public class WalkToLocationGoal extends Goal
      */
     public WalkToLocationGoal(@NotNull Location targetLocation)
     {
-        this(targetLocation, DEFAULT_SPEED);
+        this(targetLocation, DEFAULT_SPEED, true);
     }
 
     /**
@@ -62,7 +63,19 @@ public class WalkToLocationGoal extends Goal
      */
     public WalkToLocationGoal(@NotNull Location targetLocation, double speed)
     {
-        this(targetLocation, speed, DEFAULT_MAX_ITERATIONS, true, null);
+        this(targetLocation, speed, DEFAULT_MAX_ITERATIONS, true, null, true);
+    }
+
+    /**
+     * Creates a WalkToLocationGoal with a fixed target location and custom speed.
+     *
+     * @param targetLocation The location to walk to
+     * @param speed          The walking speed (0.1 to 1.0)
+     * @param withRotation   If true, includes rotation packets in the movement; otherwise only position packets are sent.
+     */
+    public WalkToLocationGoal(@NotNull Location targetLocation, double speed, boolean withRotation)
+    {
+        this(targetLocation, speed, DEFAULT_MAX_ITERATIONS, true, null, withRotation);
     }
 
     /**
@@ -73,9 +86,10 @@ public class WalkToLocationGoal extends Goal
      * @param maxIterations      Maximum iterations for pathfinding
      * @param allowDiagonal      Whether diagonal movement is allowed
      * @param completionCallback Callback called when walking completes
+     * @param withRotation       If true, includes rotation packets in the movement; otherwise only position packets are sent.
      */
     public WalkToLocationGoal(@NotNull Location targetLocation, double speed, int maxIterations, boolean allowDiagonal,
-                              @NotNull SerializableConsumer<WalkingResult> completionCallback)
+                              @NotNull SerializableConsumer<WalkingResult> completionCallback, boolean withRotation)
     {
         super(Priority.MID);
         this.targetLocation = targetLocation.clone();
@@ -84,6 +98,7 @@ public class WalkToLocationGoal extends Goal
         this.maxIterations = maxIterations;
         this.allowDiagonal = allowDiagonal;
         this.completionCallback = completionCallback;
+        this.withRotation = withRotation;
     }
 
     /**
@@ -238,7 +253,7 @@ public class WalkToLocationGoal extends Goal
                 completionCallback.accept(result);
             if(result == WalkingResult.SUCCESS)
                 npc.changeRealLocation(targetLocation);
-        }, viewers);
+        }, withRotation, viewers);
 
         isWalking = true;
     }

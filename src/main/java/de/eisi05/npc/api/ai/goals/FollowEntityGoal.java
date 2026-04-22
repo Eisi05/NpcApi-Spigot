@@ -59,7 +59,7 @@ public class FollowEntityGoal extends Goal
      */
     public FollowEntityGoal(@NotNull UUID targetEntityId, double followDistance, double stopDistance, double speed)
     {
-        super(Priority.HIGH);
+        super(Priority.ALWAYS);
         this.targetEntityId = targetEntityId;
         this.followDistance = Math.max(stopDistance + 0.5, followDistance);
         this.stopDistance = Math.max(0.5, stopDistance);
@@ -115,7 +115,7 @@ public class FollowEntityGoal extends Goal
         this.lastTargetLocation = target.getLocation().clone();
         if(target != null && target.isValid())
         {
-            currentWalkGoal = new WalkToLocationGoal(target.getLocation(), speed);
+            currentWalkGoal = new WalkToLocationGoal(target.getLocation(), speed, false);
             currentWalkGoal.start(npc);
         }
     }

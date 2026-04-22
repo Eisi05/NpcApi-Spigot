@@ -34,7 +34,7 @@ public class PathTask extends BukkitRunnable
     private static final double gravity = -0.08;
     private static final double jumpVelocity = 0.5;
     private static final double terminalVelocity = -0.5;
-    private static final double stepHeight = -0.5;
+    private static final double stepHeight = 0.5;
 
     private final NPC npc;
     private final Path path;
@@ -42,17 +42,17 @@ public class PathTask extends BukkitRunnable
     private final Player[] viewers;
     private final WrappedEntity<?> serverEntity;
     private final Consumer<WalkingResult> callback;
+    private final boolean withRotation;
 
-    // Settings
     private final double speed;
     private final boolean updateRealLocation;
-    private final Set<Block> openedDoors = new HashSet<>();
 
-    // State
+    private final Set<Block> openedDoors = new HashSet<>();
+    private final Vector previousMoveDir;
+
     private boolean finished = false;
     private int index = 0;
     private Vector currentPos;
-    private Vector previousMoveDir;
     private float previousYaw;
     private double verticalVelocity = 0.0;
 
@@ -68,6 +68,7 @@ public class PathTask extends BukkitRunnable
         this.pathPoints = new ArrayList<>(builder.path.asLocations());
         this.viewers = builder.viewers;
         this.callback = builder.callback;
+        this.withRotation = builder.withRotation;
 
         this.speed = builder.speed;
         this.updateRealLocation = builder.updateRealLocation;
@@ -109,13 +110,30 @@ public class PathTask extends BukkitRunnable
 
         PhysicsResult physics = applyPhysics(movement, toTarget);
 
+        if(physics.skipHorizontal)
+        {
+            movement.setX(0);
+            movement.setZ(0);
+        }
+        else if(physics.horizontalSlowdown < 1.0)
+            movement.multiply(physics.horizontalSlowdown);
+
         movement.setY(physics.yChange);
 
         currentPos.add(movement);
 
-        float[] rotation = calculateSmoothRotation();
-        float yaw = rotation[0];
-        float pitch = rotation[1];
+        float yaw, pitch;
+        if(withRotation)
+        {
+            float[] rotation = calculateSmoothRotation();
+            yaw = rotation[0];
+            pitch = rotation[1];
+        }
+        else
+        {
+            yaw = npc.getLocation().getYaw();
+            pitch = npc.getLocation().getPitch();
+        }
 
         sendMovePackets(movement, yaw, pitch, physics.isGrounded);
     }
@@ -323,7 +341,7 @@ public class PathTask extends BukkitRunnable
     {
         World world = npc.getLocation().getWorld();
         if(world == null)
-            return new PhysicsResult(0, false);
+            return new PhysicsResult(0, false, false, 1.0);
 
         double groundY = getGroundY(world, currentPos);
         boolean onGround = currentPos.getY() <= groundY + 1e-5;
@@ -331,14 +349,42 @@ public class PathTask extends BukkitRunnable
 
         if(onGround)
         {
+            if(toTarget.getY() < 0 && Math.abs(toTarget.getY()) <= stepHeight)
+            {
+                Vector testPos = currentPos.clone().add(movement);
+                testPos.setY(currentPos.getY() + toTarget.getY());
+                if(isPositionValid(world, testPos))
+                {
+                    yChange = toTarget.getY();
+                    verticalVelocity = 0;
+                    double slowdown = 0.5;
+                    return new PhysicsResult(yChange, true, false, slowdown);
+                }
+            }
+
             if(toTarget.getY() > 0 && toTarget.getY() <= stepHeight && movement.lengthSquared() > 1e-6)
             {
+                Vector testPos = currentPos.clone().add(movement);
+                testPos.setY(currentPos.getY() + Math.min(toTarget.getY(), stepHeight));
+                if(!isPositionValid(world, testPos))
+                {
+                    yChange = Math.min(toTarget.getY(), stepHeight);
+                    verticalVelocity = 0;
+                    return new PhysicsResult(yChange, true, true, 1.0);
+                }
                 yChange = Math.min(toTarget.getY(), stepHeight);
                 verticalVelocity = 0;
-                return new PhysicsResult(yChange, true);
+                return new PhysicsResult(yChange, true, false, 1.0);
             }
             else if(toTarget.getY() > 0.5)
             {
+                Vector testPos = currentPos.clone().add(movement);
+                testPos.setY(currentPos.getY() + jumpVelocity);
+                if(!isPositionValid(world, testPos))
+                {
+                    verticalVelocity = jumpVelocity;
+                    return new PhysicsResult(jumpVelocity, false, true, 1.0);
+                }
                 verticalVelocity = jumpVelocity;
                 onGround = false;
             }
@@ -347,7 +393,7 @@ public class PathTask extends BukkitRunnable
                 verticalVelocity = 0;
                 if(Math.abs(currentPos.getY() - groundY) > 1e-6)
                     currentPos.setY(groundY);
-                return new PhysicsResult(0, true);
+                return new PhysicsResult(0, true, false, 1.0);
             }
         }
 
@@ -358,7 +404,15 @@ public class PathTask extends BukkitRunnable
                 verticalVelocity = terminalVelocity;
             yChange = verticalVelocity;
 
-            if(currentPos.getY() + yChange <= groundY)
+            Vector testPos = currentPos.clone().add(movement);
+            testPos.setY(currentPos.getY() + yChange);
+            if(!isPositionValid(world, testPos) && currentPos.getY() + yChange <= groundY + 0.1)
+            {
+                yChange = groundY - currentPos.getY();
+                verticalVelocity = 0;
+                onGround = true;
+            }
+            else if(currentPos.getY() + yChange <= groundY)
             {
                 yChange = groundY - currentPos.getY();
                 verticalVelocity = 0;
@@ -366,7 +420,58 @@ public class PathTask extends BukkitRunnable
             }
         }
 
-        return new PhysicsResult(yChange, onGround);
+        return new PhysicsResult(yChange, onGround, false, 1.0);
+    }
+
+    /**
+     * Checks if a position is valid (not inside a solid block).
+     *
+     * @param world The world to check in
+     * @param pos   The position to check
+     * @return true if the position is valid, false otherwise
+     */
+    private boolean isPositionValid(@NotNull World world, @NotNull Vector pos)
+    {
+        double entityWidth = 0.6;
+        double entityHeight = 1.8;
+
+        double minX = pos.getX() - entityWidth / 2;
+        double maxX = pos.getX() + entityWidth / 2;
+        double minY = pos.getY();
+        double maxY = pos.getY() + entityHeight;
+        double minZ = pos.getZ() - entityWidth / 2;
+        double maxZ = pos.getZ() + entityWidth / 2;
+
+        int minBlockX = (int) Math.floor(minX);
+        int maxBlockX = (int) Math.floor(maxX);
+        int minBlockY = (int) Math.floor(minY);
+        int maxBlockY = (int) Math.floor(maxY);
+        int minBlockZ = (int) Math.floor(minZ);
+        int maxBlockZ = (int) Math.floor(maxZ);
+
+        for(int x = minBlockX; x <= maxBlockX; x++)
+        {
+            for(int y = minBlockY; y <= maxBlockY; y++)
+            {
+                for(int z = minBlockZ; z <= maxBlockZ; z++)
+                {
+                    Block block = world.getBlockAt(x, y, z);
+                    if(block.getBlockData() instanceof Openable)
+                        continue;
+
+                    if(block.getType().isSolid() && !block.isPassable())
+                    {
+                        BoundingBox blockBox = block.getBoundingBox();
+                        Vector min = new Vector(minX, minY, minZ);
+                        Vector max = new Vector(maxX, maxY, maxZ);
+                        if(blockBox.overlaps(min, max))
+                            return false;
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -424,7 +529,7 @@ public class PathTask extends BukkitRunnable
 
         Vector horizontalLook = new Vector(lookDir.getX(), 0, lookDir.getZ());
         if(horizontalLook.lengthSquared() < 1e-6)
-            horizontalLook = previousMoveDir.clone();
+            horizontalLook.copy(previousMoveDir.clone());
 
         float targetYaw = (float) (Math.toDegrees(Math.atan2(horizontalLook.getZ(), horizontalLook.getX())) - 90);
         targetYaw = normalizeAngle(targetYaw);
@@ -434,7 +539,7 @@ public class PathTask extends BukkitRunnable
 
         float yaw = previousYaw + diff;
         previousYaw = yaw;
-        previousMoveDir = horizontalLook;
+        previousMoveDir.copy(horizontalLook);
 
         Vector targetVec = pathPoints.get(Math.min(index + 1, pathPoints.size() - 1)).toVector().subtract(currentPos);
         double hLen = Math.sqrt(targetVec.getX() * targetVec.getX() + targetVec.getZ() * targetVec.getZ());
@@ -528,10 +633,12 @@ public class PathTask extends BukkitRunnable
     /**
      * A record representing the result of physics calculations.
      *
-     * @param yChange    The vertical movement to apply
-     * @param isGrounded Whether the NPC is on the ground
+     * @param yChange            The vertical movement to apply
+     * @param isGrounded         Whether the NPC is on the ground
+     * @param skipHorizontal     Whether to skip horizontal movement this tick
+     * @param horizontalSlowdown Factor to slow down horizontal movement (1.0 = normal, <1.0 = slower)
      */
-    private record PhysicsResult(double yChange, boolean isGrounded) {}
+    private record PhysicsResult(double yChange, boolean isGrounded, boolean skipHorizontal, double horizontalSlowdown) {}
 
     // --- Builder Class ---
 
@@ -547,6 +654,7 @@ public class PathTask extends BukkitRunnable
         private Consumer<WalkingResult> callback = null;
         private double speed = 1.0;
         private boolean updateRealLocation = false;
+        private boolean withRotation = true;
 
         /**
          * Creates a new Builder for a PathTask.
@@ -605,6 +713,18 @@ public class PathTask extends BukkitRunnable
         public @NotNull Builder callback(@Nullable Consumer<WalkingResult> callback)
         {
             this.callback = callback;
+            return this;
+        }
+
+        /**
+         * Sets whether to include rotation packets in the movement.
+         *
+         * @param withRotation true to include rotation packets, false otherwise
+         * @return This builder instance for method chaining
+         */
+        public @NotNull Builder withRotation(boolean withRotation)
+        {
+            this.withRotation = withRotation;
             return this;
         }
 

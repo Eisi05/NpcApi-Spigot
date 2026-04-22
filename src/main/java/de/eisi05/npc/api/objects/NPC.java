@@ -696,8 +696,8 @@ public class NPC extends NpcHolder
      * Makes the NPC look at a specific player. This calculates the required yaw and pitch and sends update packets to the viewing player.
      *
      * @param targetEntity the entity the NPC should look at. Must not be null.
-     * @param viewer the player to send the packets to. Must not be null.
-     * @param force If true, the NPC's location will be updated; otherwise only packets are sent.
+     * @param viewer       the player to send the packets to. Must not be null.
+     * @param force        If true, the NPC's location will be updated; otherwise only packets are sent.
      */
     public void lookAtEntity(@NotNull Entity targetEntity, @NotNull Player viewer, boolean force)
     {
@@ -715,7 +715,8 @@ public class NPC extends NpcHolder
         double eyeHeight = (entity.getBukkitPlayer() instanceof LivingEntity le ? le.getEyeHeight() :
                 entity.getBukkitPlayer().getHeight()) - (Pose.fromBukkit(getOption(NpcOption.POSE, viewer)) == Pose.SITTING ? 0.625 : 0);
 
-        double dy = (targetLoc.getY() + (targetEntity instanceof LivingEntity le ? le.getEyeHeight() : targetEntity.getHeight())) - (npcLoc.getY() + (eyeHeight * getOption(NpcOption.SCALE, viewer)));
+        double dy = (targetLoc.getY() + (targetEntity instanceof LivingEntity le ? le.getEyeHeight() : targetEntity.getHeight())) -
+                (npcLoc.getY() + (eyeHeight * getOption(NpcOption.SCALE, viewer)));
         double dz = targetLoc.getZ() - npcLoc.getZ();
 
         double distanceXZ = Math.sqrt(dx * dx + dz * dz);
@@ -748,7 +749,7 @@ public class NPC extends NpcHolder
     public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed, boolean changeRealLocation,
                                       @Nullable Consumer<WalkingResult> onEnd)
     {
-        return walkTo(path, walkSpeed, changeRealLocation, onEnd, null);
+        return walkTo(path, walkSpeed, changeRealLocation, onEnd, true, null);
     }
 
     /**
@@ -759,11 +760,29 @@ public class NPC extends NpcHolder
      * @param walkSpeed          The walking speed of the NPC (clamped between 0.1 and 1).
      * @param changeRealLocation If true, the NPC's actual server-side location will be updated; otherwise only packets are sent.
      * @param onEnd              A {@link Runnable} to be executed when the NPC reaches the end of the path.
+     * @param withRotation       If true, includes rotation packets in the movement; otherwise only position packets are sent.
+     * @return The {@link BukkitTask} representing the movement task.
+     */
+    public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed, boolean changeRealLocation,
+                                      @Nullable Consumer<WalkingResult> onEnd, boolean withRotation)
+    {
+        return walkTo(path, walkSpeed, changeRealLocation, onEnd, withRotation, null);
+    }
+
+    /**
+     * Moves the NPC along a precomputed {@link de.eisi05.npc.api.pathfinding.Path}, simulating walking, jumping, and gravity. The NPC's position and rotation
+     * are updated each tick and sent to the specified player(s).
+     *
+     * @param path               The {@link de.eisi05.npc.api.pathfinding.Path} containing the ordered waypoints the NPC should follow.
+     * @param walkSpeed          The walking speed of the NPC (clamped between 0.1 and 1).
+     * @param changeRealLocation If true, the NPC's actual server-side location will be updated; otherwise only packets are sent.
+     * @param onEnd              A {@link Runnable} to be executed when the NPC reaches the end of the path.
+     * @param withRotation       If true, includes rotation packets in the movement; otherwise only position packets are sent.
      * @param viewers            The players who should see the NPC move. If null, updates all viewers in the `viewers` set.
      * @return The {@link BukkitTask} representing the movement task.
      */
     public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed,
-                                      boolean changeRealLocation, @Nullable Consumer<WalkingResult> onEnd, @Nullable List<Player> viewers)
+                                      boolean changeRealLocation, @Nullable Consumer<WalkingResult> onEnd, boolean withRotation, @Nullable List<Player> viewers)
     {
         viewers = viewers == null || viewers.isEmpty() ? this.viewers.stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toList() : viewers;
 
@@ -784,7 +803,9 @@ public class NPC extends NpcHolder
                 .speed(event.getWalkSpeed())
                 .viewers(viewers.toArray(new Player[0]))
                 .updateRealLocation(event.isChangeRealLocation())
-                .callback(onEnd).build();
+                .callback(onEnd)
+                .withRotation(withRotation)
+                .build();
 
         for(Player player : viewers)
             pathTasks.put(player.getUniqueId(), pathTask);
@@ -914,8 +935,7 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Saves the goal selector state to the NPC's options.
-     * Call this after modifying the goal selector to persist changes.
+     * Saves the goal selector state to the NPC's options. Call this after modifying the goal selector to persist changes.
      */
     private void saveGoals()
     {

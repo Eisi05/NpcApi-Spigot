@@ -15,9 +15,29 @@ import java.util.*;
 
 public class AStarPathfinder
 {
+    private static final double[][][] MOVE_COSTS = new double[3][3][3];
+
+    static
+    {
+        for(int x = -1; x <= 1; x++)
+        {
+            for(int y = -1; y <= 1; y++)
+            {
+                for(int z = -1; z <= 1; z++)
+                {
+                    if(x == 0 && y == 0 && z == 0)
+                        MOVE_COSTS[x + 1][y + 1][z + 1] = 0;
+                    else
+                        MOVE_COSTS[x + 1][y + 1][z + 1] = (Math.abs(x) + Math.abs(y) + Math.abs(z)) > 1 ? 1.414 : 1.0;
+                }
+            }
+        }
+    }
+
     private final int maxIterations;
     private final boolean allowDiagonal;
     private final PriorityQueue<Node> openSet = new PriorityQueue<>();
+    private final Set<Long> openSetIds = new HashSet<>();
     private final Map<Long, Node> allNodes = new HashMap<>();
     private World world;
 
@@ -33,6 +53,7 @@ public class AStarPathfinder
             return null;
 
         openSet.clear();
+        openSetIds.clear();
         allNodes.clear();
         this.world = start.getWorld();
 
@@ -51,6 +72,7 @@ public class AStarPathfinder
         startNode.calculateH(end);
 
         openSet.add(startNode);
+        openSetIds.add(startNode.id);
         allNodes.put(startNode.id, startNode);
 
         int iterations = 0;
@@ -63,8 +85,9 @@ public class AStarPathfinder
             iterations++;
 
             Node current = openSet.poll();
+            openSetIds.remove(current.id);
 
-            if(distance(current, end) < 2)
+            if(distance(current, end) < 4)
                 return retracePath(current);
 
             current.closed = true;
@@ -89,23 +112,27 @@ public class AStarPathfinder
                             continue;
 
                         long id = Node.hash(targetX, targetY, targetZ);
-                        Node neighbor = allNodes.getOrDefault(id, new Node(targetX, targetY, targetZ, id));
+                        Node neighbor = allNodes.get(id);
+
+                        if(neighbor == null)
+                            neighbor = new Node(targetX, targetY, targetZ, id);
 
                         if(neighbor.closed)
                             continue;
 
-                        double moveCost = (Math.abs(x) + Math.abs(y) + Math.abs(z)) > 1 ? 1.414 : 1.0;
+                        double moveCost = MOVE_COSTS[x + 1][y + 1][z + 1];
                         double newGCost = current.gCost + moveCost;
 
-                        if(newGCost < neighbor.gCost || !openSet.contains(neighbor))
+                        if(newGCost < neighbor.gCost || !openSetIds.contains(id))
                         {
                             neighbor.gCost = newGCost;
                             neighbor.calculateH(end);
                             neighbor.parent = current;
 
-                            if(!openSet.contains(neighbor))
+                            if(!openSetIds.contains(id))
                             {
                                 openSet.add(neighbor);
+                                openSetIds.add(id);
                                 allNodes.put(id, neighbor);
                             }
                         }
@@ -278,7 +305,10 @@ public class AStarPathfinder
 
         public void calculateH(@NotNull Location end)
         {
-            this.hCost = Math.hypot(Math.hypot(x - end.getBlockX(), y - end.getBlockY()), z - end.getBlockZ());
+            double dx = x - end.getBlockX();
+            double dy = y - end.getBlockY();
+            double dz = z - end.getBlockZ();
+            this.hCost = Math.sqrt(dx * dx + dy * dy + dz * dz);
         }
 
         public double getFCost()

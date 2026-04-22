@@ -663,7 +663,7 @@ public class AttackEntityGoal extends Goal
         {
             isKiting = false;
             movementGoal = null;
-        });
+        }, false);
 
         movementGoal = newGoal;
         newGoal.start(npc);
