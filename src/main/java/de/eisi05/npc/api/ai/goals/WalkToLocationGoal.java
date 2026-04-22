@@ -48,24 +48,18 @@ public class WalkToLocationGoal extends Goal
     /**
      * Creates a WalkToLocationGoal with full configuration options.
      *
-     * @param targetLocation     The location to walk to
-     * @param speed              The walking speed (0.1 to 1.0)
-     * @param maxIterations      Maximum iterations for pathfinding
-     * @param allowDiagonal      Whether diagonal movement is allowed
-     * @param completionCallback Callback called when walking completes
-     * @param withRotation       If true, includes rotation packets in the movement; otherwise only position packets are sent.
+     * @param builder the builder containing the configuration options
      */
-    public WalkToLocationGoal(@NotNull Location targetLocation, double speed, int maxIterations, boolean allowDiagonal,
-                              @NotNull SerializableConsumer<WalkingResult> completionCallback, boolean withRotation)
+    public WalkToLocationGoal(@NotNull Builder builder)
     {
         super(Priority.MID);
-        this.targetLocation = targetLocation.clone();
+        this.targetLocation = builder.targetLocation.clone();
         this.serializableLocation = new Path.SerializablePath.SerializableLocation(targetLocation);
-        this.speed = Math.max(0.1, Math.min(1.0, speed));
-        this.maxIterations = maxIterations;
-        this.allowDiagonal = allowDiagonal;
-        this.completionCallback = completionCallback;
-        this.withRotation = withRotation;
+        this.speed = Math.max(0.1, Math.min(1.0, builder.speed));
+        this.maxIterations = builder.maxIterations;
+        this.allowDiagonal = builder.allowDiagonal;
+        this.completionCallback = builder.completionCallback;
+        this.withRotation = builder.withRotation;
     }
 
     /**
@@ -342,7 +336,7 @@ public class WalkToLocationGoal extends Goal
          */
         public WalkToLocationGoal build()
         {
-            return new WalkToLocationGoal(targetLocation, speed, maxIterations, allowDiagonal, completionCallback, withRotation);
+            return new WalkToLocationGoal(this);
         }
     }
 }

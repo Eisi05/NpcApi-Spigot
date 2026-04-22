@@ -644,11 +644,13 @@ public class AttackEntityGoal extends Goal
 
         stopMovement(npc);
 
-        WalkToLocationGoal newGoal = new WalkToLocationGoal(retreatLoc, 0.3, 5000, true, result ->
-        {
-            isKiting = false;
-            movementGoal = null;
-        }, false);
+
+        WalkToLocationGoal newGoal = new WalkToLocationGoal.Builder(retreatLoc).speed(0.3).maxIterations(5000).allowDiagonal(true)
+                .completionCallback(walkingResult ->
+                {
+                    isKiting = false;
+                    movementGoal = null;
+                }).withRotation(false).build();
 
         movementGoal = newGoal;
         newGoal.start(npc);
