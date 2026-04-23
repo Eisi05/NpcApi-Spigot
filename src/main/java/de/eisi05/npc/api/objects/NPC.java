@@ -2,7 +2,6 @@ package de.eisi05.npc.api.objects;
 
 import com.mojang.datafixers.util.Either;
 import de.eisi05.npc.api.NpcApi;
-import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.ai.GoalSelector;
 import de.eisi05.npc.api.enums.WalkingResult;
 import de.eisi05.npc.api.events.NpcHideEvent;
@@ -927,50 +926,12 @@ public class NPC extends NpcHolder
      *
      * @return The goal selector for this NPC
      */
-    private @NotNull GoalSelector getGoalSelector()
+    @Override
+    protected @NotNull GoalSelector getGoalSelector()
     {
         if(goalSelector == null)
             goalSelector = new GoalSelector(this);
         return goalSelector;
-    }
-
-    /**
-     * Adds a goal to this NPC's goal selector.
-     *
-     * @param goal The goal to add
-     * @return This NPC for method chaining
-     */
-    public @NotNull NPC addGoal(@NotNull Goal goal)
-    {
-        ArrayList<Goal> goals = getOption(NpcOption.GOALS);
-        goals.add(goal);
-        setOption(NpcOption.GOALS, goals);
-        return this;
-    }
-
-    /**
-     * Removes a goal from this NPC's goal selector.
-     *
-     * @param goal The goal to remove
-     * @return This NPC for method chaining
-     */
-    public @NotNull NPC removeGoal(@NotNull Goal goal)
-    {
-        ArrayList<Goal> goals = getOption(NpcOption.GOALS);
-        goals.remove(goal);
-        setOption(NpcOption.GOALS, goals);
-        getGoalSelector().stopGoalIfRunning(goal);
-        return this;
-    }
-
-    /**
-     * Gets the list of goals associated with this NPC.
-     *
-     * @return A list of goals, or an empty list if no goals are set
-     */
-    public @NotNull List<Goal> getGoals()
-    {
-        return getOption(NpcOption.GOALS);
     }
 
     /**
