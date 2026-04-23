@@ -207,6 +207,7 @@ public class WalkToLocationGoal extends Goal
                 .filter(java.util.Objects::nonNull)
                 .toList();
 
+        //TODO: Rework (with recalculations and block collision checks: maybe also change walkTo method for that (new boolean parameter))
         npc.walkTo(currentPath, speed, true, result ->
         {
             isWalking = false;
