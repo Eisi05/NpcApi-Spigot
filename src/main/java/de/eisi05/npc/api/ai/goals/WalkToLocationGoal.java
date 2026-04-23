@@ -4,11 +4,14 @@ import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.enums.WalkingResult;
 import de.eisi05.npc.api.objects.NPC;
+import de.eisi05.npc.api.pathfinding.AStarPathfinder;
 import de.eisi05.npc.api.pathfinding.Path;
 import de.eisi05.npc.api.pathfinding.PathfindingUtils;
 import de.eisi05.npc.api.utils.SerializableConsumer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,6 +35,7 @@ public class WalkToLocationGoal extends Goal
 
     private static final int DEFAULT_MAX_ITERATIONS = 5000;
     private static final double DEFAULT_SPEED = 0.25;
+    private static final int PATH_CHECK_AHEAD = 5;
 
     private final Path.SerializablePath.SerializableLocation serializableLocation;
     private final double speed;
@@ -44,6 +48,7 @@ public class WalkToLocationGoal extends Goal
     private transient CompletableFuture<Void> pathfindingFuture;
     private transient Path currentPath;
     private transient boolean isWalking;
+    private transient int pathRecalculationCooldown = 0;
 
     /**
      * Creates a WalkToLocationGoal with full configuration options.
@@ -95,14 +100,24 @@ public class WalkToLocationGoal extends Goal
     }
 
     /**
-     * Ticks the walk to location goal (no-op, walking is handled by path task).
+     * Ticks the walk to location goal, checking for path validity and recalculating if needed.
      *
      * @param npc the NPC to update
      */
     @Override
     public void tick(@NotNull NPC npc)
     {
-        // No dynamic target updates needed
+        if(pathRecalculationCooldown > 0)
+        {
+            pathRecalculationCooldown--;
+            return;
+        }
+
+        if(isPathInvalid(npc))
+        {
+            calculatePath(npc);
+            pathRecalculationCooldown = RECALCULATION_COOLDOWN;
+        }
     }
 
     /**
@@ -119,18 +134,7 @@ public class WalkToLocationGoal extends Goal
             pathfindingFuture = null;
         }
 
-        List<Player> viewers = npc.getViewers().stream()
-                .map(Bukkit::getPlayer)
-                .filter(Objects::nonNull)
-                .toList();
-
-        for(Player viewer : viewers)
-        {
-            if(npc.isWalking(viewer))
-                npc.cancelWalking(viewer);
-        }
-
-        isWalking = false;
+        cancelWalking(npc);
         currentPath = null;
     }
 
@@ -143,7 +147,7 @@ public class WalkToLocationGoal extends Goal
     @Override
     public boolean canContinue(@NotNull NPC npc)
     {
-        return isWalking && targetLocation != null && npc.getLocation().distance(targetLocation) > 1.0;
+        return isWalking && currentPath != null && targetLocation != null && npc.getLocation().distance(targetLocation) > 1.0;
     }
 
     /**
@@ -167,7 +171,12 @@ public class WalkToLocationGoal extends Goal
         Location end = targetLocation;
 
         if(!end.getWorld().equals(start.getWorld()))
+        {
+            if(completionCallback != null)
+                completionCallback.accept(WalkingResult.CANCELLED);
+            cancelWalking(npc);
             return;
+        }
 
         isWalking = true;
 
@@ -180,8 +189,13 @@ public class WalkToLocationGoal extends Goal
                         currentPath = path;
                         startWalking(npc);
                     }
-                    else if(completionCallback != null)
-                        completionCallback.accept(WalkingResult.CANCELLED);
+                    else
+                    {
+                        cancelWalking(npc);
+
+                        if(completionCallback != null)
+                            completionCallback.accept(WalkingResult.CANCELLED);
+                    }
                 }, task -> Bukkit.getScheduler().runTask(NpcApi.plugin, task))
                 .exceptionally(e ->
                 {
@@ -189,7 +203,7 @@ public class WalkToLocationGoal extends Goal
                     {
                         if(completionCallback != null)
                             completionCallback.accept(WalkingResult.CANCELLED);
-                        isWalking = false;
+                        cancelWalking(npc);
                     });
                     return null;
                 });
@@ -204,10 +218,9 @@ public class WalkToLocationGoal extends Goal
     {
         List<Player> viewers = npc.getViewers().stream()
                 .map(Bukkit::getPlayer)
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .toList();
 
-        //TODO: Rework (with recalculations and block collision checks: maybe also change walkTo method for that (new boolean parameter))
         npc.walkTo(currentPath, speed, true, result ->
         {
             isWalking = false;
@@ -218,6 +231,63 @@ public class WalkToLocationGoal extends Goal
         }, withRotation, viewers);
 
         isWalking = true;
+    }
+
+    /**
+     * Checks if the current path is invalid due to block changes. Uses similar validation logic to AStarPathfinder for consistency.
+     *
+     * @param npc the NPC to check path for
+     * @return true if the path is invalid and should be recalculated
+     */
+    private boolean isPathInvalid(@NotNull NPC npc)
+    {
+        if(currentPath == null || currentPath.getWaypoints().isEmpty())
+            return true;
+
+        Location npcLoc = npc.getLocation();
+        if(npcLoc.getWorld() == null)
+            return true;
+
+        int checkAhead = Math.min(PATH_CHECK_AHEAD, currentPath.getWaypoints().size());
+        for(int i = 0; i < checkAhead; i++)
+        {
+            Location waypoint = currentPath.getWaypoints().get(i);
+            if(!waypoint.getWorld().equals(npcLoc.getWorld()))
+                return true;
+
+            Block floor = waypoint.getBlock();
+            Block spaceFeet = waypoint.getBlock().getRelative(BlockFace.UP);
+            Block spaceHead = waypoint.getBlock().getRelative(BlockFace.UP).getRelative(BlockFace.UP);
+
+            if(!AStarPathfinder.isSafeFloor(floor))
+                return true;
+
+            if(AStarPathfinder.isSolid(spaceFeet) || AStarPathfinder.isSolid(spaceHead))
+                return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Cancels the NPC's walking task for all viewers.
+     *
+     * @param npc the NPC to stop walking
+     */
+    private void cancelWalking(@NotNull NPC npc)
+    {
+        isWalking = false;
+
+        List<Player> viewers = npc.getViewers().stream()
+                .map(Bukkit::getPlayer)
+                .filter(Objects::nonNull)
+                .toList();
+
+        for(Player viewer : viewers)
+        {
+            if(npc.isWalking(viewer))
+                npc.cancelWalking(viewer);
+        }
     }
 
     /**

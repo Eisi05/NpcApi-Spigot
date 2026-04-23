@@ -47,6 +47,51 @@ public class AStarPathfinder
         this.allowDiagonal = allowDiagonal;
     }
 
+    /**
+     * Checks if a block is valid to stand ON.
+     */
+    public static boolean isSafeFloor(Block block)
+    {
+        if(block == null)
+            return false;
+
+        Material type = block.getType();
+        if(type.isAir() || block.isLiquid())
+            return false;
+
+        if(block.isPassable())
+            return false;
+
+        return true;
+    }
+
+    /**
+     * Checks if a block obstructs movement (is a wall).
+     */
+    public static boolean isSolid(Block block)
+    {
+        if(block == null)
+            return false;
+
+        Material type = block.getType();
+        if(type.isAir())
+            return false;
+
+        if(Var.isCarpet(type) && Var.isCarpet(block.getRelative(BlockFace.UP).getType()))
+            return true;
+
+        if(Var.isCarpet(type))
+            return false;
+
+        if(block.isPassable())
+            return false;
+
+        if(block.getBlockData() instanceof Openable)
+            return false;
+
+        return true;
+    }
+
     public @Nullable List<Location> getPath(@NotNull Location start, @NotNull Location end) throws PathfindingUtils.PathfindingException
     {
         if(!start.getWorld().equals(end.getWorld()))
@@ -170,24 +215,6 @@ public class AStarPathfinder
     }
 
     /**
-     * Checks if a block is valid to stand ON.
-     */
-    private boolean isSafeFloor(Block block)
-    {
-        if(block == null)
-            return false;
-
-        Material type = block.getType();
-        if(type.isAir() || block.isLiquid())
-            return false;
-
-        if(block.isPassable())
-            return false;
-
-        return true;
-    }
-
-    /**
      * Finds a safe floor block at or below the given coordinates. Searches downward from the starting Y level to find a solid, passable block. Includes edge
      * detection to handle cases where the entity is standing near a block edge.
      *
@@ -230,33 +257,6 @@ public class AStarPathfinder
                 return block;
         }
         return null;
-    }
-
-    /**
-     * Checks if a block obstructs movement (is a wall).
-     */
-    private boolean isSolid(Block block)
-    {
-        if(block == null)
-            return false;
-
-        Material type = block.getType();
-        if(type.isAir())
-            return false;
-
-        if(Var.isCarpet(type) && Var.isCarpet(block.getRelative(BlockFace.UP).getType()))
-            return true;
-
-        if(Var.isCarpet(type))
-            return false;
-
-        if(block.isPassable())
-            return false;
-
-        if(block.getBlockData() instanceof Openable)
-            return false;
-
-        return true;
     }
 
     private @NotNull List<Location> retracePath(@NotNull Node current)
