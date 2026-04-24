@@ -37,6 +37,7 @@ public class WalkToLocationGoal extends Goal
     private static final int DEFAULT_MAX_ITERATIONS = 5000;
     private static final double DEFAULT_SPEED = 0.25;
     private static final int PATH_CHECK_AHEAD = 5;
+    private static final long PATHABILITY_CHECK_INTERVAL_MS = 5000;
 
     private final Path.SerializablePath.SerializableLocation serializableLocation;
     private final double speed;
@@ -50,6 +51,8 @@ public class WalkToLocationGoal extends Goal
     private transient Path currentPath;
     private transient boolean isWalking;
     private transient int pathRecalculationCooldown = 0;
+    private transient boolean pathable = true;
+    private transient long lastPathabilityCheckTime = 0;
 
     /**
      * Creates a WalkToLocationGoal with full configuration options.
@@ -83,7 +86,16 @@ public class WalkToLocationGoal extends Goal
         if(targetLocation == null || !targetLocation.getWorld().equals(npc.getLocation().getWorld()))
             return false;
 
-        return npc.getLocation().distance(targetLocation) > 1.0;
+        if(npc.getLocation().distance(targetLocation) <= 1.0)
+            return false;
+
+        if(lastPathabilityCheckTime == 0 || System.currentTimeMillis() - lastPathabilityCheckTime > PATHABILITY_CHECK_INTERVAL_MS)
+            checkPathabilityAsync(npc);
+
+        if(!pathable)
+            return false;
+
+        return true;
     }
 
     /**
@@ -137,6 +149,8 @@ public class WalkToLocationGoal extends Goal
 
         cancelWalking(npc);
         currentPath = null;
+        pathable = true;
+        lastPathabilityCheckTime = 0;
     }
 
     /**
@@ -159,6 +173,33 @@ public class WalkToLocationGoal extends Goal
     public @NotNull Location getTargetLocation()
     {
         return targetLocation.clone();
+    }
+
+    /**
+     * Asynchronously checks if a path exists to the target location. Updates the pathable cache based on the result.
+     *
+     * @param npc the NPC to check pathability for
+     */
+    private void checkPathabilityAsync(@NotNull NPC npc)
+    {
+        lastPathabilityCheckTime = System.currentTimeMillis();
+        Location start = npc.getLocation();
+        Location end = targetLocation;
+
+        if(end == null || !end.getWorld().equals(start.getWorld()))
+        {
+            pathable = false;
+            return;
+        }
+
+        CompletableFuture<Path> future = PathfindingUtils.findPathAsync(List.of(start, end), maxIterations, allowDiagonal, null);
+        Tasks.trackFuture(future);
+        future.thenAcceptAsync(path -> pathable = path != null, task -> Bukkit.getScheduler().runTask(NpcApi.plugin, task))
+                .exceptionally(e ->
+                {
+                    pathable = false;
+                    return null;
+                });
     }
 
     /**
