@@ -61,7 +61,7 @@ public class WanderGoal extends Goal
      */
     public WanderGoal(int radius, int minDelay, int maxDelay, double speed)
     {
-        super(Priority.MID);
+        super(Priority.MEDIUM);
         this.radius = radius;
         this.minDelay = minDelay;
         this.maxDelay = maxDelay;

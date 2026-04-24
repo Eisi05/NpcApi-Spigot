@@ -57,7 +57,7 @@ public class WalkToLocationGoal extends Goal
      */
     public WalkToLocationGoal(@NotNull Builder builder)
     {
-        super(Priority.MID);
+        super(Priority.MEDIUM);
         this.targetLocation = builder.targetLocation.clone();
         this.serializableLocation = new Path.SerializablePath.SerializableLocation(targetLocation);
         this.speed = Math.max(0.1, Math.min(1.0, builder.speed));

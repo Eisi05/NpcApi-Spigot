@@ -114,6 +114,11 @@ public abstract class Goal implements Serializable
         ALWAYS(100),
 
         /**
+         * Very high chance of being selected when among non-ALWAYS goals.
+         */
+        HIGHEST(4),
+
+        /**
          * High chance of being selected when among non-ALWAYS goals.
          */
         HIGH(3),
@@ -121,7 +126,7 @@ public abstract class Goal implements Serializable
         /**
          * Medium chance of being selected when among non-ALWAYS goals.
          */
-        MID(2),
+        MEDIUM(2),
 
         /**
          * Low chance of being selected when among non-ALWAYS goals.
