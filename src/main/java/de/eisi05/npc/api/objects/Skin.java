@@ -16,6 +16,7 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -25,15 +26,16 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Scanner;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Represents a player's skin, containing its name, value, and signature.
- * This record is immutable and implements {@link Serializable} for easy persistence.
- * The skin value and signature are typically obtained from Mojang's session servers
- * and are used to display the correct player texture.
+ * Represents a player's skin, containing its name, value, and signature. This record is immutable and implements {@link Serializable} for easy persistence. The
+ * skin value and signature are typically obtained from Mojang's session servers and are used to display the correct player texture.
  *
  * @param name      The name associated with the skin (usually the player's username). Can be {@code null}.
  * @param value     The base64 encoded string representing the skin data (texture URL, model, etc.).
@@ -45,16 +47,14 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
     private static final long serialVersionUID = 1L;
 
     /**
-     * A static cache to store fetched skins, mapping UUIDs to Skin objects.
-     * This helps reduce redundant API calls to Mojang's servers.
+     * A static cache to store fetched skins, mapping UUIDs to Skin objects. This helps reduce redundant API calls to Mojang's servers.
      */
     private static final Map<String, Skin> skinCacheName = new ConcurrentHashMap<>();
     private static final Map<UUID, Skin> skinCacheUUID = new ConcurrentHashMap<>();
     private static final Map<File, Skin> skinCacheFile = new ConcurrentHashMap<>();
 
     /**
-     * Retrieves the skin data directly from a currently online Bukkit player.
-     * This method uses reflection to access the player's game profile properties.
+     * Retrieves the skin data directly from a currently online Bukkit player. This method uses reflection to access the player's game profile properties.
      *
      * @param player The Bukkit player from whom to retrieve the skin. Must not be {@code null}.
      * @return A {@link Skin} object representing the player's current skin, or {@code null} if no skin properties are found.
@@ -120,7 +120,8 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
 
                 return Optional.empty();
             }
-        } catch(IOException e)
+        }
+        catch(IOException e)
         {
             skinCacheUUID.remove(uuid);
             return Optional.empty();
@@ -153,7 +154,8 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
                         "(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})",
                         "$1-$2-$3-$4-$5")));
             }
-        } catch(IOException e)
+        }
+        catch(IOException e)
         {
             skinCacheName.remove(name);
             return Optional.empty();
@@ -185,7 +187,7 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
         try(CloseableHttpClient httpClient = HttpClients.custom()
                 .setDefaultRequestConfig(requestConfig)
                 .build();
-                FileInputStream fis = new FileInputStream(skinFile))
+            FileInputStream fis = new FileInputStream(skinFile))
         {
             HttpPost upload = new HttpPost("https://api.mineskin.org/generate/upload");
             upload.setHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
@@ -225,7 +227,8 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
                 skinCacheFile.put(skinFile, skin);
                 return Optional.of(skin);
             });
-        } catch(IOException e)
+        }
+        catch(IOException e)
         {
             if(NpcApi.config.debug())
                 e.printStackTrace();
@@ -236,16 +239,6 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
     }
 
     /**
-     * Converts this Skin to a NpcSkin.
-     *
-     * @return the NpcSkin representation of this Skin
-     */
-    public NpcSkin toNpcSkin()
-    {
-        return NpcSkin.of(this);
-    }
-
-    /**
      * Asynchronously fetches a skin by the player's UUID.
      *
      * @param uuid the UUID of the player
@@ -253,7 +246,8 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
      */
     public static CompletableFuture<Optional<Skin>> fetchSkinAsync(@NotNull UUID uuid)
     {
-        return CompletableFuture.supplyAsync(() -> fetchSkin(uuid));
+        return CompletableFuture.supplyAsync(() -> fetchSkin(uuid),
+                runnable -> Bukkit.getScheduler().runTaskAsynchronously(NpcApi.plugin, runnable));
     }
 
     /**
@@ -264,7 +258,8 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
      */
     public static CompletableFuture<Optional<Skin>> fetchSkinAsync(@NotNull String name)
     {
-        return CompletableFuture.supplyAsync(() -> fetchSkin(name));
+        return CompletableFuture.supplyAsync(() -> fetchSkin(name),
+                runnable -> Bukkit.getScheduler().runTaskAsynchronously(NpcApi.plugin, runnable));
     }
 
     /**
@@ -275,7 +270,8 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
      */
     public static CompletableFuture<Optional<Skin>> fetchSkinAsync(@NotNull File skinFile)
     {
-        return CompletableFuture.supplyAsync(() -> fetchSkin(skinFile));
+        return CompletableFuture.supplyAsync(() -> fetchSkin(skinFile),
+                runnable -> Bukkit.getScheduler().runTaskAsynchronously(NpcApi.plugin, runnable));
     }
 
     /**
@@ -298,5 +294,15 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
     public static boolean isPreLoaded(@NotNull UUID uuid)
     {
         return skinCacheUUID.containsKey(uuid);
+    }
+
+    /**
+     * Converts this Skin to a NpcSkin.
+     *
+     * @return the NpcSkin representation of this Skin
+     */
+    public NpcSkin toNpcSkin()
+    {
+        return NpcSkin.of(this);
     }
 }

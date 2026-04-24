@@ -7,6 +7,7 @@ import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.pathfinding.AStarPathfinder;
 import de.eisi05.npc.api.pathfinding.Path;
 import de.eisi05.npc.api.pathfinding.PathfindingUtils;
+import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.SerializableConsumer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -45,7 +46,7 @@ public class WalkToLocationGoal extends Goal
     private final boolean withRotation;
 
     private transient Location targetLocation;
-    private transient CompletableFuture<Void> pathfindingFuture;
+    private transient CompletableFuture<Path> pathfindingFuture;
     private transient Path currentPath;
     private transient boolean isWalking;
     private transient int pathRecalculationCooldown = 0;
@@ -180,8 +181,9 @@ public class WalkToLocationGoal extends Goal
 
         isWalking = true;
 
-        PathfindingUtils.findPathAsync(List.of(start, end), maxIterations, allowDiagonal, null)
-                .thenAcceptAsync(path ->
+        pathfindingFuture = PathfindingUtils.findPathAsync(List.of(start, end), maxIterations, allowDiagonal, null);
+        Tasks.trackFuture(pathfindingFuture);
+        pathfindingFuture.thenAcceptAsync(path ->
                 {
                     isWalking = false;
                     if(path != null)
