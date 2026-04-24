@@ -149,16 +149,12 @@ public class Tasks
         try
         {
             UUID skinUuid = UUID.fromString(newPlaceholder);
-            CompletableFuture<Optional<Skin>> future = Skin.fetchSkinAsync(skinUuid);
-            trackFuture(future);
-            future.thenAccept(skinOpt -> skinOpt.ifPresent(skin ->
+            Skin.fetchSkinAsync(skinUuid).thenAccept(skinOpt -> skinOpt.ifPresent(skin ->
                     Bukkit.getScheduler().runTaskLater(NpcApi.plugin, () -> npc.updateSkin(player), 1)));
         }
         catch(IllegalArgumentException e)
         {
-            CompletableFuture<Optional<Skin>> future = Skin.fetchSkinAsync(newPlaceholder);
-            trackFuture(future);
-            future.thenAccept(skinOpt -> skinOpt.ifPresent(skin ->
+            Skin.fetchSkinAsync(newPlaceholder).thenAccept(skinOpt -> skinOpt.ifPresent(skin ->
                     Bukkit.getScheduler().runTaskLater(NpcApi.plugin, () -> npc.updateSkin(player), 1)));
         }
     }
