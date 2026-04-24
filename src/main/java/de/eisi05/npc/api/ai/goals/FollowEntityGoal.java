@@ -118,6 +118,8 @@ public class FollowEntityGoal extends Goal
             currentWalkGoal = new WalkToLocationGoal.Builder(target.getLocation()).speed(speed).withRotation(false).build();
             currentWalkGoal.start(npc);
         }
+
+        updateCachedViewers(npc);
     }
 
     /**
@@ -218,6 +220,9 @@ public class FollowEntityGoal extends Goal
             currentWalkGoal.stop(npc);
             currentWalkGoal = null;
         }
+
+        if(cachedViewers == null || cachedViewers.size() != npc.getViewers().size())
+            updateCachedViewers(npc);
 
         for(Player viewer : cachedViewers)
             npc.lookAtEntity(target, viewer, true);
