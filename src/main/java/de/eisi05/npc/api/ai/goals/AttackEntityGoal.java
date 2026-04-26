@@ -45,8 +45,8 @@ public class AttackEntityGoal extends Goal
     private static final double KITING_DISTANCE = 3.0;
     private static final double OPTIMAL_RANGED_DISTANCE = 6.0;
 
-    private final SerializablePredicate<LivingEntity> targetFilter;
-    private final double customAttackRange;
+    private SerializablePredicate<LivingEntity> targetFilter;
+    private double customAttackRange;
 
     private transient LivingEntity target;
     private transient int attackCooldown;
@@ -82,6 +82,46 @@ public class AttackEntityGoal extends Goal
     }
 
     /**
+     * Gets the target filter for this goal.
+     *
+     * @return the target filter
+     */
+    public SerializablePredicate<LivingEntity> getTargetFilter()
+    {
+        return targetFilter;
+    }
+
+    /**
+     * Sets the target filter for this goal.
+     *
+     * @param targetFilter the new target filter
+     */
+    public void setTargetFilter(@NotNull SerializablePredicate<LivingEntity> targetFilter)
+    {
+        this.targetFilter = targetFilter;
+    }
+
+    /**
+     * Gets the custom attack range for this goal.
+     *
+     * @return the custom attack range
+     */
+    public double getCustomAttackRange()
+    {
+        return customAttackRange;
+    }
+
+    /**
+     * Sets the custom attack range for this goal.
+     *
+     * @param customAttackRange the new custom attack range
+     */
+    public void setCustomAttackRange(double customAttackRange)
+    {
+        this.customAttackRange = customAttackRange;
+    }
+
+    /**
      * Checks if this goal can be used by the NPC.
      *
      * @param npc the NPC to check
@@ -90,6 +130,9 @@ public class AttackEntityGoal extends Goal
     @Override
     public boolean canUse(@NotNull NPC npc)
     {
+        if(targetFilter == null)
+            return false;
+
         if(target != null && target.isValid() && canContinue(npc))
             return true;
 

@@ -20,8 +20,8 @@ public class LookAroundGoal extends Goal
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private static final int DEFAULT_MIN_DURATION = 20; // 1 second
-    private static final int DEFAULT_MAX_DURATION = 80; // 4 seconds
+    public static final int DEFAULT_MIN_DURATION = 20; // 1 second
+    public static final int DEFAULT_MAX_DURATION = 80; // 4 seconds
     private static final float YAW_CHANGE_MAX = 120f;
     private static final float PITCH_CHANGE_MAX = 40f;
     private static final double ENTITY_LOOK_RANGE = 8.0;
@@ -31,8 +31,8 @@ public class LookAroundGoal extends Goal
     private static final int MIN_STARE_DURATION = 60; // 2 seconds
     private static final int MAX_STARE_DURATION = 120; // 5 seconds
 
-    private final int minDuration;
-    private final int maxDuration;
+    private int minDuration;
+    private int maxDuration;
 
     private transient int ticksRemaining;
     private transient float targetYaw;
@@ -63,6 +63,46 @@ public class LookAroundGoal extends Goal
     }
 
     /**
+     * Gets the maximum duration for this goal.
+     *
+     * @return the maximum duration
+     */
+    public int getMaxDuration()
+    {
+        return maxDuration;
+    }
+
+    /**
+     * Sets the maximum duration for this goal.
+     *
+     * @param maxDuration the new maximum duration
+     */
+    public void setMaxDuration(int maxDuration)
+    {
+        this.maxDuration = maxDuration;
+    }
+
+    /**
+     * Gets the minimum duration for this goal.
+     *
+     * @return the minimum duration
+     */
+    public int getMinDuration()
+    {
+        return minDuration;
+    }
+
+    /**
+     * Sets the minimum duration for this goal.
+     *
+     * @param minDuration the new minimum duration
+     */
+    public void setMinDuration(int minDuration)
+    {
+        this.minDuration = minDuration;
+    }
+
+    /**
      * Checks if this goal can be used by the NPC.
      *
      * @param npc the NPC to check
@@ -71,7 +111,7 @@ public class LookAroundGoal extends Goal
     @Override
     public boolean canUse(@NotNull NPC npc)
     {
-        return true;
+        return minDuration >= 0 && maxDuration >= 0;
     }
 
     /**

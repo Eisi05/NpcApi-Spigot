@@ -9,6 +9,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.Serial;
 import java.util.List;
@@ -24,14 +25,14 @@ public class FollowEntityGoal extends Goal
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private static final double DEFAULT_FOLLOW_DISTANCE = 10.0;
-    private static final double DEFAULT_STOP_DISTANCE = 1.5;
-    private static final double DEFAULT_SPEED = 0.4;
+    public static final double DEFAULT_FOLLOW_DISTANCE = 10.0;
+    public static final double DEFAULT_STOP_DISTANCE = 1.5;
+    public static final double DEFAULT_SPEED = 0.4;
 
-    private final double followDistance;
-    private final double stopDistance;
-    private final double speed;
-    private final UUID targetEntityId;
+    private double followDistance;
+    private double stopDistance;
+    private double speed;
+    private UUID targetEntityId;
 
     private transient WalkToLocationGoal currentWalkGoal;
     private transient LivingEntity target;
@@ -67,6 +68,86 @@ public class FollowEntityGoal extends Goal
     }
 
     /**
+     * Gets the follow distance for this goal.
+     *
+     * @return the follow distance
+     */
+    public double getFollowDistance()
+    {
+        return followDistance;
+    }
+
+    /**
+     * Sets the follow distance for this goal.
+     *
+     * @param followDistance the new follow distance
+     */
+    public void setFollowDistance(double followDistance)
+    {
+        this.followDistance = followDistance;
+    }
+
+    /**
+     * Gets the stop distance for this goal.
+     *
+     * @return the stop distance
+     */
+    public double getStopDistance()
+    {
+        return stopDistance;
+    }
+
+    /**
+     * Sets the stop distance for this goal.
+     *
+     * @param stopDistance the new stop distance
+     */
+    public void setStopDistance(double stopDistance)
+    {
+        this.stopDistance = stopDistance;
+    }
+
+    /**
+     * Gets the speed for this goal.
+     *
+     * @return the speed
+     */
+    public double getSpeed()
+    {
+        return speed;
+    }
+
+    /**
+     * Sets the speed for this goal.
+     *
+     * @param speed the new speed
+     */
+    public void setSpeed(double speed)
+    {
+        this.speed = speed;
+    }
+
+    /**
+     * Gets the target entity ID for this goal.
+     *
+     * @return the target entity ID
+     */
+    public @Nullable UUID getTargetEntityId()
+    {
+        return targetEntityId;
+    }
+
+    /**
+     * Sets the target entity ID for this goal.
+     *
+     * @param targetEntityId the new target entity ID
+     */
+    public void setTargetEntityId(@NotNull UUID targetEntityId)
+    {
+        this.targetEntityId = targetEntityId;
+    }
+
+    /**
      * Checks if this goal can be used by the NPC.
      *
      * @param npc the NPC to check
@@ -75,6 +156,9 @@ public class FollowEntityGoal extends Goal
     @Override
     public boolean canUse(@NotNull NPC npc)
     {
+        if(targetEntityId == null)
+            return false;
+
         LivingEntity potentialTarget = target;
         if(potentialTarget == null || !potentialTarget.isValid())
         {

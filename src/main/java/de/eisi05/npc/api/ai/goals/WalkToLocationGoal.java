@@ -15,6 +15,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -34,17 +35,17 @@ public class WalkToLocationGoal extends Goal
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private static final int DEFAULT_MAX_ITERATIONS = 5000;
-    private static final double DEFAULT_SPEED = 0.25;
+    public static final int DEFAULT_MAX_ITERATIONS = 5000;
+    public static final double DEFAULT_SPEED = 0.25;
     private static final int PATH_CHECK_AHEAD = 5;
     private static final long PATHABILITY_CHECK_INTERVAL_MS = 5000;
 
-    private final Path.SerializablePath.SerializableLocation serializableLocation;
-    private final double speed;
-    private final int maxIterations;
-    private final boolean allowDiagonal;
-    private final SerializableConsumer<WalkingResult> completionCallback;
-    private final boolean withRotation;
+    private Path.SerializablePath.SerializableLocation serializableLocation;
+    private double speed;
+    private int maxIterations;
+    private boolean allowDiagonal;
+    private SerializableConsumer<WalkingResult> completionCallback;
+    private boolean withRotation;
 
     private transient Location targetLocation;
     private transient CompletableFuture<Path> pathfindingFuture;
@@ -69,6 +70,106 @@ public class WalkToLocationGoal extends Goal
         this.allowDiagonal = builder.allowDiagonal;
         this.completionCallback = builder.completionCallback;
         this.withRotation = builder.withRotation;
+    }
+
+    /**
+     * Gets the speed for this goal.
+     *
+     * @return the speed
+     */
+    public double getSpeed()
+    {
+        return speed;
+    }
+
+    /**
+     * Sets the speed for this goal.
+     *
+     * @param speed the new speed
+     */
+    public void setSpeed(double speed)
+    {
+        this.speed = Math.max(0.1, Math.min(1.0, speed));
+    }
+
+    /**
+     * Gets the maximum number of iterations for pathfinding.
+     *
+     * @return the maximum number of iterations
+     */
+    public int getMaxIterations()
+    {
+        return maxIterations;
+    }
+
+    /**
+     * Sets the maximum number of iterations for pathfinding.
+     *
+     * @param maxIterations the new maximum number of iterations
+     */
+    public void setMaxIterations(int maxIterations)
+    {
+        this.maxIterations = maxIterations;
+    }
+
+    /**
+     * Gets whether diagonal movement is allowed.
+     *
+     * @return true if diagonal movement is allowed
+     */
+    public boolean isAllowDiagonal()
+    {
+        return allowDiagonal;
+    }
+
+    /**
+     * Sets whether diagonal movement is allowed.
+     *
+     * @param allowDiagonal the new diagonal movement setting
+     */
+    public void setAllowDiagonal(boolean allowDiagonal)
+    {
+        this.allowDiagonal = allowDiagonal;
+    }
+
+    /**
+     * Gets the completion callback for the walk to location goal.
+     *
+     * @return the completion callback
+     */
+    public @Nullable SerializableConsumer<WalkingResult> getCompletionCallback()
+    {
+        return completionCallback;
+    }
+
+    /**
+     * Sets the completion callback for the walk to location goal.
+     *
+     * @param completionCallback the new completion callback
+     */
+    public void setCompletionCallback(@Nullable SerializableConsumer<WalkingResult> completionCallback)
+    {
+        this.completionCallback = completionCallback;
+    }
+
+    /**
+     * Gets whether the NPC should rotate to face the target location.
+     *
+     * @return true if the NPC should rotate
+     */
+    public boolean isWithRotation()
+    {
+        return withRotation;
+    }
+
+    /**
+     * Sets whether the NPC should rotate to face the target location.
+     *
+     * @param withRotation the new rotation setting
+     */
+    public void setWithRotation(boolean withRotation)
+    {
+        this.withRotation = withRotation;
     }
 
     /**
@@ -173,6 +274,17 @@ public class WalkToLocationGoal extends Goal
     public @NotNull Location getTargetLocation()
     {
         return targetLocation.clone();
+    }
+
+    /**
+     * Sets the target location for this goal.
+     *
+     * @param targetLocation the new target location
+     */
+    public void setTargetLocation(@NotNull Location targetLocation)
+    {
+        this.targetLocation = targetLocation;
+        this.serializableLocation = new Path.SerializablePath.SerializableLocation(targetLocation);
     }
 
     /**

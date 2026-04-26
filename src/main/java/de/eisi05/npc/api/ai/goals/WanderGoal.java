@@ -19,15 +19,15 @@ public class WanderGoal extends Goal
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private static final int DEFAULT_RADIUS = 10;
-    private static final int DEFAULT_MIN_DELAY = 40; // 2 seconds
-    private static final int DEFAULT_MAX_DELAY = 140; // 7 seconds
-    private static final double DEFAULT_SPEED = 0.3;
+    public static final int DEFAULT_RADIUS = 10;
+    public static final int DEFAULT_MIN_DELAY = 40; // 2 seconds
+    public static final int DEFAULT_MAX_DELAY = 140; // 7 seconds
+    public static final double DEFAULT_SPEED = 0.3;
 
-    private final int radius;
-    private final int minDelay;
-    private final int maxDelay;
-    private final double speed;
+    private int radius;
+    private int minDelay;
+    private int maxDelay;
+    private double speed;
 
     private transient WalkToLocationGoal currentWalkGoal;
     private transient int delayTicks;
@@ -69,6 +69,86 @@ public class WanderGoal extends Goal
     }
 
     /**
+     * Gets the radius for this goal.
+     *
+     * @return the radius
+     */
+    public int getRadius()
+    {
+        return radius;
+    }
+
+    /**
+     * Sets the radius for this goal.
+     *
+     * @param radius the new radius
+     */
+    public void setRadius(int radius)
+    {
+        this.radius = radius;
+    }
+
+    /**
+     * Gets the maximum delay between wander actions.
+     *
+     * @return the maximum delay
+     */
+    public int getMaxDelay()
+    {
+        return maxDelay;
+    }
+
+    /**
+     * Sets the maximum delay between wander actions.
+     *
+     * @param maxDelay the new maximum delay
+     */
+    public void setMaxDelay(int maxDelay)
+    {
+        this.maxDelay = maxDelay;
+    }
+
+    /**
+     * Gets the minimum delay between wander actions.
+     *
+     * @return the minimum delay
+     */
+    public int getMinDelay()
+    {
+        return minDelay;
+    }
+
+    /**
+     * Sets the minimum delay between wander actions.
+     *
+     * @param minDelay the new minimum delay
+     */
+    public void setMinDelay(int minDelay)
+    {
+        this.minDelay = minDelay;
+    }
+
+    /**
+     * Gets the speed for this goal.
+     *
+     * @return the speed
+     */
+    public double getSpeed()
+    {
+        return speed;
+    }
+
+    /**
+     * Sets the speed for this goal.
+     *
+     * @param speed the new speed
+     */
+    public void setSpeed(double speed)
+    {
+        this.speed = Math.max(0.1, Math.min(1.0, speed));
+    }
+
+    /**
      * Checks if this goal can be used by the NPC.
      *
      * @param npc the NPC to check
@@ -77,7 +157,7 @@ public class WanderGoal extends Goal
     @Override
     public boolean canUse(@NotNull NPC npc)
     {
-        return true;
+        return radius >= 0 && minDelay >= 0 && maxDelay >= 0 && speed >= 0;
     }
 
     /**

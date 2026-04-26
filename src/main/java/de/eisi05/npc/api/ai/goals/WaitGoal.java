@@ -14,7 +14,7 @@ public class WaitGoal extends Goal
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private final int durationTicks;
+    private int durationTicks;
     private transient int ticksRemaining;
 
     /**
@@ -25,6 +25,26 @@ public class WaitGoal extends Goal
     public WaitGoal(int durationTicks)
     {
         super(Priority.LOW);
+        this.durationTicks = Math.max(1, durationTicks);
+    }
+
+    /**
+     * Gets the duration in ticks.
+     *
+     * @return The duration in ticks
+     */
+    public int getDurationTicks()
+    {
+        return durationTicks;
+    }
+
+    /**
+     * Sets the duration for this goal.
+     *
+     * @param durationTicks the new duration in ticks
+     */
+    public void setDurationTicks(int durationTicks)
+    {
         this.durationTicks = Math.max(1, durationTicks);
     }
 
