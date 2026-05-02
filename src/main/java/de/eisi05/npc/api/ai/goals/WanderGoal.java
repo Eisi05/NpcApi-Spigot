@@ -22,7 +22,6 @@ public class WanderGoal extends Goal
     public static final int DEFAULT_RADIUS = 10;
     public static final int DEFAULT_MIN_DELAY = 40; // 2 seconds
     public static final int DEFAULT_MAX_DELAY = 140; // 7 seconds
-    public static final double DEFAULT_SPEED = 0.3;
 
     private int radius;
     private int minDelay;
@@ -38,7 +37,7 @@ public class WanderGoal extends Goal
      */
     public WanderGoal()
     {
-        this(DEFAULT_RADIUS, DEFAULT_MIN_DELAY, DEFAULT_MAX_DELAY, DEFAULT_SPEED);
+        this(DEFAULT_RADIUS, DEFAULT_MIN_DELAY, DEFAULT_MAX_DELAY, WalkToLocationGoal.DEFAULT_SPEED);
     }
 
     /**
@@ -48,7 +47,7 @@ public class WanderGoal extends Goal
      */
     public WanderGoal(int radius)
     {
-        this(radius, DEFAULT_MIN_DELAY, DEFAULT_MAX_DELAY, DEFAULT_SPEED);
+        this(radius, DEFAULT_MIN_DELAY, DEFAULT_MAX_DELAY, WalkToLocationGoal.DEFAULT_SPEED);
     }
 
     /**

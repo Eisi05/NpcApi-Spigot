@@ -27,7 +27,6 @@ public class FollowEntityGoal extends Goal
 
     public static final double DEFAULT_FOLLOW_DISTANCE = 10.0;
     public static final double DEFAULT_STOP_DISTANCE = 1.5;
-    public static final double DEFAULT_SPEED = 0.4;
 
     private double followDistance;
     private double stopDistance;
@@ -47,7 +46,7 @@ public class FollowEntityGoal extends Goal
      */
     public FollowEntityGoal(@NotNull UUID targetEntityId)
     {
-        this(targetEntityId, DEFAULT_FOLLOW_DISTANCE, DEFAULT_STOP_DISTANCE, DEFAULT_SPEED);
+        this(targetEntityId, DEFAULT_FOLLOW_DISTANCE, DEFAULT_STOP_DISTANCE, WalkToLocationGoal.DEFAULT_SPEED);
     }
 
     /**

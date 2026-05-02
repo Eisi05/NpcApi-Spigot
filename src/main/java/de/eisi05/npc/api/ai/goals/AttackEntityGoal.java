@@ -5,7 +5,7 @@ import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcOption;
 import de.eisi05.npc.api.utils.LocationUtils;
-import de.eisi05.npc.api.utils.SerializablePredicate;
+import de.eisi05.npc.api.utils.SerializableBiPredicate;
 import de.eisi05.npc.api.wrapper.enums.Pose;
 import de.eisi05.npc.api.wrapper.objects.WrappedEntityData;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
@@ -45,8 +45,9 @@ public class AttackEntityGoal extends Goal
     private static final double KITING_DISTANCE = 3.0;
     private static final double OPTIMAL_RANGED_DISTANCE = 6.0;
 
-    private SerializablePredicate<LivingEntity> targetFilter;
+    private SerializableBiPredicate<LivingEntity, NPC> targetFilter;
     private double customAttackRange;
+    private double speed;
 
     private transient LivingEntity target;
     private transient int attackCooldown;
@@ -63,7 +64,7 @@ public class AttackEntityGoal extends Goal
      *
      * @param targetFilter A predicate to filter valid targets
      */
-    public AttackEntityGoal(@NotNull SerializablePredicate<LivingEntity> targetFilter)
+    public AttackEntityGoal(@NotNull SerializableBiPredicate<LivingEntity, NPC> targetFilter)
     {
         this(targetFilter, -1);
     }
@@ -74,11 +75,23 @@ public class AttackEntityGoal extends Goal
      * @param targetFilter      A predicate to filter valid targets
      * @param customAttackRange Custom attack range (-1 for default based on weapon)
      */
-    public AttackEntityGoal(@NotNull SerializablePredicate<LivingEntity> targetFilter, double customAttackRange)
+    public AttackEntityGoal(@NotNull SerializableBiPredicate<LivingEntity, NPC> targetFilter, double customAttackRange)
+    {
+        this(targetFilter, customAttackRange, WalkToLocationGoal.DEFAULT_SPEED);
+    }
+
+    /**
+     * Creates an AttackEntityGoal with a filter for valid targets and custom speed.
+     *
+     * @param targetFilter A predicate to filter valid targets
+     * @param speed        Custom movement speed (-1 for default)
+     */
+    public AttackEntityGoal(@NotNull SerializableBiPredicate<LivingEntity, NPC> targetFilter, double customAttackRange, double speed)
     {
         super(Priority.ALWAYS);
         this.targetFilter = targetFilter;
         this.customAttackRange = customAttackRange;
+        this.speed = Math.max(0.1, Math.min(1.0, speed));
     }
 
     /**
@@ -86,7 +99,7 @@ public class AttackEntityGoal extends Goal
      *
      * @return the target filter
      */
-    public SerializablePredicate<LivingEntity> getTargetFilter()
+    public SerializableBiPredicate<LivingEntity, NPC> getTargetFilter()
     {
         return targetFilter;
     }
@@ -96,7 +109,7 @@ public class AttackEntityGoal extends Goal
      *
      * @param targetFilter the new target filter
      */
-    public void setTargetFilter(@NotNull SerializablePredicate<LivingEntity> targetFilter)
+    public void setTargetFilter(@NotNull SerializableBiPredicate<LivingEntity, NPC> targetFilter)
     {
         this.targetFilter = targetFilter;
     }
@@ -119,6 +132,26 @@ public class AttackEntityGoal extends Goal
     public void setCustomAttackRange(double customAttackRange)
     {
         this.customAttackRange = customAttackRange;
+    }
+
+    /**
+     * Gets the speed for this goal.
+     *
+     * @return the speed
+     */
+    public double getSpeed()
+    {
+        return speed;
+    }
+
+    /**
+     * Sets the speed for this goal.
+     *
+     * @param speed the new speed
+     */
+    public void setSpeed(double speed)
+    {
+        this.speed = speed;
     }
 
     /**
@@ -333,7 +366,7 @@ public class AttackEntityGoal extends Goal
             if(!(entity instanceof LivingEntity livingEntity))
                 continue;
 
-            if(!targetFilter.test(livingEntity))
+            if(!targetFilter.test(livingEntity, npc))
                 continue;
 
             if(!hasLineOfSight(npc, livingEntity))
@@ -657,7 +690,7 @@ public class AttackEntityGoal extends Goal
         OptionalInt safeY = LocationUtils.findSafeY(targetLoc);
         if(safeY.isPresent())
             targetLoc = new Location(targetLoc.getWorld(), targetLoc.getX(), safeY.getAsInt(), targetLoc.getZ());
-        movementGoal = new WalkToLocationGoal.Builder(targetLoc).speed(0.35).build();
+        movementGoal = new WalkToLocationGoal.Builder(targetLoc).speed(speed).build();
         movementGoal.start(npc);
     }
 
@@ -688,7 +721,7 @@ public class AttackEntityGoal extends Goal
         stopMovement(npc);
 
 
-        WalkToLocationGoal newGoal = new WalkToLocationGoal.Builder(retreatLoc).speed(0.3).maxIterations(5000).allowDiagonal(true)
+        WalkToLocationGoal newGoal = new WalkToLocationGoal.Builder(retreatLoc).speed(speed + 0.5).maxIterations(5000).allowDiagonal(true)
                 .completionCallback(walkingResult ->
                 {
                     isKiting = false;

@@ -301,6 +301,7 @@ public class NPC extends NpcHolder
     public void setLocation(@NotNull Location location)
     {
         this.location = location;
+        markChange();
 
         if(serverPlayer == null)
             return;
