@@ -8,7 +8,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -21,6 +23,7 @@ public class GoalSelector
     private BukkitTask task;
     private boolean running;
     private long tickInterval;
+    private final Set<Goal> removalQueue = new HashSet<>();
 
     /**
      * Creates a new GoalSelector for the specified NPC.
@@ -71,6 +74,24 @@ public class GoalSelector
             currentGoal = null;
         }
         return this;
+    }
+
+    /**
+     * Queues a goal for removal. If the goal is currently running, it will be removed after it finishes.
+     * If the goal is not running, it will be removed immediately from the NPC's goal list.
+     *
+     * @param goal The goal to queue for removal
+     * @return true if the goal was queued for removal or removed immediately, false otherwise
+     */
+    public boolean queueGoalForRemoval(@NotNull Goal goal)
+    {
+        if(currentGoal == goal)
+        {
+            removalQueue.add(goal);
+            return true;
+        }
+        else
+            return npc.removeGoal(goal);
     }
 
     /**
@@ -180,10 +201,29 @@ public class GoalSelector
     }
 
     /**
+     * Processes the removal queue, removing goals that have finished running.
+     */
+    private void processRemovalQueue()
+    {
+        if(removalQueue.isEmpty())
+            return;
+
+        removalQueue.removeIf(goal -> goal != currentGoal);
+
+        if(currentGoal != null && removalQueue.contains(currentGoal) && !currentGoal.canContinue(npc))
+        {
+            removalQueue.remove(currentGoal);
+            npc.removeGoal(currentGoal);
+        }
+    }
+
+    /**
      * The main tick method that evaluates and executes goals.
      */
     private void tick()
     {
+        processRemovalQueue();
+
         List<Goal> usableGoals = getGoals().stream()
                 .filter(goal -> goal.canUse(npc))
                 .toList();

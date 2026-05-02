@@ -295,19 +295,21 @@ public abstract class NpcHolder implements InventoryHolder
     }
 
     /**
-     * Removes a goal from this NPC's goal selector.
+     * Removes a goal from this NPC's goal selector. If the goal is currently running,
+     * it will be queued for removal and removed once it finishes naturally.
      *
      * @param goal The goal to remove
-     * @return true if the goal was removed, false otherwise
+     * @return true if the goal was removed or queued for removal, false otherwise
      */
     public boolean removeGoal(@NotNull Goal goal)
     {
+        GoalSelector selector = getGoalSelector();
+        if(selector != null && selector.getCurrentGoal().equals(goal))
+            return selector.queueGoalForRemoval(goal);
+
         ArrayList<Goal> goals = getOption(NpcOption.GOALS);
         boolean removed = goals.remove(goal);
         setOption(NpcOption.GOALS, goals);
-        GoalSelector selector = getGoalSelector();
-        if(selector != null)
-            selector.stopGoalIfRunning(goal);
         return removed;
     }
 
