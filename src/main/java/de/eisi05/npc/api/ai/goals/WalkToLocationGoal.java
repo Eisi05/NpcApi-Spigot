@@ -266,6 +266,23 @@ public class WalkToLocationGoal extends Goal
         return isWalking && currentPath != null && targetLocation != null && npc.getLocation().distance(targetLocation) > 1.0;
     }
 
+    @Override
+    protected boolean canBeRemovedNow(@NotNull NPC npc)
+    {
+        if(super.canBeRemovedNow(npc))
+            return true;
+
+        if(isWalking)
+        {
+            Location npcLoc = npc.getLocation();
+            Location below = npcLoc.clone().subtract(0, 0.1, 0);
+            
+            if(below.getBlock().getType().isAir())
+                return false;
+        }
+        return true;
+    }
+
     /**
      * Gets the target location.
      *

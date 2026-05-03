@@ -295,8 +295,7 @@ public abstract class NpcHolder implements InventoryHolder
     }
 
     /**
-     * Removes a goal from this NPC's goal selector. If the goal is currently running,
-     * it will be queued for removal and removed once it finishes naturally.
+     * Removes a goal from this NPC's goal selector. If the goal is currently running, it will be queued for removal and removed once it finishes naturally.
      *
      * @param goal The goal to remove
      * @return true if the goal was removed or queued for removal, false otherwise
@@ -315,12 +314,21 @@ public abstract class NpcHolder implements InventoryHolder
 
     /**
      * Gets the list of goals associated with this NPC.
+     * <p>
+     * This method returns all active goals for this NPC, excluding any goals that are currently queued for removal. Goals that are in the removal queue will
+     * not appear in the returned list even if they are still running.
      *
-     * @return A list of goals, or an empty list if no goals are set
+     * @return A list of active goals, or an empty list if no goals are set
      */
     public @NotNull List<Goal> getGoals()
     {
-        return getOption(NpcOption.GOALS);
+        return getOption(NpcOption.GOALS).stream().filter(goal ->
+        {
+            GoalSelector goalSelector = getGoalSelector();
+            if(goalSelector == null)
+                return true;
+            return !goalSelector.isGoalQueuedForRemoval(goal);
+        }).toList();
     }
 
     /**

@@ -353,6 +353,23 @@ public class AttackEntityGoal extends Goal
         return distance <= Math.max(attackRange, LINE_OF_SIGHT_RANGE);
     }
 
+    @Override
+    protected boolean canBeRemovedNow(@NotNull NPC npc)
+    {
+        if(super.canBeRemovedNow(npc))
+            return true;
+
+        if(movementGoal != null && movementGoal.canContinue(npc))
+        {
+            Location npcLoc = npc.getLocation();
+            Location below = npcLoc.clone().subtract(0, 0.1, 0);
+            
+            if(below.getBlock().getType().isAir())
+                return false;
+        }
+        return true;
+    }
+
     /**
      * Finds a valid target entity near the NPC.
      */

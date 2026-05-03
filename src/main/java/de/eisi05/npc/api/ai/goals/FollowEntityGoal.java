@@ -336,6 +336,23 @@ public class FollowEntityGoal extends Goal
         return distance <= followDistance * 2 && distance > stopDistance;
     }
 
+    @Override
+    protected boolean canBeRemovedNow(@NotNull NPC npc)
+    {
+        if(super.canBeRemovedNow(npc))
+            return true;
+
+        if(currentWalkGoal != null && currentWalkGoal.canContinue(npc))
+        {
+            Location npcLoc = npc.getLocation();
+            Location below = npcLoc.clone().subtract(0, 0.1, 0);
+            
+            if(below.getBlock().getType().isAir())
+                return false;
+        }
+        return true;
+    }
+
     /**
      * Updates the cached viewers list.
      */
