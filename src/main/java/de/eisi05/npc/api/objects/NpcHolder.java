@@ -176,7 +176,7 @@ public abstract class NpcHolder implements InventoryHolder
         if(globalOptions != null && globalOptions.containsKey(option))
             return (T) globalOptions.get(option);
 
-        return  option.getDefaultValue();
+        return option.getDefaultValue();
     }
 
     /**

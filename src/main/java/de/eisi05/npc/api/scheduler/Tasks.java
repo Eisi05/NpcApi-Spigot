@@ -104,10 +104,6 @@ public class Tasks
 
                 for(NPC npc : npcs)
                 {
-                    NpcSkin npcSkin = npc.getOption(NpcOption.SKIN);
-                    if(npcSkin == null || npcSkin.isStatic() || npcSkin.getPlaceholder() == null || npc.getOption(NpcOption.USE_PLAYER_SKIN))
-                        continue;
-
                     for(UUID viewerId : npc.getViewers())
                     {
                         if(viewerId == null)
@@ -115,6 +111,10 @@ public class Tasks
 
                         Player player = Bukkit.getPlayer(viewerId);
                         if(player == null)
+                            continue;
+
+                        NpcSkin npcSkin = npc.getOption(NpcOption.SKIN, player);
+                        if(npcSkin == null || npcSkin.isStatic() || npcSkin.getPlaceholder() == null || npc.getOption(NpcOption.USE_PLAYER_SKIN, player))
                             continue;
 
                         updateSkin(player, npc, npcSkin);
