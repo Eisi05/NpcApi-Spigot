@@ -9,6 +9,7 @@ import de.eisi05.npc.api.events.NpcPreShowEvent;
 import de.eisi05.npc.api.events.NpcStartWalkingEvent;
 import de.eisi05.npc.api.interfaces.NpcClickAction;
 import de.eisi05.npc.api.manager.NpcManager;
+import de.eisi05.npc.api.manager.NpcVisibilityManager;
 import de.eisi05.npc.api.scheduler.PathTask;
 import de.eisi05.npc.api.utils.ObjectSaver;
 import de.eisi05.npc.api.utils.Var;
@@ -418,6 +419,16 @@ public class NPC extends NpcHolder
     }
 
     /**
+     * Gets the visibility manager for this NPC.
+     *
+     * @return the {@link NpcVisibilityManager} for this NPC. Will not be null.
+     */
+    public @NotNull NpcVisibilityManager getVisibilityManager()
+    {
+        return getOption(NpcOption.VISIBILITY_MANAGER, GLOBAL_UUID);
+    }
+
+    /**
      * Updates the display name of the given player on the server.
      * <p>
      * Sends a packet to the player to modify their name tag, taking into account the server version and whether custom naming is enabled.
@@ -489,16 +500,17 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Makes the NPC visible to all currently online players. This respects the NPC's enabled state and player permissions.
+     * Makes the NPC visible to all currently online players and marks it to be shown to future players who join. This respects the NPC's enabled state and player permissions.
      */
     public void showNpcToAllPlayers()
     {
+        getVisibilityManager().setShowToAllPlayers(true);
         Bukkit.getOnlinePlayers().forEach(this::showNPCToPlayer);
     }
 
     /**
      * Makes the NPC visible to a specific player. If the NPC is disabled and the player is not an operator, the NPC will not be shown. This method handles
-     * sending all necessary packets to display the NPC correctly.
+     * sending all necessary packets to display the NPC correctly. If the NPC is not marked to show to all players, the player will be added to the specific players list.
      *
      * @param player the player to show the NPC to. Must not be null.
      */
@@ -506,6 +518,9 @@ public class NPC extends NpcHolder
     {
         if(!getOption(NpcOption.ENABLED, GLOBAL_UUID) && !player.isPermissionSet("npc.admin") && !player.isOp())
             return;
+
+        if (!getVisibilityManager().shouldShowToAllPlayers())
+            getVisibilityManager().addSpecificPlayer(player.getUniqueId());
 
         if(!player.getWorld().getUID().equals(serverPlayer.getWorld().getUID()))
         {
@@ -563,15 +578,20 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Hides the NPC from all currently online players.
+     * Hides the NPC from all currently online players and resets visibility settings.
+     * This will clear the "show to all players" flag and remove all specific players from the list.
      */
     public void hideNpcFromAllPlayers()
     {
+        getVisibilityManager().setShowToAllPlayers(false);
+        getVisibilityManager().clearSpecificPlayers();
+        
         Bukkit.getOnlinePlayers().forEach(this::hideNpcFromPlayer);
     }
 
     /**
      * Hides the NPC from a specific player. This method sends packets to remove the NPC and its associated entities from the player's view.
+     * If the NPC is not set to show to all players, the player will also be removed from the specific players list.
      *
      * @param player the player to hide the NPC from. Must not be null.
      */
@@ -579,6 +599,9 @@ public class NPC extends NpcHolder
     {
         if(!viewers.contains(player.getUniqueId()))
             return;
+
+        if (!getVisibilityManager().shouldShowToAllPlayers())
+            getVisibilityManager().removeSpecificPlayer(player.getUniqueId());
 
         WrappedServerPlayer wrappedServerPlayer = WrappedServerPlayer.fromPlayer(player);
         wrappedServerPlayer.sendPacket(new RemoveEntityPacket(serverPlayer.getId()));

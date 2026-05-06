@@ -3,9 +3,9 @@ package de.eisi05.npc.api.listeners;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.objects.NPC;
-import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.objects.NpcOption;
 import de.eisi05.npc.api.objects.NpcSkin;
+import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.PacketReader;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import org.bukkit.event.EventHandler;
@@ -33,6 +33,9 @@ public class ConnectionListener implements Listener
             {
                 for(NPC npc : new ArrayList<>(NpcManager.getList()))
                 {
+                    if(!npc.getVisibilityManager().shouldShowToPlayer(event.getPlayer().getUniqueId()))
+                        continue;
+
                     npc.showNPCToPlayer(event.getPlayer());
                     NpcSkin npcSkin = npc.getOption(NpcOption.SKIN, event.getPlayer());
                     if(npcSkin == null || npcSkin.isStatic() || npcSkin.getPlaceholder() == null || npc.getOption(NpcOption.USE_PLAYER_SKIN, event.getPlayer()))

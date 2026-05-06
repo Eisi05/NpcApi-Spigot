@@ -2,7 +2,6 @@ package de.eisi05.npc.api.listeners;
 
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.manager.NpcManager;
-import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
@@ -18,7 +17,11 @@ public class ChangeWorldListener implements Listener
             @Override
             public void run()
             {
-                NpcManager.getList().forEach(npc -> npc.showNPCToPlayer(event.getPlayer()));
+                NpcManager.getList().forEach(npc ->
+                {
+                    if(npc.getVisibilityManager().shouldShowToPlayer(event.getPlayer().getUniqueId()))
+                        npc.showNPCToPlayer(event.getPlayer());
+                });
             }
         }.runTaskLater(NpcApi.plugin, 10L);
     }
