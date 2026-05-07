@@ -12,6 +12,9 @@ public class ChangeWorldListener implements Listener
     @EventHandler
     public void onChange(PlayerChangedWorldEvent event)
     {
+        if(!NpcApi.config.autoManageVisibility())
+            return;
+
         new BukkitRunnable()
         {
             @Override

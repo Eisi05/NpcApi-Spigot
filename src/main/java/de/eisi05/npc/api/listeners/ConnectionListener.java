@@ -26,6 +26,9 @@ public class ConnectionListener implements Listener
 
         WrappedPlayerTeam.clear(event.getPlayer().getUniqueId());
 
+        if(!NpcApi.config.autoManageVisibility())
+            return;
+
         new BukkitRunnable()
         {
             @Override
@@ -57,7 +60,9 @@ public class ConnectionListener implements Listener
         for(NPC npc : NpcManager.getList())
         {
             npc.nameCache.remove(event.getPlayer().getUniqueId());
-            npc.hideNpcFromPlayer(event.getPlayer());
+
+            if(NpcApi.config.handleConnections())
+                npc.hideNpcFromPlayer(event.getPlayer());
         }
     }
 }
