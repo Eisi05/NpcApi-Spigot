@@ -61,7 +61,7 @@ public class ConnectionListener implements Listener
         {
             npc.nameCache.remove(event.getPlayer().getUniqueId());
 
-            if(NpcApi.config.handleConnections())
+            if(NpcApi.config.autoManageVisibility())
                 npc.hideNpcFromPlayer(event.getPlayer());
         }
     }
