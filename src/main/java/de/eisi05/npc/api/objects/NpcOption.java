@@ -566,9 +566,14 @@ public class NpcOption<T, S extends Serializable>
                 packets.add(SetPlayerTeamPacket.createPlayerPacket(team, npc.entity.getBukkitPlayer().getUniqueId().toString(),
                         SetPlayerTeamPacket.Action.ADD));
 
-                packets.add(new RotateHeadPacket(entity, (byte) ((npc.getLocation().getYaw() % 360) * 256 / 360)));
-                packets.add(new MoveEntityPacket.Rot(entity.getId(), (byte) npc.getLocation().getYaw(),
-                        (byte) npc.getLocation().getPitch(), npc.getServerPlayer().isOnGround()));
+                float yaw = npc.getLocation().getYaw();
+                float pitch = npc.getLocation().getPitch();
+                if(npc.getOption(NpcOption.POSE, player) == org.bukkit.entity.Pose.SLEEPING)
+                    yaw = 180.0F - yaw + 90.0F;
+
+                packets.add(new RotateHeadPacket(entity, (byte) ((yaw % 360) * 256 / 360)));
+                packets.add(new MoveEntityPacket.Rot(entity.getId(), (byte) ((yaw % 360) * 256 / 360), (byte) (pitch * 256 / 360),
+                        npc.getServerPlayer().isOnGround()));
 
                 WrappedEntityData data = entity.getEntityData();
 

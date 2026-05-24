@@ -699,6 +699,9 @@ public class NPC extends NpcHolder
         float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
         float pitch = (float) Math.toDegrees(-Math.atan2(dy, distanceXZ));
 
+        if(getOption(NpcOption.POSE, viewer) == org.bukkit.entity.Pose.SLEEPING)
+            yaw = 180.0F - yaw + 90.0F;
+
         byte yawByte = (byte) (yaw * 256 / 360);
         byte pitchByte = (byte) (pitch * 256 / 360);
 
@@ -889,12 +892,30 @@ public class NPC extends NpcHolder
         Set<UUID> excluded = excludedPlayers == null ? Collections.emptySet() :
                 Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
 
-        TeleportEntityPacket teleport1 = new TeleportEntityPacket(serverPlayer,
-                new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), location.getYaw(), location.getPitch()),
-                Set.of(), true);
+        float baseYaw = location.getYaw();
+        float pitch = location.getPitch();
+
+        float renderYaw = baseYaw;
+
+        if (getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SLEEPING)
+            renderYaw = 180.0F - baseYaw + 90.0F;
+
+        PacketWrapper teleport1 = new TeleportEntityPacket(serverPlayer, new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0),
+                0, pitch), Set.of(), true);
+
+        byte renderYawByte = (byte) (renderYaw * 256 / 360);
+        PacketWrapper rotPacket;
+        if (getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SLEEPING)
+            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), renderYawByte, (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()),
+                    new RotateHeadPacket(entity, renderYawByte));
+        else
+        {
+            byte yawByte = (byte) (baseYaw * 256 / 360);
+            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), yawByte, (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()), new RotateHeadPacket(entity, yawByte));
+        }
 
         TeleportEntityPacket teleport2 = entity.equals(serverPlayer) ? null : new TeleportEntityPacket(entity,
-                new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), location.getYaw(), location.getPitch()),
+                new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), baseYaw, pitch),
                 Set.of(), true);
 
         for(UUID uuid : viewers)
@@ -911,6 +932,9 @@ public class NPC extends NpcHolder
 
             if(teleport2 != null)
                 serverPlayer1.sendPacket(teleport2);
+
+            if(rotPacket != null)
+                serverPlayer1.sendPacket(rotPacket);
         }
     }
 
