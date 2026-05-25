@@ -150,6 +150,20 @@ public abstract class NpcHolder implements InventoryHolder
     }
 
     /**
+     * Sets an option value for this NPC holder for a specific player.
+     *
+     * @param <T>    the type of the option value
+     * @param option the option to set
+     * @param value  the value to set for the option, or {@code null} to remove the option
+     * @param player the player to associate with this option setting
+     */
+    <T> void setOption(@NotNull NpcOption<T, ?> option, @Nullable T value, @NotNull Player player)
+    {
+        player.getPersistentDataContainer().set(getKey(player), PersistentDataType.STRING, player.getUniqueId().toString());
+        setOption(option, value, player.getUniqueId());
+    }
+
+    /**
      * Gets the value of an option for a specific UUID.
      *
      * @param <T>    the type of the option value
