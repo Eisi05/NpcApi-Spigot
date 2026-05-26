@@ -274,9 +274,14 @@ public class NPC extends NpcHolder
     public void reload()
     {
         final List<UUID> viewers = new ArrayList<>(this.viewers);
+        NpcVisibilityManager visibilityManager = getVisibilityManager();
+        boolean shouldShowToAll = visibilityManager.shouldShowToAllPlayers();
+        Set<UUID> specificPlayers = visibilityManager.getSpecificPlayers();
         hideNpcFromAllPlayers();
         WrappedPlayerTeam.clear(getServerPlayer().getName());
         viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> showNPCToPlayer(Bukkit.getPlayer(uuid)));
+        visibilityManager.setShowToAllPlayers(shouldShowToAll);
+        specificPlayers.forEach(visibilityManager::addSpecificPlayer);
     }
 
     /**
@@ -441,7 +446,7 @@ public class NPC extends NpcHolder
                 .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
                         Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
                                 WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                                        .append(WrappedComponent.create("\n").append(name.getName(player))))));
+                                .append(WrappedComponent.create("\n").append(name.getName(player))))));
     }
 
     /**
@@ -500,17 +505,23 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Makes the NPC visible to all currently online players and marks it to be shown to future players who join. This respects the NPC's enabled state and player permissions.
+     * Makes the NPC visible to all currently online players and marks it to be shown to future players who join. This respects the NPC's enabled state and
+     * player permissions.
      */
     public void showNpcToAllPlayers()
     {
-        getVisibilityManager().setShowToAllPlayers(true);
+        if(!getVisibilityManager().shouldShowToAllPlayers())
+        {
+            getVisibilityManager().setShowToAllPlayers(true);
+            markChange();
+        }
         Bukkit.getOnlinePlayers().forEach(this::showNPCToPlayer);
     }
 
     /**
      * Makes the NPC visible to a specific player. If the NPC is disabled and the player is not an operator, the NPC will not be shown. This method handles
-     * sending all necessary packets to display the NPC correctly. If the NPC is not marked to show to all players, the player will be added to the specific players list.
+     * sending all necessary packets to display the NPC correctly. If the NPC is not marked to show to all players, the player will be added to the specific
+     * players list.
      *
      * @param player the player to show the NPC to. Must not be null.
      */
@@ -519,8 +530,11 @@ public class NPC extends NpcHolder
         if(!getOption(NpcOption.ENABLED, GLOBAL_UUID) && !player.isPermissionSet("npc.admin") && !player.isOp())
             return;
 
-        if (!getVisibilityManager().shouldShowToAllPlayers())
-            getVisibilityManager().addSpecificPlayer(player.getUniqueId());
+        if(!getVisibilityManager().shouldShowToAllPlayers())
+        {
+            if(getVisibilityManager().addSpecificPlayer(player.getUniqueId()))
+                markChange();
+        }
 
         if(!player.getWorld().getUID().equals(serverPlayer.getWorld().getUID()))
         {
@@ -578,20 +592,24 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Hides the NPC from all currently online players and resets visibility settings.
-     * This will clear the "show to all players" flag and remove all specific players from the list.
+     * Hides the NPC from all currently online players and resets visibility settings. This will clear the "show to all players" flag and remove all specific
+     * players from the list.
      */
     public void hideNpcFromAllPlayers()
     {
-        getVisibilityManager().setShowToAllPlayers(false);
-        getVisibilityManager().clearSpecificPlayers();
-        
+        if(getVisibilityManager().shouldShowToAllPlayers())
+        {
+            getVisibilityManager().setShowToAllPlayers(false);
+            getVisibilityManager().clearSpecificPlayers();
+            markChange();
+        }
+
         Bukkit.getOnlinePlayers().forEach(this::hideNpcFromPlayer);
     }
 
     /**
-     * Hides the NPC from a specific player. This method sends packets to remove the NPC and its associated entities from the player's view.
-     * If the NPC is not set to show to all players, the player will also be removed from the specific players list.
+     * Hides the NPC from a specific player. This method sends packets to remove the NPC and its associated entities from the player's view. If the NPC is not
+     * set to show to all players, the player will also be removed from the specific players list.
      *
      * @param player the player to hide the NPC from. Must not be null.
      */
@@ -600,8 +618,11 @@ public class NPC extends NpcHolder
         if(!viewers.contains(player.getUniqueId()))
             return;
 
-        if (!getVisibilityManager().shouldShowToAllPlayers())
-            getVisibilityManager().removeSpecificPlayer(player.getUniqueId());
+        if(!getVisibilityManager().shouldShowToAllPlayers())
+        {
+            if(getVisibilityManager().removeSpecificPlayer(player.getUniqueId()))
+                markChange();
+        }
 
         WrappedServerPlayer wrappedServerPlayer = WrappedServerPlayer.fromPlayer(player);
         wrappedServerPlayer.sendPacket(new RemoveEntityPacket(serverPlayer.getId()));
@@ -897,22 +918,24 @@ public class NPC extends NpcHolder
 
         float renderYaw = baseYaw;
 
-        if (getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SLEEPING)
+        if(getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SLEEPING)
             renderYaw = 180.0F - baseYaw + 90.0F;
-
-        PacketWrapper teleport1 = new TeleportEntityPacket(serverPlayer, new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0),
-                0, pitch), Set.of(), true);
 
         byte renderYawByte = (byte) (renderYaw * 256 / 360);
         PacketWrapper rotPacket;
-        if (getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SLEEPING)
-            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), renderYawByte, (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()),
+        if(getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SLEEPING)
+            rotPacket = new BundlePacket(
+                    new MoveEntityPacket.Rot(entity.getId(), renderYawByte, (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()),
                     new RotateHeadPacket(entity, renderYawByte));
         else
         {
             byte yawByte = (byte) (baseYaw * 256 / 360);
-            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), yawByte, (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()), new RotateHeadPacket(entity, yawByte));
+            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), yawByte, (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()),
+                    new RotateHeadPacket(entity, yawByte));
         }
+
+        PacketWrapper teleport1 = new TeleportEntityPacket(serverPlayer, new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0),
+                0, pitch), Set.of(), true);
 
         TeleportEntityPacket teleport2 = entity.equals(serverPlayer) ? null : new TeleportEntityPacket(entity,
                 new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), baseYaw, pitch),

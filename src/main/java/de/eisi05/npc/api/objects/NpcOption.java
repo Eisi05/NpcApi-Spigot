@@ -22,6 +22,7 @@ import org.bukkit.entity.Pose;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -313,16 +314,29 @@ public class NpcOption<T, S extends Serializable>
                 }
                 else
                 {
+                    float yaw = npc.getLocation().getYaw();
+                    float pitch = npc.getLocation().getPitch();
+                    if(pose == Pose.SLEEPING)
+                        yaw = 180.0F - yaw + 90.0F;
+
+                    PacketWrapper packet1 = new TeleportEntityPacket(npc.entity, new TeleportEntityPacket.PositionMoveRotation(npc.getLocation().toVector(),
+                            new Vector(0, 0, 0), yaw, pitch), Set.of(), true);
+                    PacketWrapper packet2 = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (yaw  * 256 / 360), (byte) (pitch * 256 / 360),
+                            npc.getServerPlayer().isOnGround());
+                    PacketWrapper packet3 = new RotateHeadPacket(npc.entity, (byte) (yaw * 256 / 360));
+
+                    PacketWrapper bundle = new BundlePacket(packet1, packet2, packet3);
+
                     Integer toDelete = npc.toDeleteEntities.get("sit");
 
                     if(toDelete == null)
-                        return packetWrapper == null ? SetEntityDataPacket.create(npc.entity.getId(), data) :
-                                new BundlePacket(SetEntityDataPacket.create(npc.entity.getId(), data), packetWrapper);
+                        return packetWrapper == null ? new BundlePacket(SetEntityDataPacket.create(npc.entity.getId(), data), bundle) :
+                                new BundlePacket(SetEntityDataPacket.create(npc.entity.getId(), data), packetWrapper, bundle);
 
                     npc.toDeleteEntities.remove("sit");
                     return packetWrapper == null ?
-                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.entity.getId(), data)) :
-                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.entity.getId(), data), packetWrapper);
+                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.entity.getId(), data), bundle) :
+                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.entity.getId(), data), packetWrapper, bundle);
                 }
             });
 
@@ -565,15 +579,6 @@ public class NpcOption<T, S extends Serializable>
                 packets.add(SetPlayerTeamPacket.createPlayerPacket(team, npc.getServerPlayer().getName(), SetPlayerTeamPacket.Action.ADD));
                 packets.add(SetPlayerTeamPacket.createPlayerPacket(team, npc.entity.getBukkitPlayer().getUniqueId().toString(),
                         SetPlayerTeamPacket.Action.ADD));
-
-                float yaw = npc.getLocation().getYaw();
-                float pitch = npc.getLocation().getPitch();
-                if(npc.getOption(NpcOption.POSE, player) == org.bukkit.entity.Pose.SLEEPING)
-                    yaw = 180.0F - yaw + 90.0F;
-
-                packets.add(new RotateHeadPacket(entity, (byte) ((yaw % 360) * 256 / 360)));
-                packets.add(new MoveEntityPacket.Rot(entity.getId(), (byte) ((yaw % 360) * 256 / 360), (byte) (pitch * 256 / 360),
-                        npc.getServerPlayer().isOnGround()));
 
                 WrappedEntityData data = entity.getEntityData();
 

@@ -4,8 +4,10 @@ import com.mojang.datafixers.util.Either;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.utils.ObjectSaver;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -258,6 +260,15 @@ public class NpcManager
         if(npc.getCreatedAt().isBefore(instant))
             npc.setEditable(true);
 
-        npc.showNpcToAllPlayers();
+        if(npc.getVisibilityManager().shouldShowToAllPlayers())
+            npc.showNpcToAllPlayers();
+        else
+            npc.getVisibilityManager().getSpecificPlayers().forEach(uuid ->
+            {
+                Player player = Bukkit.getPlayer(uuid);
+                if(player == null)
+                    return;
+                npc.showNPCToPlayer(player);
+            });
     }
 }
