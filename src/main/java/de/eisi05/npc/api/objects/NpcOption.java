@@ -493,59 +493,6 @@ public class NpcOption<T, S extends Serializable>
     });
 
     /**
-     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
-     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
-     */
-    static final NpcOption<Boolean, Boolean> ENABLED = new NpcOption<>("enabled", false,
-            aBoolean -> aBoolean, aBoolean -> aBoolean,
-            (enabled, npc, player) ->
-            {
-                if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
-                    return null;
-
-                if(enabled)
-                    return null;
-
-                WrappedArmorStand armorStand = WrappedArmorStand.create(npc.entity.getBukkitPlayer().getLocation().getWorld());
-                armorStand.moveTo(npc.entity.getBukkitPlayer()
-                        .getLocation()
-                        .clone()
-                        .add(0, (npc.getServerPlayer().getBoundingBox().getYSize() * npc.getOption(SCALE, player)), 0));
-
-                PacketWrapper addPacket = armorStand.getAddEntityPacket();
-
-                WrappedEntityData data = armorStand.getEntityData();
-
-                data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0x20);
-                data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2),
-                        Optional.of(WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player)).getHandle()));
-                data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), true);
-                data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(4), true);
-                data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(15), (byte) 0x10);
-
-                npc.toDeleteEntities.put("name", armorStand.getId());
-
-                return new BundlePacket(addPacket, SetEntityDataPacket.create(armorStand.getId(), data));
-            });
-
-    /**
-     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
-     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
-     */
-    static final NpcOption<Boolean, Boolean> EDITABLE = new NpcOption<>("editable", false,
-            aBoolean -> aBoolean, aBoolean -> aBoolean,
-            (enabled, npc, player) -> null);
-
-    /**
-     * NPC option to store custom data for the NPC. This is an internal option, typically not directly set by users but controlled by
-     * {@link NPC#addCustomData(Serializable, Serializable)}.
-     */
-    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data",
-            new HashMap<>(),
-            aHashMap -> aHashMap, aHashMap -> aHashMap,
-            (customData, npc, player) -> null);
-
-    /**
      * NPC option to change the entity type of the NPC. This allows transforming the NPC into any Minecraft entity type. The default is a PLAYER entity. When
      * changed, the NPC will be recreated as the new entity type.
      *
@@ -631,11 +578,55 @@ public class NpcOption<T, S extends Serializable>
             }).loadBefore(true);
 
     /**
+     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
+     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
+     */
+    static final NpcOption<Boolean, Boolean> EDITABLE = new NpcOption<>("editable", false,
+            aBoolean -> aBoolean, aBoolean -> aBoolean,
+            (enabled, npc, player) -> null);
+
+    /**
      * NPC option to manage visibility settings for the NPC. This controls whether the NPC should be shown to all players (including new ones) or only to specific players.
      */
     static final NpcOption<NpcVisibilityManager, NpcVisibilityManager> VISIBILITY_MANAGER = new NpcOption<>("visibility-manager", new NpcVisibilityManager(),
             visibilityManager -> visibilityManager, visibilityManager -> visibilityManager,
             (visibilityManager, npc, player) -> null);
+
+    /**
+     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
+     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
+     */
+    static final NpcOption<Boolean, Boolean> ENABLED = new NpcOption<>("enabled", false,
+            aBoolean -> aBoolean, aBoolean -> aBoolean,
+            (enabled, npc, player) ->
+            {
+                if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
+                    return null;
+
+                if(enabled)
+                    return null;
+
+                WrappedArmorStand armorStand = WrappedArmorStand.create(npc.entity.getBukkitPlayer().getLocation().getWorld());
+                armorStand.moveTo(npc.entity.getBukkitPlayer()
+                        .getLocation()
+                        .clone()
+                        .add(0, (npc.getServerPlayer().getBoundingBox().getYSize() * npc.getOption(SCALE, player)), 0));
+
+                PacketWrapper addPacket = armorStand.getAddEntityPacket();
+
+                WrappedEntityData data = armorStand.getEntityData();
+
+                data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0x20);
+                data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2),
+                        Optional.of(WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player)).getHandle()));
+                data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), true);
+                data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(4), true);
+                data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(15), (byte) 0x10);
+
+                npc.toDeleteEntities.put("name", armorStand.getId());
+
+                return new BundlePacket(addPacket, SetEntityDataPacket.create(armorStand.getId(), data));
+            });
 
     /**
      * NPC option to store custom data for the NPC. This is an internal option, typically not directly set by users but controlled by
