@@ -6,6 +6,7 @@ import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.datafixers.util.Pair;
 import de.eisi05.npc.api.NpcApi;
+import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.enums.NpcVisibility;
 import de.eisi05.npc.api.enums.SkinParts;
 import de.eisi05.npc.api.manager.NpcManager;
@@ -528,6 +529,23 @@ public class NpcOption<T, S extends Serializable>
             });
 
     /**
+     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
+     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
+     */
+    static final NpcOption<Boolean, Boolean> EDITABLE = new NpcOption<>("editable", false,
+            aBoolean -> aBoolean, aBoolean -> aBoolean,
+            (enabled, npc, player) -> null);
+
+    /**
+     * NPC option to store custom data for the NPC. This is an internal option, typically not directly set by users but controlled by
+     * {@link NPC#addCustomData(Serializable, Serializable)}.
+     */
+    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data",
+            new HashMap<>(),
+            aHashMap -> aHashMap, aHashMap -> aHashMap,
+            (customData, npc, player) -> null);
+
+    /**
      * NPC option to change the entity type of the NPC. This allows transforming the NPC into any Minecraft entity type. The default is a PLAYER entity. When
      * changed, the NPC will be recreated as the new entity type.
      *
@@ -613,12 +631,11 @@ public class NpcOption<T, S extends Serializable>
             }).loadBefore(true);
 
     /**
-     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
-     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
+     * NPC option to manage visibility settings for the NPC. This controls whether the NPC should be shown to all players (including new ones) or only to specific players.
      */
-    static final NpcOption<Boolean, Boolean> EDITABLE = new NpcOption<>("editable", false,
-            aBoolean -> aBoolean, aBoolean -> aBoolean,
-            (enabled, npc, player) -> null);
+    static final NpcOption<NpcVisibilityManager, NpcVisibilityManager> VISIBILITY_MANAGER = new NpcOption<>("visibility-manager", new NpcVisibilityManager(),
+            visibilityManager -> visibilityManager, visibilityManager -> visibilityManager,
+            (visibilityManager, npc, player) -> null);
 
     /**
      * NPC option to store custom data for the NPC. This is an internal option, typically not directly set by users but controlled by
@@ -630,11 +647,14 @@ public class NpcOption<T, S extends Serializable>
             (customData, npc, player) -> null);
 
     /**
-     * NPC option to manage visibility settings for the NPC. This controls whether the NPC should be shown to all players (including new ones) or only to specific players.
+     * NPC option to store the goal selector for the NPC. This allows saving and restoring the NPC's AI behavior. The serialized form stores the running state,
+     * tick interval, and goal configurations. Note: Goals themselves are not fully serialized - only their class names and any serializable configuration. On
+     * deserialization, goals must be re-instantiated by the plugin.
      */
-    static final NpcOption<NpcVisibilityManager, NpcVisibilityManager> VISIBILITY_MANAGER = new NpcOption<>("visibility-manager", new NpcVisibilityManager(),
-            visibilityManager -> visibilityManager, visibilityManager -> visibilityManager,
-            (visibilityManager, npc, player) -> null);
+    static final NpcOption<ArrayList<Goal>, ArrayList<Goal>> GOALS = new NpcOption<>("goals", new ArrayList<>(),
+            goals -> goals,
+            goals -> goals,
+            (data, npc, player) -> null);
 
     private final String path;
     private final T defaultValue;

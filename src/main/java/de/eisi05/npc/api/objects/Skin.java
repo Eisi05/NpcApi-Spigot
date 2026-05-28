@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import de.eisi05.npc.api.NpcApi;
+import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.utils.exceptions.VersionNotFound;
@@ -240,7 +241,10 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
      */
     public static CompletableFuture<Optional<Skin>> fetchSkinAsync(@NotNull UUID uuid)
     {
-        return CompletableFuture.supplyAsync(() -> fetchSkin(uuid));
+        CompletableFuture<Optional<Skin>> future = CompletableFuture.supplyAsync(() -> fetchSkin(uuid),
+                runnable -> Bukkit.getScheduler().runTaskAsynchronously(NpcApi.plugin, runnable));
+        Tasks.trackFuture(future);
+        return future;
     }
 
     /**
@@ -251,7 +255,10 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
      */
     public static CompletableFuture<Optional<Skin>> fetchSkinAsync(@NotNull String name)
     {
-        return CompletableFuture.supplyAsync(() -> fetchSkin(name));
+        CompletableFuture<Optional<Skin>> future = CompletableFuture.supplyAsync(() -> fetchSkin(name),
+                runnable -> Bukkit.getScheduler().runTaskAsynchronously(NpcApi.plugin, runnable));
+        Tasks.trackFuture(future);
+        return future;
     }
 
     /**
@@ -262,7 +269,10 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
      */
     public static CompletableFuture<Optional<Skin>> fetchSkinAsync(@NotNull File skinFile)
     {
-        return CompletableFuture.supplyAsync(() -> fetchSkin(skinFile));
+        CompletableFuture<Optional<Skin>> future = CompletableFuture.supplyAsync(() -> fetchSkin(skinFile),
+                runnable -> Bukkit.getScheduler().runTaskAsynchronously(NpcApi.plugin, runnable));
+        Tasks.trackFuture(future);
+        return future;
     }
 
     /**

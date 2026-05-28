@@ -248,6 +248,26 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         Reflections.invokeMethod(nmsLevel, getPath(), getHandle(), RemovalReason.DISCARDED.getHandle());
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getAdvancements-stopListening")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "U-a")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "S-a")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_5), path = "R-a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_4), path = "S-a")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21), path = "R-a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_20_6), path = "Q-a")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_2), path = "O-a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_20), path = "M-a")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_3), path = "N-a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_19_1), path = "M-a")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getAdvancementData-a")
+    public void stopAdvancementListening()
+    {
+        String path = getPath();
+        String[] paths = path.split("-");
+
+        Reflections.invokeMethod(getHandle(), paths[0]).thanInvoke(paths[1]);
+    }
+
     public @NotNull String getName()
     {
         return (String) Reflections.getField(getGameProfile(), "name").get();
