@@ -4,6 +4,7 @@ import de.eisi05.npc.api.listeners.*;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcConfig;
+import de.eisi05.npc.api.objects.NpcHolder;
 import de.eisi05.npc.api.pathfinding.Path;
 import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.Metrics;
@@ -19,6 +20,8 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
@@ -104,6 +107,20 @@ public final class NpcApi
      */
     public static void disable()
     {
+        List<NpcHolder> npcsToSave = new ArrayList<>(NpcManager.getList());
+        npcsToSave.stream().filter(NpcHolder::hasUnsavedChanges).parallel().forEach(npc ->
+        {
+            if(npc instanceof NPC npc1 && !npc1.isSaved())
+                return;
+
+            try
+            {
+                npc.save();
+            }
+            catch(IOException e)
+            {
+            }
+        });
         NpcManager.getList().forEach(NPC::hideNpcFromAllPlayers);
         NpcManager.clear();
         PacketReader.uninjectAll();
