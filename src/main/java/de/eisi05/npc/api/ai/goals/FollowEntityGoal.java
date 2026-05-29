@@ -67,6 +67,20 @@ public class FollowEntityGoal extends Goal
     }
 
     /**
+     * Creates a copy of this goal.
+     *
+     * @param goal the goal to copy
+     */
+    private FollowEntityGoal(@NotNull FollowEntityGoal goal)
+    {
+        super(goal.getPriority());
+        this.targetEntityId = goal.targetEntityId;
+        this.followDistance = goal.followDistance;
+        this.stopDistance = goal.stopDistance;
+        this.speed = goal.speed;
+    }
+
+    /**
      * Gets the follow distance for this goal.
      *
      * @return the follow distance
@@ -351,6 +365,12 @@ public class FollowEntityGoal extends Goal
                 return false;
         }
         return true;
+    }
+
+    @Override
+    public @NotNull Goal copy()
+    {
+        return new FollowEntityGoal(this);
     }
 
     /**

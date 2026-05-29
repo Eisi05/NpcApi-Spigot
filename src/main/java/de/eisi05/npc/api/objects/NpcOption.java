@@ -31,6 +31,7 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -46,8 +47,8 @@ public class NpcOption<T, S extends Serializable>
      * NPC option to determine if the NPC should use the skin of the viewing player. If true, the NPC's skin will be dynamically set to the skin of the player
      * looking at it.
      */
-    public static final NpcOption<Boolean, Boolean> USE_PLAYER_SKIN = new NpcOption<>("use-player-skin", false,
-            aBoolean -> aBoolean, aBoolean -> aBoolean,
+    public static final NpcOption<Boolean, Boolean> USE_PLAYER_SKIN = new NpcOption<>("use-player-skin", () -> false,
+            aBoolean -> aBoolean, aBoolean -> aBoolean, aBoolean -> aBoolean,
             (skin, npc, player) ->
             {
                 if(!skin || !npc.serverPlayer.equals(npc.entity))
@@ -97,8 +98,8 @@ public class NpcOption<T, S extends Serializable>
     /**
      * NPC option to set a specific skin using a value and signature. This is ignored if {@link #USE_PLAYER_SKIN} is true.
      */
-    public static final NpcOption<NpcSkin, SkinData> SKIN = new NpcOption<NpcSkin, SkinData>("skin", null,
-            skin -> skin, skin -> skin instanceof Skin skin1 ? NpcSkin.of(skin1) : (NpcSkin) skin,
+    public static final NpcOption<NpcSkin, SkinData> SKIN = new NpcOption<NpcSkin, SkinData>("skin", () -> null,
+            skin -> skin, skin -> skin, skin -> skin instanceof Skin skin1 ? NpcSkin.of(skin1) : (NpcSkin) skin,
             (skinData, npc, player) ->
             {
                 if(npc.getOption(USE_PLAYER_SKIN, player) || skinData == null || !npc.serverPlayer.equals(npc.entity))
@@ -143,8 +144,8 @@ public class NpcOption<T, S extends Serializable>
      * NPC option to control whether the NPC is shown in the player tab list. If false, the NPC will be removed from the tab list for the viewing player after a
      * short delay.
      */
-    public static final NpcOption<Boolean, Boolean> SHOW_TAB_LIST = new NpcOption<>("show-tab-list", true,
-            aBoolean -> aBoolean, aBoolean -> aBoolean,
+    public static final NpcOption<Boolean, Boolean> SHOW_TAB_LIST = new NpcOption<>("show-tab-list", () -> true,
+            aBoolean -> aBoolean, aBoolean -> aBoolean, aBoolean -> aBoolean,
             (show, npc, player) ->
             {
                 if(!show || !npc.name.isStatic())
@@ -168,8 +169,8 @@ public class NpcOption<T, S extends Serializable>
     /**
      * NPC option to set the simulated latency (ping) of the NPC in the tab list.
      */
-    public static final NpcOption<Integer, Integer> LATENCY = new NpcOption<>("latency", 0,
-            aInteger -> aInteger, aInteger -> aInteger,
+    public static final NpcOption<Integer, Integer> LATENCY = new NpcOption<>("latency", () -> 0,
+            aInteger -> aInteger, aInteger -> aInteger, aInteger -> aInteger,
             (latency, npc, player) ->
             {
                 npc.getServerPlayer().setLatency(latency);
@@ -179,8 +180,8 @@ public class NpcOption<T, S extends Serializable>
     /**
      * NPC option to control the visibility of the NPC's nametag.
      */
-    public static final NpcOption<Boolean, Boolean> HIDE_NAMETAG = new NpcOption<>("hide-nametag", false,
-            aBoolean -> aBoolean, aBoolean -> aBoolean,
+    public static final NpcOption<Boolean, Boolean> HIDE_NAMETAG = new NpcOption<>("hide-nametag", () -> false,
+            aBoolean -> aBoolean, aBoolean -> aBoolean, aBoolean -> aBoolean,
             (hide, npc, player) ->
             {
                 WrappedEntity<?> nameTag = npc.getServerPlayer().getNameTag();
@@ -203,7 +204,7 @@ public class NpcOption<T, S extends Serializable>
      * NPC option to set the equipment worn by the NPC (armor, items in hand). The map uses {@link EquipmentSlot} as keys and {@link ItemStack} as values.
      * Serialized form uses item base64 strings.
      */
-    public static final NpcOption<Map<EquipmentSlot, ItemStack>, HashMap<EquipmentSlot, String>> EQUIPMENT = new NpcOption<>("equipment", Map.of(),
+    public static final NpcOption<Map<EquipmentSlot, ItemStack>, HashMap<EquipmentSlot, String>> EQUIPMENT = new NpcOption<>("equipment", HashMap::new, HashMap::new,
             map -> map.entrySet().stream().collect(
                     Collectors.toMap(Map.Entry::getKey,
                             entry -> ItemSerializer.itemStackToBase64(entry.getValue()), (a, b) -> b, HashMap::new)),
@@ -226,8 +227,8 @@ public class NpcOption<T, S extends Serializable>
     /**
      * NPC option to control which parts of the NPC's skin are visible (e.g., hat, jacket). For a full list look at {@link SkinParts}.
      */
-    public static final NpcOption<SkinParts[], SkinParts[]> SKIN_PARTS = new NpcOption<>("skin-parts", SkinParts.values(),
-            skinParts -> skinParts, skinParts -> skinParts,
+    public static final NpcOption<SkinParts[], SkinParts[]> SKIN_PARTS = new NpcOption<>("skin-parts", SkinParts::values,
+            skinParts -> skinParts, skinParts -> skinParts, skinParts -> skinParts,
             (skinParts, npc, player) ->
             {
                 WrappedEntityData data = npc.getServerPlayer().getEntityData();
@@ -240,15 +241,15 @@ public class NpcOption<T, S extends Serializable>
      * NPC option to make the NPC look at the player if they are within a certain distance. The value is the maximum distance in blocks. A value of 0 or less
      * disables this. The actual looking logic is handled by {@link Tasks#lookAtTask()}.
      */
-    public static final NpcOption<Double, Double> LOOK_AT_PLAYER = new NpcOption<>("look-at-player", 0.0,
-            distance -> distance, distance -> distance,
+    public static final NpcOption<Double, Double> LOOK_AT_PLAYER = new NpcOption<>("look-at-player", () -> 0.0,
+            distance -> distance, distance -> distance, distance -> distance,
             (distance, npc, player) -> null);
 
     /**
      * NPC option to set the pose of the NPC (e.g., standing, sleeping, swimming). For a full list look at {@link Pose}.
      */
-    public static final NpcOption<Pose, Pose> POSE = new NpcOption<>("pose", Pose.STANDING,
-            pose -> pose, pose -> pose,
+    public static final NpcOption<Pose, Pose> POSE = new NpcOption<>("pose", () -> Pose.STANDING,
+            pose -> pose, pose -> pose, pose -> pose,
             (pose, npc, player) ->
             {
                 de.eisi05.npc.api.wrapper.enums.Pose nmsPose = de.eisi05.npc.api.wrapper.enums.Pose.fromBukkit(pose);
@@ -351,8 +352,8 @@ public class NpcOption<T, S extends Serializable>
      * </ul>
      * <p>
      */
-    public static final NpcOption<NpcVisibility, NpcVisibility> VISIBILITY = new NpcOption<>("visibility", NpcVisibility.FULLY_VISIBLE,
-            visibility -> visibility, visibility -> visibility, (visibility, npc, player) ->
+    public static final NpcOption<NpcVisibility, NpcVisibility> VISIBILITY = new NpcOption<>("visibility", () -> NpcVisibility.FULLY_VISIBLE,
+            visibility -> visibility, visibility -> visibility, visibility -> visibility, (visibility, npc, player) ->
     {
         String teamName = "trans-" + player.getEntityId();
         WrappedPlayerTeam playerTeam = WrappedPlayerTeam.getPlayersTeam(player);
@@ -403,8 +404,8 @@ public class NpcOption<T, S extends Serializable>
     /**
      * NPC option to set the scale (size) of the NPC. A value of 1.0 is normal size. Requires Minecraft 1.20.6 or newer.
      */
-    public static final NpcOption<Double, Double> SCALE = new NpcOption<>("scale", 1.0,
-            scale -> scale, scale -> scale,
+    public static final NpcOption<Double, Double> SCALE = new NpcOption<>("scale", () -> 1.0,
+            scale -> scale, scale -> scale, scale -> scale,
             (scale, npc, player) ->
             {
                 if(npc.entity.getBukkitPlayer().getType().name().equals("ITEM_DISPLAY") ||
@@ -426,8 +427,8 @@ public class NpcOption<T, S extends Serializable>
      * </ul>
      * </p>
      */
-    public static final NpcOption<ChatColor, ChatColor> GLOWING = new NpcOption<>("glowing", null,
-            color -> color, color -> color,
+    public static final NpcOption<ChatColor, ChatColor> GLOWING = new NpcOption<>("glowing", () -> null,
+            color -> color, color -> color, color -> color,
             (color, npc, player) ->
             {
                 WrappedEntityData entityData = npc.entity.getEntityData();
@@ -461,8 +462,8 @@ public class NpcOption<T, S extends Serializable>
      * Only works on versions older than 1.21.2. On 1.21.2 and newer, this option has no effect.
      * </p>
      */
-    public static final NpcOption<Integer, Integer> LIST_ORDER = new NpcOption<>("list-order", 0,
-            aInt -> aInt, aInt -> aInt,
+    public static final NpcOption<Integer, Integer> LIST_ORDER = new NpcOption<>("list-order", () -> 0,
+            aInt -> aInt, aInt -> aInt, aInt -> aInt,
             (order, npc, player) ->
             {
                 if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_2))
@@ -483,8 +484,8 @@ public class NpcOption<T, S extends Serializable>
      * </ul>
      * <p>
      */
-    public static final NpcOption<Boolean, Boolean> COLLISION = new NpcOption<>("collision", true,
-            aBoolean -> aBoolean, aBoolean -> aBoolean, (collision, npc, player) ->
+    public static final NpcOption<Boolean, Boolean> COLLISION = new NpcOption<>("collision", () -> true,
+            aBoolean -> aBoolean, aBoolean -> aBoolean, aBoolean -> aBoolean, (collision, npc, player) ->
     {
         var teamPair = getTeam(player, npc);
         WrappedPlayerTeam team = teamPair.getFirst();
@@ -505,7 +506,7 @@ public class NpcOption<T, S extends Serializable>
      * }</pre>
      */
     public static final NpcOption<WrappedEntitySnapshot, WrappedEntitySnapshot> ENTITY = new NpcOption<>("entity",
-            new WrappedEntitySnapshot(EntityType.PLAYER),
+            () -> new WrappedEntitySnapshot(EntityType.PLAYER), wrappedEntitySnapshot -> wrappedEntitySnapshot,
             wrappedEntitySnapshot -> wrappedEntitySnapshot, wrappedEntitySnapshot -> wrappedEntitySnapshot,
             (wrappedEntitySnapshot, npc, player) ->
             {
@@ -581,23 +582,8 @@ public class NpcOption<T, S extends Serializable>
      * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
      * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
      */
-    static final NpcOption<Boolean, Boolean> EDITABLE = new NpcOption<>("editable", false,
-            aBoolean -> aBoolean, aBoolean -> aBoolean,
-            (enabled, npc, player) -> null);
-
-    /**
-     * NPC option to manage visibility settings for the NPC. This controls whether the NPC should be shown to all players (including new ones) or only to specific players.
-     */
-    static final NpcOption<NpcVisibilityManager, NpcVisibilityManager> VISIBILITY_MANAGER = new NpcOption<>("visibility-manager", new NpcVisibilityManager(),
-            visibilityManager -> visibilityManager, visibilityManager -> visibilityManager,
-            (visibilityManager, npc, player) -> null);
-
-    /**
-     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
-     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
-     */
-    static final NpcOption<Boolean, Boolean> ENABLED = new NpcOption<>("enabled", false,
-            aBoolean -> aBoolean, aBoolean -> aBoolean,
+    static final NpcOption<Boolean, Boolean> ENABLED = new NpcOption<>("enabled", () -> false,
+            aBoolean -> aBoolean, aBoolean -> aBoolean, aBoolean -> aBoolean,
             (enabled, npc, player) ->
             {
                 if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
@@ -629,28 +615,50 @@ public class NpcOption<T, S extends Serializable>
             });
 
     /**
-     * NPC option to store custom data for the NPC. This is an internal option, typically not directly set by users but controlled by
-     * {@link NPC#addCustomData(Serializable, Serializable)}.
+     * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
+     * not directly set by users but controlled by {@link NPC#setEnabled(boolean)}.
      */
-    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data",
-            new HashMap<>(),
-            aHashMap -> aHashMap, aHashMap -> aHashMap,
-            (customData, npc, player) -> null);
+    static final NpcOption<Boolean, Boolean> EDITABLE = new NpcOption<>("editable", () -> false,
+            aBoolean -> aBoolean, aBoolean -> aBoolean, aBoolean -> aBoolean,
+            (enabled, npc, player) -> null);
 
     /**
      * NPC option to store the goal selector for the NPC. This allows saving and restoring the NPC's AI behavior. The serialized form stores the running state,
      * tick interval, and goal configurations. Note: Goals themselves are not fully serialized - only their class names and any serializable configuration. On
      * deserialization, goals must be re-instantiated by the plugin.
      */
-    static final NpcOption<ArrayList<Goal>, ArrayList<Goal>> GOALS = new NpcOption<>("goals", new ArrayList<>(),
-            goals -> goals,
+    static final NpcOption<ArrayList<Goal>, ArrayList<Goal>> GOALS = new NpcOption<>("goals", ArrayList::new,
+            goals -> new ArrayList<>(goals.stream().map(goal -> goal.copy()).toList()),goals -> goals,
             goals -> goals,
             (data, npc, player) -> null);
 
+    /**
+     * NPC option to store custom data for the NPC. This is an internal option, typically not directly set by users but controlled by
+     * {@link NPC#addCustomData(Serializable, Serializable)}.
+     */
+    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data",
+            HashMap::new, HashMap::new,
+            aHashMap -> aHashMap, aHashMap -> aHashMap,
+            (customData, npc, player) -> null);
+
+    /**
+     * NPC option to manage visibility settings for the NPC. This controls whether the NPC should be shown to all players (including new ones) or only to specific players.
+     */
+    static final NpcOption<NpcVisibilityManager, NpcVisibilityManager> VISIBILITY_MANAGER = new NpcOption<>("visibility-manager", NpcVisibilityManager::new,
+            npcVisibilityManager ->
+            {
+                NpcVisibilityManager newManager = new NpcVisibilityManager();
+                newManager.setShowToAllPlayers(npcVisibilityManager.shouldShowToAllPlayers());
+                npcVisibilityManager.getSpecificPlayers().forEach(newManager::addSpecificPlayer);
+                return newManager;
+            },visibilityManager -> visibilityManager, visibilityManager -> visibilityManager,
+            (visibilityManager, npc, player) -> null);
+
     private final String path;
-    private final T defaultValue;
+    private final Supplier<T> defaultValue;
     private final Function<T, S> serializer;
     private final Function<S, T> deserializer;
+    private final Function<T, T> copyFunction;
     private final TriFunction<T, NPC, Player, PacketWrapper> packet;
     private Versions since = Versions.V1_17;
     private boolean loadBefore = false;
@@ -660,15 +668,17 @@ public class NpcOption<T, S extends Serializable>
      *
      * @param path         The configuration path string. Must not be null.
      * @param defaultValue The default value for the option. Can be null.
+     * @param copyFunction The copy function. Must not be null.
      * @param serializer   The serialization function. Must not be null.
      * @param deserializer The deserialization function. Must not be null.
      * @param packet       The packet generation function. Must not be null.
      */
-    private NpcOption(@NotNull String path, @Nullable T defaultValue, @NotNull Function<T, S> serializer, @NotNull Function<S, T> deserializer,
-                      @NotNull TriFunction<T, NPC, Player, PacketWrapper> packet)
+    private NpcOption(@NotNull String path, @Nullable Supplier<T> defaultValue, @NotNull Function<T, T> copyFunction,
+                      @NotNull Function<T, S> serializer, @NotNull Function<S, T> deserializer, @NotNull TriFunction<T, NPC, Player, PacketWrapper> packet)
     {
         this.path = path;
         this.defaultValue = defaultValue;
+        this.copyFunction = copyFunction;
         this.serializer = serializer;
         this.deserializer = deserializer;
         this.packet = packet;
@@ -732,12 +742,23 @@ public class NpcOption<T, S extends Serializable>
         return this;
     }
 
+    /**
+     * Sets whether this option should be loaded before other options.
+     *
+     * @param loadBefore Whether this option should be loaded before other options.
+     * @return This {@link NpcOption} instance for method chaining.
+     */
     public @NotNull NpcOption<T, S> loadBefore(boolean loadBefore)
     {
         this.loadBefore = loadBefore;
         return this;
     }
 
+    /**
+     * Returns whether this option should be loaded before other options.
+     *
+     * @return {@code true} if this option should be loaded before other options, {@code false} otherwise.
+     */
     public boolean loadBefore()
     {
         return loadBefore;
@@ -771,7 +792,18 @@ public class NpcOption<T, S extends Serializable>
      */
     public @Nullable T getDefaultValue()
     {
-        return defaultValue;
+        return defaultValue.get();
+    }
+
+    /**
+     * Creates a copy of the current value
+     *
+     * @param value The current value which should be copied
+     * @return A copy of the current value
+     */
+    public @NotNull T copy(@NotNull T value)
+    {
+        return copyFunction.apply(value);
     }
 
     /**
