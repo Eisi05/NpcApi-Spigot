@@ -179,6 +179,9 @@ public class AttackEntityGoal extends Goal
         if(targetFilter == null)
             return false;
 
+        if(!super.canUse(npc))
+            return false;
+
         if(target != null && target.isValid() && canContinue(npc))
             return true;
 
@@ -348,6 +351,9 @@ public class AttackEntityGoal extends Goal
     public boolean canContinue(@NotNull NPC npc)
     {
         if(!isAttacking || target == null || !target.isValid())
+            return false;
+
+        if(!super.canContinue(npc))
             return false;
 
         Location npcLoc = npc.getLocation();

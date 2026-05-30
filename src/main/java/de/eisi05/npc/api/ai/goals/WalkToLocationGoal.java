@@ -200,6 +200,9 @@ public class WalkToLocationGoal extends Goal
         if(isWalking)
             return true;
 
+        if(!super.canUse(npc))
+            return false;
+
         if(targetLocation == null || !targetLocation.getWorld().equals(npc.getLocation().getWorld()))
             return false;
 
@@ -279,7 +282,8 @@ public class WalkToLocationGoal extends Goal
     @Override
     public boolean canContinue(@NotNull NPC npc)
     {
-        return isWalking && currentPath != null && targetLocation != null && npc.getLocation().distance(targetLocation) > 1.0;
+        return isWalking && currentPath != null && targetLocation != null && npc.getLocation().distance(targetLocation) > 1.0
+                && super.canContinue(npc);
     }
 
     @Override
