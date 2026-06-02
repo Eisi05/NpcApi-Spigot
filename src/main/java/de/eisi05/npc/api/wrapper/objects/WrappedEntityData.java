@@ -29,6 +29,7 @@ public class WrappedEntityData extends Wrapper
     public <T> void set(@NotNull EntityDataAccessor<T> accessor, @Nullable T value)
     {
         invokeWrappedMethod(accessor, value);
+        markDirty(accessor);
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "get")
@@ -44,6 +45,12 @@ public class WrappedEntityData extends Wrapper
     public @NotNull List<?> packDirty()
     {
         return invokeWrappedMethod();
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V26_1), path = "markDirty")
+    public <T> void markDirty(@NotNull EntityDataAccessor<T> accessor)
+    {
+        invokeWrappedMethod(accessor);
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getNonDefaultValues")

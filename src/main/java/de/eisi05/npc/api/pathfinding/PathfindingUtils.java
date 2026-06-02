@@ -77,12 +77,10 @@ public class PathfindingUtils
             if(segment == null)
                 throw new PathfindingException("Could not find path between waypoint " + i + " and " + (i + 1));
 
-            if(!fullPathPoints.isEmpty() && !segment.isEmpty() && isAbove(segment.get(0), fullPathPoints.get(fullPathPoints.size() - 1)))
+            if(!fullPathPoints.isEmpty() && !segment.isEmpty())
                 segment.remove(0);
-            else if(!segment.isEmpty())
-                segment.set(0, segment.get(0).subtract(0, 1, 0));
 
-            fullPathPoints.addAll(segment.stream().map(location -> location.clone().add(0, 1, 0)).toList());
+            fullPathPoints.addAll(segment.stream().map(Location::clone).toList());
 
             if(progressListener != null)
                 progressListener.accept(i + 1, waypoints.size() - 1);

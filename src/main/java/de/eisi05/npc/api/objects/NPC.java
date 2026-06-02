@@ -56,6 +56,7 @@ public class NPC extends NpcHolder
     private final List<UUID> viewers = new ArrayList<>();
     private final Path npcPath;
     private final Map<UUID, PathTask> pathTasks = new HashMap<>();
+    private final Set<PathTask> walkingTasks = new LinkedHashSet<>();
     public WrappedEntity<?> entity;
     WrappedServerPlayer serverPlayer;
 
@@ -287,15 +288,26 @@ public class NPC extends NpcHolder
      */
     public void reload()
     {
+        boolean hasUnsavedChanges = hasUnsavedChanges();
         final List<UUID> viewers = new ArrayList<>(this.viewers);
         NpcVisibilityManager visibilityManager = getVisibilityManager();
         boolean shouldShowToAll = visibilityManager.shouldShowToAllPlayers();
         Set<UUID> specificPlayers = visibilityManager.getSpecificPlayers();
         hideNpcFromAllPlayers();
         WrappedPlayerTeam.clear(getServerPlayer().getName());
-        viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> showNPCToPlayer(Bukkit.getPlayer(uuid)));
         visibilityManager.setShowToAllPlayers(shouldShowToAll);
         specificPlayers.forEach(visibilityManager::addSpecificPlayer);
+        viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> showNPCToPlayer(Bukkit.getPlayer(uuid)));
+        if(!hasUnsavedChanges)
+        {
+            try
+            {
+                super.save();
+            }
+            catch(IOException e)
+            {
+            }
+        }
     }
 
     /**
@@ -682,6 +694,21 @@ public class NPC extends NpcHolder
     }
 
     /**
+     * Returns the eye height of the NPC for a specific viewer.
+     *
+     * @param viewer The player to get the eye height for. If null, the default eye height is returned.
+     * @return The eye height of the NPC.
+     */
+    public double getEyeHeight(@Nullable Player viewer)
+    {
+        org.bukkit.entity.Pose pose = viewer == null ? getOption(NpcOption.POSE) : getOption(NpcOption.POSE, viewer);
+        double scale = viewer == null ? getOption(NpcOption.SCALE) : getOption(NpcOption.SCALE, viewer);
+        double eyeHeight = (entity.getBukkitPlayer() instanceof LivingEntity le ? le.getEyeHeight() :
+                entity.getBukkitPlayer().getHeight()) - (Pose.fromBukkit(pose) == Pose.SITTING ? 0.625 : 0);
+        return eyeHeight * scale;
+    }
+
+    /**
      * Rotates the NPC's head to the specified yaw and pitch angles. This sends rotation packets to all current viewers.
      *
      * @param yaw   The horizontal rotation angle in degrees (0-360)
@@ -718,7 +745,7 @@ public class NPC extends NpcHolder
         if(entity == null)
             return;
 
-        Location npcLoc = entity.getBukkitPlayer().getLocation();
+        Location npcLoc = location;
         Location playerLoc = viewer.getLocation();
 
         if(npcLoc.getWorld() != playerLoc.getWorld())
@@ -838,30 +865,52 @@ public class NPC extends NpcHolder
      * @return The {@link BukkitTask} representing the movement task.
      */
     public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed,
-                                      boolean changeRealLocation, @Nullable Consumer<WalkingResult> onEnd, boolean withRotation, @Nullable List<Player> viewers)
+                                      boolean changeRealLocation, @Nullable Consumer<WalkingResult> onEnd,
+                                      boolean withRotation, @Nullable List<Player> viewers)
     {
-        viewers = viewers == null || viewers.isEmpty() ? this.viewers.stream().map(Bukkit::getPlayer).filter(Objects::nonNull).toList() : viewers;
+        boolean explicitViewers = viewers != null && !viewers.isEmpty();
+
+        boolean autoManageWalkingViewers = !explicitViewers
+                && NpcApi.config.autoManageVisibility()
+                && NpcApi.config.autoManageWalkingViewers();
+
+        if(!explicitViewers)
+        {
+            if(autoManageWalkingViewers)
+            {
+                viewers = Bukkit.getOnlinePlayers().stream()
+                        .filter(player -> canShowWalkingTo(player, getLocation()))
+                        .collect(Collectors.toList());
+            }
+            else
+            {
+                viewers = this.viewers.stream()
+                        .map(Bukkit::getPlayer)
+                        .filter(Objects::nonNull)
+                        .toList();
+            }
+        }
 
         for(Player player : viewers)
         {
             if(isWalking(player))
                 cancelWalking(player);
         }
-
         final double speed = Math.max(Math.min(walkSpeed, 1), 0.1);
-
         NpcStartWalkingEvent event = new NpcStartWalkingEvent(this, path, speed, changeRealLocation);
         Bukkit.getPluginManager().callEvent(event);
         if(event.isCancelled())
             return null;
-
         PathTask pathTask = new PathTask.Builder(this, path)
                 .speed(event.getWalkSpeed())
                 .viewers(viewers.toArray(new Player[0]))
                 .updateRealLocation(event.isChangeRealLocation())
                 .callback(onEnd)
                 .withRotation(withRotation)
+                .autoManageWalkingViewers(autoManageWalkingViewers)
                 .build();
+
+        walkingTasks.add(pathTask);
 
         for(Player player : viewers)
             pathTasks.put(player.getUniqueId(), pathTask);
@@ -870,31 +919,205 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Checks whether the NPC is currently walking.
-     * <p>
-     * The NPC is considered walking if a path task exists and has not yet finished.
+     * Checks whether this NPC has any active walking task.
      *
-     * @param viewer Player who is viewing the NPC
-     * @return true if the NPC is still walking, false otherwise
+     * @return true if this NPC is walking; false otherwise
      */
-    public boolean isWalking(@NotNull Player viewer)
+    public boolean isWalking()
     {
-        return pathTasks.containsKey(viewer.getUniqueId()) && !pathTasks.get(viewer.getUniqueId()).isFinished();
+        return walkingTasks.stream().anyMatch(task -> !task.isFinished());
     }
 
     /**
-     * Cancels the NPC's current walking task if one is active.
-     * <p>
-     * If the NPC is walking, the path task is canceled and cleared. If no walking task is active, this method has no effect.
+     * Checks whether this NPC is currently walking for the specified viewer.
      *
-     * @param viewer Player who is viewing the NPC
+     * @param viewer the viewer to check
+     * @return true if this NPC has an active walking task for the viewer; false otherwise
+     */
+    public boolean isWalking(@NotNull Player viewer)
+    {
+        PathTask task = pathTasks.get(viewer.getUniqueId());
+        return task != null && !task.isFinished();
+    }
+
+    /**
+     * Cancels this NPC's walking task for the specified viewer if one is active.
+     * <p>
+     * For automatically managed walking tasks, this only removes the viewer from the task and does
+     * not cancel the shared walking task for other viewers.
+     * <p>
+     * For manually created viewer-specific walking tasks, the task itself is cancelled.
+     *
+     * @param viewer the viewer whose walking task should be cancelled
      */
     public void cancelWalking(@NotNull Player viewer)
     {
-        if(!pathTasks.containsKey(viewer.getUniqueId()))
+        PathTask task = pathTasks.remove(viewer.getUniqueId());
+        if(task == null)
             return;
 
-        pathTasks.remove(viewer.getUniqueId()).cancel();
+        task.removeViewer(viewer);
+
+        if(task.isAutoManageWalkingViewers())
+            return;
+
+        task.cancel();
+    }
+
+    /**
+     * Cancels all active walking tasks for this NPC.
+     * <p>
+     * If the NPC is currently walking, each unique path task is cancelled and cleared.
+     * If no walking task is active, this method has no effect.
+     */
+    public void cancelWalking()
+    {
+        for(PathTask task : new HashSet<>(walkingTasks))
+            task.cancel();
+
+        walkingTasks.clear();
+        pathTasks.clear();
+    }
+
+    /**
+     * Checks whether a player is allowed to receive packets for this NPC's current walking position.
+     * <p>
+     * A player is eligible only if:
+     * <ul>
+     *     <li>the player is online,</li>
+     *     <li>the player is in the same world as the walking NPC,</li>
+     *     <li>the player passes this NPC's visibility rules,</li>
+     *     <li>the player is within {@link NpcConfig#walkingViewerDistance()} blocks, unless disabled.</li>
+     * </ul>
+     *
+     * @param player the player to check
+     * @param currentLocation the NPC's current walking location
+     * @return true if the player should receive walking packets; false otherwise
+     */
+    public boolean canShowWalkingTo(@NotNull Player player, @NotNull Location currentLocation)
+    {
+        if(!player.isOnline())
+            return false;
+
+        if(currentLocation.getWorld() == null)
+            return false;
+
+        if(!player.getWorld().equals(currentLocation.getWorld()))
+            return false;
+
+        if(!getVisibilityManager().shouldShowToPlayer(player.getUniqueId()))
+            return false;
+
+        double distance = NpcApi.config.walkingViewerDistance();
+        if(distance >= 0 && player.getLocation().distanceSquared(currentLocation) > distance * distance)
+            return false;
+
+        return true;
+    }
+
+    /**
+     * Adds a player to this NPC's active automatically managed walking task, if possible.
+     * <p>
+     * This method does not start or cancel any walking task. It only attaches the player to an
+     * already running task that allows automatic viewer management.
+     *
+     * @param player the player to add as a walking viewer
+     */
+    public void addWalkingViewer(@NotNull Player player)
+    {
+        if(!NpcApi.config.autoManageVisibility() || !NpcApi.config.autoManageWalkingViewers())
+            return;
+
+        for(PathTask task : new ArrayList<>(walkingTasks))
+        {
+            if(task.isFinished())
+            {
+                clearWalkingTask(task);
+                continue;
+            }
+
+            if(!task.isAutoManageWalkingViewers())
+                continue;
+
+            if(!canShowWalkingTo(player, task.getCurrentLocation()))
+                continue;
+
+            PathTask currentTask = pathTasks.get(player.getUniqueId());
+
+            if(currentTask == task && task.hasViewer(player))
+                return;
+
+            if(currentTask != null && currentTask != task)
+                removeWalkingViewer(player);
+
+            boolean newlyAdded = !task.hasViewer(player);
+
+            pathTasks.put(player.getUniqueId(), task);
+
+            if(newlyAdded)
+                showNPCToPlayer(player);
+
+            task.addViewer(player);
+            return;
+        }
+    }
+
+    /**
+     * Removes a player from all active walking tasks for this NPC.
+     * <p>
+     * This does not cancel the walking task itself. It only stops sending movement packets
+     * to the specified player.
+     *
+     * @param player the player to remove
+     */
+    public void removeWalkingViewer(@NotNull Player player)
+    {
+        PathTask task = pathTasks.remove(player.getUniqueId());
+        if(task != null)
+            task.removeViewer(player);
+    }
+
+    /**
+     * Removes all references to a finished or cancelled walking task.
+     *
+     * @param task the task to clear
+     */
+    public void clearWalkingTask(@NotNull PathTask task)
+    {
+        walkingTasks.remove(task);
+        pathTasks.entrySet().removeIf(entry -> entry.getValue() == task);
+    }
+
+    /**
+     * Re-checks all online players for active automatically managed walking tasks.
+     * <p>
+     * Eligible players are added to the walking task. Players who are no longer eligible,
+     * for example because they changed worlds or moved too far away, are removed.
+     */
+    public void refreshWalkingViewers()
+    {
+        if(!NpcApi.config.autoManageVisibility() || !NpcApi.config.autoManageWalkingViewers())
+            return;
+
+        for(PathTask task : new ArrayList<>(walkingTasks))
+        {
+            if(task.isFinished())
+            {
+                clearWalkingTask(task);
+                continue;
+            }
+
+            if(!task.isAutoManageWalkingViewers())
+                continue;
+
+            for(Player player : Bukkit.getOnlinePlayers())
+            {
+                if(canShowWalkingTo(player, task.getCurrentLocation()))
+                    addWalkingViewer(player);
+                else if(pathTasks.get(player.getUniqueId()) == task)
+                    removeWalkingViewer(player);
+            }
+        }
     }
 
     /**
@@ -1023,7 +1246,7 @@ public class NPC extends NpcHolder
      *
      * @param excludedPlayers Players who should NOT see the respawn/refresh.
      */
-    public void changeRealLocation(Location location, @Nullable Player... excludedPlayers)
+    public void changeRealLocation(@NotNull Location location, @Nullable Player... excludedPlayers)
     {
         if(serverPlayer == null)
             return;
@@ -1033,33 +1256,35 @@ public class NPC extends NpcHolder
         Set<UUID> excluded = excludedPlayers == null ? Collections.emptySet() :
                 Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
 
-        float baseYaw = location.getYaw();
+        float baseYaw = location.getYaw() + 360F;
         float pitch = location.getPitch();
 
         float renderYaw = baseYaw;
 
         if(getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SLEEPING)
+        {
             renderYaw = 180.0F - baseYaw + 90.0F;
+            pitch = 0F;
+        }
+
+        PacketWrapper teleport1 = new TeleportEntityPacket(serverPlayer, new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0),
+                renderYaw, pitch), Set.of(), true);
 
         byte renderYawByte = (byte) (renderYaw * 256 / 360);
         PacketWrapper rotPacket;
         if(getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SLEEPING)
             rotPacket = new BundlePacket(
-                    new MoveEntityPacket.Rot(entity.getId(), renderYawByte, (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()),
+                    new MoveEntityPacket.Rot(entity.getId(), (byte) (renderYawByte - 35), (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()),
                     new RotateHeadPacket(entity, renderYawByte));
         else
         {
             byte yawByte = (byte) (baseYaw * 256 / 360);
-            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), yawByte, (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()),
-                    new RotateHeadPacket(entity, yawByte));
+            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), (byte) (yawByte + 35), (byte) (pitch * 256 / 360),
+                    entity.getBukkitPlayer().isOnGround()), new RotateHeadPacket(entity, yawByte));
         }
 
-        PacketWrapper teleport1 = new TeleportEntityPacket(serverPlayer, new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0),
-                0, pitch), Set.of(), true);
-
         TeleportEntityPacket teleport2 = entity.equals(serverPlayer) ? null : new TeleportEntityPacket(entity,
-                new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), baseYaw, pitch),
-                Set.of(), true);
+                new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), baseYaw, pitch), Set.of(), true);
 
         for(UUID uuid : viewers)
         {
@@ -1079,6 +1304,60 @@ public class NPC extends NpcHolder
             if(rotPacket != null)
                 serverPlayer1.sendPacket(rotPacket);
         }
+    }
+
+    /**
+     * Updates this NPC's location and rotation for a specific player by sending the appropriate teleport and rotation packets.
+     * <p>
+     * Sleeping NPCs require special handling because the client renders their orientation differently from standing entities. In that case, a modified yaw is
+     * used and the pitch is forced to {@code 0}.
+     *
+     * @param location the location to display the NPC at
+     * @param player   the player to send the location update to
+     */
+    public void updateLocationForPlayer(@NotNull Location location, @NotNull Player player)
+    {
+        if(serverPlayer == null)
+            return;
+
+        float baseYaw = location.getYaw() + 360F;
+        float pitch = location.getPitch();
+
+        float renderYaw = baseYaw;
+
+        if(getOption(NpcOption.POSE, player) == org.bukkit.entity.Pose.SLEEPING)
+        {
+            renderYaw = 180.0F - baseYaw + 90.0F;
+            pitch = 0F;
+        }
+
+        PacketWrapper teleport1 = new TeleportEntityPacket(serverPlayer, new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0),
+                renderYaw, pitch), Set.of(), true);
+
+        byte renderYawByte = (byte) (renderYaw * 256 / 360);
+        PacketWrapper rotPacket;
+        if(getOption(NpcOption.POSE, player) == org.bukkit.entity.Pose.SLEEPING)
+            rotPacket = new BundlePacket(
+                    new MoveEntityPacket.Rot(entity.getId(), (byte) (renderYawByte - 35), (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()),
+                    new RotateHeadPacket(entity, renderYawByte));
+        else
+        {
+            byte yawByte = (byte) (baseYaw * 256 / 360);
+            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), (byte) (yawByte + 35), (byte) (pitch * 256 / 360),
+                    entity.getBukkitPlayer().isOnGround()), new RotateHeadPacket(entity, yawByte));
+        }
+
+        TeleportEntityPacket teleport2 = entity.equals(serverPlayer) ? null : new TeleportEntityPacket(entity,
+                new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), baseYaw, pitch), Set.of(), true);
+
+        WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(player);
+        serverPlayer1.sendPacket(teleport1);
+
+        if(teleport2 != null)
+            serverPlayer1.sendPacket(teleport2);
+
+        if(rotPacket != null)
+            serverPlayer1.sendPacket(rotPacket);
     }
 
     /**

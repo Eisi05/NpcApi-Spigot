@@ -7,10 +7,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Utility class providing methods for reflective operations such as loading classes,
@@ -19,6 +19,9 @@ import java.util.Optional;
 @SuppressWarnings("unchecked")
 public class Reflections
 {
+    private static final ConcurrentHashMap<MethodKey, Method> METHOD_CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<FieldKey, Field> FIELD_CACHE = new ConcurrentHashMap<>();
+
     /**
      * Loads a class by its fully qualified name.
      *
@@ -91,7 +94,7 @@ public class Reflections
     }
 
     /**
-     * Finds a declared method in the specified class that matches the given name and parameter types.
+     * Finds a declared method in the specified class that matches the given name and parameter types. Uses caching to avoid repeated reflection overhead.
      *
      * @param clazz the class to search in
      * @param name  the name of the method
@@ -101,11 +104,16 @@ public class Reflections
      */
     private static @NotNull Method findMethod(@NotNull Class<?> clazz, @NotNull String name, @Nullable Object[] args) throws NoSuchMethodException
     {
-        Class<?> current = clazz;
-        Class<?>[] argTypes = Arrays.stream(args)
-                .map(Object::getClass)
-                .toArray(Class<?>[]::new);
+        Class<?>[] argTypes = args == null ? new Class<?>[0] : Arrays.stream(args)
+                                                               .map(Object::getClass)
+                                                               .toArray(Class<?>[]::new);
 
+        MethodKey key = new MethodKey(clazz, name, argTypes);
+        Method cached = METHOD_CACHE.get(key);
+        if(cached != null)
+            return cached;
+
+        Class<?> current = clazz;
         while(current != null)
         {
             for(Method method : current.getDeclaredMethods())
@@ -119,6 +127,7 @@ public class Reflections
                 if(isCompatible(argTypes, paramTypes, isVarArgs))
                 {
                     method.setAccessible(true);
+                    METHOD_CACHE.put(key, method);
                     return method;
                 }
             }
@@ -218,7 +227,7 @@ public class Reflections
     }
 
     /**
-     * Finds a declared field in the specified class by its name and makes it accessible.
+     * Finds a declared field in the specified class by its name and makes it accessible. Uses caching to avoid repeated reflection overhead.
      *
      * @param clazz     the class to search in
      * @param fieldName the name of the field
@@ -227,12 +236,18 @@ public class Reflections
      */
     private static @NotNull Field findField(@NotNull Class<?> clazz, @NotNull String fieldName) throws NoSuchFieldException
     {
+        FieldKey key = new FieldKey(clazz, fieldName);
+        Field cached = FIELD_CACHE.get(key);
+        if(cached != null)
+            return cached;
+
         while(clazz != null)
         {
             try
             {
                 Field field = clazz.getDeclaredField(fieldName);
                 field.setAccessible(true);
+                FIELD_CACHE.put(key, field);
                 return field;
             } catch(NoSuchFieldException ignored)
             {
@@ -340,6 +355,49 @@ public class Reflections
         } catch(Exception e)
         {
             throw new RuntimeException(e);
+        }
+    }
+
+    private record MethodKey(Class<?> clazz, String methodName, Class<?>[] paramTypes)
+    {
+        @Override
+        public boolean equals(Object o)
+        {
+            if(this == o)
+                return true;
+            if(!(o instanceof MethodKey methodKey))
+                return false;
+            return clazz.equals(methodKey.clazz) && methodName.equals(methodKey.methodName) && Arrays.equals(paramTypes, methodKey.paramTypes);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = clazz.hashCode();
+            result = 31 * result + methodName.hashCode();
+            result = 31 * result + Arrays.hashCode(paramTypes);
+            return result;
+        }
+    }
+
+    private record FieldKey(Class<?> clazz, String fieldName)
+    {
+        @Override
+        public boolean equals(Object o)
+        {
+            if(this == o)
+                return true;
+            if(!(o instanceof FieldKey fieldKey))
+                return false;
+            return clazz.equals(fieldKey.clazz) && fieldName.equals(fieldKey.fieldName);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = clazz.hashCode();
+            result = 31 * result + fieldName.hashCode();
+            return result;
         }
     }
 
