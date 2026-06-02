@@ -17,6 +17,7 @@ import de.eisi05.npc.api.wrapper.enums.ChatFormat;
 import de.eisi05.npc.api.wrapper.objects.*;
 import de.eisi05.npc.api.wrapper.packets.*;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Pose;
@@ -41,6 +42,9 @@ import java.util.function.Supplier;
  */
 public class NpcOption<T, S extends Serializable>
 {
+    public static float value1;
+    public static float value2;
+
     /**
      * NPC option to determine if the NPC should use the skin of the viewing player. If true, the NPC's skin will be dynamically set to the skin of the player
      * looking at it.
@@ -270,90 +274,6 @@ public class NpcOption<T, S extends Serializable>
             (distance, npc, player) -> null);
 
     /**
-     * NPC option to set the pose of the NPC (e.g., standing, sleeping, swimming). For a full list look at {@link Pose}.
-     */
-    public static final NpcOption<Pose, Pose> POSE = new NpcOption<>("pose", () -> Pose.STANDING,
-            pose -> pose, pose -> pose, pose -> pose,
-            (pose, npc, player) ->
-            {
-                de.eisi05.npc.api.wrapper.enums.Pose nmsPose = de.eisi05.npc.api.wrapper.enums.Pose.fromBukkit(pose);
-
-                if(nmsPose == null)
-                    throw new RuntimeException("Pose (" + pose.name() + ") not found");
-
-                npc.getServerPlayer().setPose(nmsPose);
-
-                WrappedEntityData data = npc.entity.getEntityData();
-                data.set(WrappedEntityData.EntityDataSerializers.ENTITY_POSE.create(6), nmsPose);
-
-                WrappedEntityData.EntityDataAccessor<Byte> accessor = WrappedEntityData.EntityDataSerializers.BYTE.create(0);
-                Byte value = data.get(accessor);
-                byte flags = value == null ? 0 : value;
-
-                PacketWrapper packetWrapper = null;
-                if(pose == Pose.FALL_FLYING)
-                {
-                    data.set(accessor, (byte) (flags | 0x80));
-                    packetWrapper = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
-                            (byte) 0, npc.getServerPlayer().isOnGround());
-                }
-                else if(pose == Pose.SWIMMING)
-                    data.set(accessor, (byte) (flags | 0x10));
-                else
-                    data.set(accessor, (byte) (flags & ~(0x80 | 0x10)));
-
-                if(!npc.entity.getBukkitPlayer().getType().name().equals("ITEM_DISPLAY") &&
-                        !npc.entity.getBukkitPlayer().getType().name().equals("BLOCK_DISPLAY"))
-                {
-                    Byte handValue = data.get(WrappedEntityData.EntityDataSerializers.BYTE.create(8));
-                    byte handFlag = handValue == null ? 0 : handValue;
-
-                    if(pose == Pose.SPIN_ATTACK)
-                    {
-                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) (handFlag |  0x04));
-                        packetWrapper = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
-                                (byte) -90, npc.getServerPlayer().isOnGround());
-                    }
-                    else
-                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) (handFlag & ~0x04));
-                }
-
-                Integer oldId = npc.toDeleteEntities.remove("sit");
-                if(nmsPose == de.eisi05.npc.api.wrapper.enums.Pose.SITTING)
-                {
-                    WrappedTextDisplay textDisplay = WrappedTextDisplay.create(npc.entity.getBukkitPlayer().getLocation().getWorld());
-                    textDisplay.moveTo(npc.entity.getBukkitPlayer().getLocation());
-                    npc.toDeleteEntities.put("sit", textDisplay.getId());
-
-                    PacketWrapper addEntityPacket = textDisplay.getAddEntityPacket();
-
-                    WrappedEntityData wrappedEntityData = textDisplay.getEntityData();
-                    wrappedEntityData.set(accessor, (byte) (flags | 0x20));
-                    SetEntityDataPacket entityDataPacket = SetEntityDataPacket.create(textDisplay.getId(), wrappedEntityData);
-
-                    textDisplay.setPassengers(npc.entity);
-
-                    SetPassengerPacket passengerPacket = new SetPassengerPacket(textDisplay);
-                    RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(npc.entity, (byte) (npc.getLocation().getYaw() * 256 / 360));
-
-                    if(oldId == null)
-                        return new BundlePacket(addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
-
-                    return new BundlePacket(new RemoveEntityPacket(oldId), addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
-                }
-                else
-                {
-                    if(oldId == null)
-                        return packetWrapper == null ? new BundlePacket(SetEntityDataPacket.create(npc.entity.getId(), data)) :
-                                new BundlePacket(packetWrapper, SetEntityDataPacket.create(npc.entity.getId(), data));
-
-                    return packetWrapper == null ?
-                            new BundlePacket(new RemoveEntityPacket(oldId), SetEntityDataPacket.create(npc.entity.getId(), data)) :
-                            new BundlePacket(packetWrapper, new RemoveEntityPacket(oldId), SetEntityDataPacket.create(npc.entity.getId(), data));
-                }
-            });
-
-    /**
      * NPC option to control visibility with three states: fully visible, transparent, or invisible.
      * <p>
      * <b>Important Notes:</b>
@@ -413,23 +333,6 @@ public class NpcOption<T, S extends Serializable>
     });
 
     /**
-     * NPC option to set the scale (size) of the NPC. A value of 1.0 is normal size. Requires Minecraft 1.20.6 or newer.
-     */
-    public static final NpcOption<Double, Double> SCALE = new NpcOption<>("scale", () -> 1.0,
-            scale -> scale, scale -> scale, scale -> scale,
-            (scale, npc, player) ->
-            {
-                if(npc.entity.getBukkitPlayer().getType().name().equals("ITEM_DISPLAY") ||
-                        npc.entity.getBukkitPlayer().getType().name().equals("BLOCK_DISPLAY"))
-                    return null;
-
-                WrappedAttributeInstance instance = npc.getServerPlayer().getAttribute(WrappedAttributeInstance.Attributes.SCALE_HOLDER);
-                instance.setBaseValue(scale);
-
-                return new UpdateAttributesPacket(npc.entity.getId(), instance);
-            }).since(Versions.V1_20_6);
-
-    /**
      * NPC option to make the NPC glow with a specific color. If null, the glowing effect is removed.
      * <p>
      * <b>Important Notes:</b>
@@ -468,24 +371,6 @@ public class NpcOption<T, S extends Serializable>
             });
 
     /**
-     * NPC option to control the position of the NPC in the TAB list.
-     * <p>
-     * Only works on versions older than 1.21.2. On 1.21.2 and newer, this option has no effect.
-     * </p>
-     */
-    public static final NpcOption<Integer, Integer> LIST_ORDER = new NpcOption<>("list-order", () -> 0,
-            aInt -> aInt, aInt -> aInt, aInt -> aInt,
-            (order, npc, player) ->
-            {
-                if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_2))
-                    return null;
-
-                npc.getServerPlayer().setListOrder(order);
-
-                return new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, npc.getServerPlayer());
-            }).since(Versions.V1_21_2);
-
-    /**
      * NPC option to control collision behavior between players and NPCs. When enabled, players can push and collide with NPCs. When disabled, players pass
      * through NPCs without collision.
      * <p>
@@ -503,6 +388,146 @@ public class NpcOption<T, S extends Serializable>
         team.setCollisionRule(collision ? WrappedPlayerTeam.CollisionRule.ALWAYS : WrappedPlayerTeam.CollisionRule.NEVER);
         return SetPlayerTeamPacket.createAddOrModifyPacket(team, !teamPair.getSecond());
     });
+
+    /**
+     * NPC option to set the pose of the NPC (e.g., standing, sleeping, swimming). For a full list look at {@link Pose}.
+     */
+    public static final NpcOption<Pose, Pose> POSE = new NpcOption<>("pose", () -> Pose.STANDING,
+            pose -> pose, pose -> pose, pose -> pose,
+            (pose, npc, player) ->
+            {
+                de.eisi05.npc.api.wrapper.enums.Pose nmsPose = de.eisi05.npc.api.wrapper.enums.Pose.fromBukkit(pose);
+
+                if(nmsPose == null)
+                    throw new RuntimeException("Pose (" + pose.name() + ") not found");
+
+                npc.getServerPlayer().setPose(nmsPose);
+
+                WrappedEntityData data = npc.entity.getEntityData();
+                data.set(WrappedEntityData.EntityDataSerializers.ENTITY_POSE.create(6), nmsPose);
+
+                WrappedEntityData.EntityDataAccessor<Byte> accessor = WrappedEntityData.EntityDataSerializers.BYTE.create(0);
+                Byte value = data.get(accessor);
+                byte flags = value == null ? 0 : value;
+
+                PacketWrapper packetWrapper = null;
+                if(pose == Pose.FALL_FLYING)
+                {
+                    data.set(accessor, (byte) (flags | 0x80));
+                    packetWrapper = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
+                            (byte) 0, npc.getServerPlayer().isOnGround());
+                }
+                else if(pose == Pose.SWIMMING)
+                    data.set(accessor, (byte) (flags | 0x10));
+                else
+                    data.set(accessor, (byte) (flags & ~(0x80 | 0x10)));
+
+                if(!npc.entity.getBukkitPlayer().getType().name().equals("ITEM_DISPLAY") &&
+                        !npc.entity.getBukkitPlayer().getType().name().equals("BLOCK_DISPLAY"))
+                {
+                    Byte handValue = data.get(WrappedEntityData.EntityDataSerializers.BYTE.create(8));
+                    byte handFlag = handValue == null ? 0 : handValue;
+
+                    if(pose == Pose.SPIN_ATTACK)
+                    {
+                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) (handFlag |  0x04));
+                        packetWrapper = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (npc.getLocation().getYaw() * 256 / 360),
+                                (byte) -90, npc.getServerPlayer().isOnGround());
+                    }
+                    else
+                        data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) (handFlag & ~0x04));
+                }
+
+                if(pose == Pose.SLEEPING)
+                {
+                    new BukkitRunnable()
+                    {
+                        int counter = 255;
+                        final Location startLocation = npc.getLocation();
+                        final float startYaw = startLocation.getYaw();
+
+                        @Override
+                        public void run()
+                        {
+                            startLocation.setYaw((startYaw + counter) % 360);
+                            npc.updateLocationForPlayer(startLocation, player);
+                            if(counter == 360)
+                                cancel();
+
+                            counter += 35;
+                        }
+                    }.runTaskTimer(NpcApi.plugin, 10, 5);
+                }
+
+                Integer oldId = npc.toDeleteEntities.remove("sit");
+                if(nmsPose == de.eisi05.npc.api.wrapper.enums.Pose.SITTING)
+                {
+                    WrappedTextDisplay textDisplay = WrappedTextDisplay.create(npc.getLocation().getWorld());
+                    textDisplay.moveTo(npc.getLocation());
+                    npc.toDeleteEntities.put("sit", textDisplay.getId());
+
+                    PacketWrapper addEntityPacket = textDisplay.getAddEntityPacket();
+
+                    WrappedEntityData wrappedEntityData = textDisplay.getEntityData();
+                    wrappedEntityData.set(accessor, (byte) (flags | 0x20));
+                    SetEntityDataPacket entityDataPacket = SetEntityDataPacket.create(textDisplay.getId(), wrappedEntityData);
+
+                    textDisplay.setPassengers(npc.entity);
+
+                    SetPassengerPacket passengerPacket = new SetPassengerPacket(textDisplay);
+                    RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(npc.entity, (byte) (npc.getLocation().getYaw() * 256 / 360));
+
+                    if(oldId == null)
+                        return new BundlePacket(addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
+
+                    return new BundlePacket(new RemoveEntityPacket(oldId), addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
+                }
+                else
+                {
+                    if(oldId == null)
+                        return packetWrapper == null ? new BundlePacket(SetEntityDataPacket.create(npc.entity.getId(), data)) :
+                                new BundlePacket(packetWrapper, SetEntityDataPacket.create(npc.entity.getId(), data));
+
+                    return packetWrapper == null ?
+                            new BundlePacket(new RemoveEntityPacket(oldId), SetEntityDataPacket.create(npc.entity.getId(), data)) :
+                            new BundlePacket(packetWrapper, new RemoveEntityPacket(oldId), SetEntityDataPacket.create(npc.entity.getId(), data));
+                }
+            });
+
+    /**
+     * NPC option to set the scale (size) of the NPC. A value of 1.0 is normal size. Requires Minecraft 1.20.6 or newer.
+     */
+    public static final NpcOption<Double, Double> SCALE = new NpcOption<>("scale", () -> 1.0,
+            scale -> scale, scale -> scale, scale -> scale,
+            (scale, npc, player) ->
+            {
+                if(npc.entity.getBukkitPlayer().getType().name().equals("ITEM_DISPLAY") ||
+                        npc.entity.getBukkitPlayer().getType().name().equals("BLOCK_DISPLAY"))
+                    return null;
+
+                WrappedAttributeInstance instance = npc.getServerPlayer().getAttribute(WrappedAttributeInstance.Attributes.SCALE_HOLDER);
+                instance.setBaseValue(scale);
+
+                return new UpdateAttributesPacket(npc.entity.getId(), instance);
+            }).since(Versions.V1_20_6);
+
+    /**
+     * NPC option to control the position of the NPC in the TAB list.
+     * <p>
+     * Only works on versions older than 1.21.2. On 1.21.2 and newer, this option has no effect.
+     * </p>
+     */
+    public static final NpcOption<Integer, Integer> LIST_ORDER = new NpcOption<>("list-order", () -> 0,
+            aInt -> aInt, aInt -> aInt, aInt -> aInt,
+            (order, npc, player) ->
+            {
+                if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_2))
+                    return null;
+
+                npc.getServerPlayer().setListOrder(order);
+
+                return new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, npc.getServerPlayer());
+            }).since(Versions.V1_21_2);
 
     /**
      * NPC option to change the entity type of the NPC. This allows transforming the NPC into any Minecraft entity type. The default is a PLAYER entity. When
@@ -569,7 +594,7 @@ public class NpcOption<T, S extends Serializable>
                 {
                     if(Versions.isCurrentVersionSmallerThan(Versions.V1_21))
                         npc.serverPlayer.getNameTag()
-                                .moveTo(entity.getBukkitPlayer().getLocation().clone().add(0,
+                                .moveTo(npc.getLocation().clone().add(0,
                                         (entity.getBoundingBox().getYSize() * npc.getOption(NpcOption.SCALE, player)), 0));
 
                     packets.add(npc.serverPlayer.getNameTag().getAddEntityPacket());
@@ -603,10 +628,8 @@ public class NpcOption<T, S extends Serializable>
                 if(enabled)
                     return null;
 
-                WrappedArmorStand armorStand = WrappedArmorStand.create(npc.entity.getBukkitPlayer().getLocation().getWorld());
-                armorStand.moveTo(npc.entity.getBukkitPlayer()
-                        .getLocation()
-                        .clone()
+                WrappedArmorStand armorStand = WrappedArmorStand.create(npc.getLocation().getWorld());
+                armorStand.moveTo(npc.getLocation().clone()
                         .add(0, (npc.getServerPlayer().getBoundingBox().getYSize() * npc.getOption(SCALE, player)), 0));
 
                 PacketWrapper addPacket = armorStand.getAddEntityPacket();

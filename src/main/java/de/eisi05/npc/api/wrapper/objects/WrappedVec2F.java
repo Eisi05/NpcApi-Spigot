@@ -17,14 +17,15 @@ public class WrappedVec2F extends Wrapper
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "x")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "j")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "i")
-    public float getYaw()
+    public float getPitch()
     {
         return getWrappedFieldValue();
     }
 
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "y")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "y")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "k")
     @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "j")
-    public float getPitch()
+    public float getYaw()
     {
         return getWrappedFieldValue();
     }

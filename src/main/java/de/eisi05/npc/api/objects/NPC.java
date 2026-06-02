@@ -287,15 +287,26 @@ public class NPC extends NpcHolder
      */
     public void reload()
     {
+        boolean hasUnsavedChanges = hasUnsavedChanges();
         final List<UUID> viewers = new ArrayList<>(this.viewers);
         NpcVisibilityManager visibilityManager = getVisibilityManager();
         boolean shouldShowToAll = visibilityManager.shouldShowToAllPlayers();
         Set<UUID> specificPlayers = visibilityManager.getSpecificPlayers();
         hideNpcFromAllPlayers();
         WrappedPlayerTeam.clear(getServerPlayer().getName());
-        viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> showNPCToPlayer(Bukkit.getPlayer(uuid)));
         visibilityManager.setShowToAllPlayers(shouldShowToAll);
         specificPlayers.forEach(visibilityManager::addSpecificPlayer);
+        viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> showNPCToPlayer(Bukkit.getPlayer(uuid)));
+        if(!hasUnsavedChanges)
+        {
+            try
+            {
+                super.save();
+            }
+            catch(IOException e)
+            {
+            }
+        }
     }
 
     /**
@@ -733,7 +744,7 @@ public class NPC extends NpcHolder
         if(entity == null)
             return;
 
-        Location npcLoc = entity.getBukkitPlayer().getLocation();
+        Location npcLoc = location;
         Location playerLoc = viewer.getLocation();
 
         if(npcLoc.getWorld() != playerLoc.getWorld())
@@ -1038,7 +1049,7 @@ public class NPC extends NpcHolder
      *
      * @param excludedPlayers Players who should NOT see the respawn/refresh.
      */
-    public void changeRealLocation(Location location, @Nullable Player... excludedPlayers)
+    public void changeRealLocation(@NotNull Location location, @Nullable Player... excludedPlayers)
     {
         if(serverPlayer == null)
             return;
@@ -1048,12 +1059,35 @@ public class NPC extends NpcHolder
         Set<UUID> excluded = excludedPlayers == null ? Collections.emptySet() :
                 Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
 
+        float baseYaw = location.getYaw() + 360F;
+        float pitch = location.getPitch();
+
+        float renderYaw = baseYaw;
+
+        if(getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SLEEPING)
+        {
+            renderYaw = 180.0F - baseYaw + 90.0F;
+            pitch = 0F;
+        }
+
         PacketWrapper teleport1 = new TeleportEntityPacket(serverPlayer, new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0),
-                location.getYaw(), location.getPitch()), Set.of(), true);
+                renderYaw, pitch), Set.of(), true);
+
+        byte renderYawByte = (byte) (renderYaw * 256 / 360);
+        PacketWrapper rotPacket;
+        if(getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SLEEPING)
+            rotPacket = new BundlePacket(
+                    new MoveEntityPacket.Rot(entity.getId(), (byte) (renderYawByte - 35), (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()),
+                    new RotateHeadPacket(entity, renderYawByte));
+        else
+        {
+            byte yawByte = (byte) (baseYaw * 256 / 360);
+            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), (byte) (yawByte + 35), (byte) (pitch * 256 / 360),
+                    entity.getBukkitPlayer().isOnGround()), new RotateHeadPacket(entity, yawByte));
+        }
 
         TeleportEntityPacket teleport2 = entity.equals(serverPlayer) ? null : new TeleportEntityPacket(entity,
-                new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), location.getYaw(), location.getPitch()),
-                Set.of(), true);
+                new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), baseYaw, pitch), Set.of(), true);
 
         for(UUID uuid : viewers)
         {
@@ -1069,7 +1103,64 @@ public class NPC extends NpcHolder
 
             if(teleport2 != null)
                 serverPlayer1.sendPacket(teleport2);
+
+            if(rotPacket != null)
+                serverPlayer1.sendPacket(rotPacket);
         }
+    }
+
+    /**
+     * Updates this NPC's location and rotation for a specific player by sending the appropriate teleport and rotation packets.
+     * <p>
+     * Sleeping NPCs require special handling because the client renders their orientation differently from standing entities. In that case, a modified yaw is
+     * used and the pitch is forced to {@code 0}.
+     *
+     * @param location the location to display the NPC at
+     * @param player   the player to send the location update to
+     */
+    public void updateLocationForPlayer(@NotNull Location location, @NotNull Player player)
+    {
+        if(serverPlayer == null)
+            return;
+
+        float baseYaw = location.getYaw() + 360F;
+        float pitch = location.getPitch();
+
+        float renderYaw = baseYaw;
+
+        if(getOption(NpcOption.POSE, player) == org.bukkit.entity.Pose.SLEEPING)
+        {
+            renderYaw = 180.0F - baseYaw + 90.0F;
+            pitch = 0F;
+        }
+
+        PacketWrapper teleport1 = new TeleportEntityPacket(serverPlayer, new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0),
+                renderYaw, pitch), Set.of(), true);
+
+        byte renderYawByte = (byte) (renderYaw * 256 / 360);
+        PacketWrapper rotPacket;
+        if(getOption(NpcOption.POSE, player) == org.bukkit.entity.Pose.SLEEPING)
+            rotPacket = new BundlePacket(
+                    new MoveEntityPacket.Rot(entity.getId(), (byte) (renderYawByte - 35), (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()),
+                    new RotateHeadPacket(entity, renderYawByte));
+        else
+        {
+            byte yawByte = (byte) (baseYaw * 256 / 360);
+            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), (byte) (yawByte + 35), (byte) (pitch * 256 / 360),
+                    entity.getBukkitPlayer().isOnGround()), new RotateHeadPacket(entity, yawByte));
+        }
+
+        TeleportEntityPacket teleport2 = entity.equals(serverPlayer) ? null : new TeleportEntityPacket(entity,
+                new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), baseYaw, pitch), Set.of(), true);
+
+        WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(player);
+        serverPlayer1.sendPacket(teleport1);
+
+        if(teleport2 != null)
+            serverPlayer1.sendPacket(teleport2);
+
+        if(rotPacket != null)
+            serverPlayer1.sendPacket(rotPacket);
     }
 
     /**
