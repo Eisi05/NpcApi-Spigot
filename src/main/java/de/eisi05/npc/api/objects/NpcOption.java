@@ -23,7 +23,6 @@ import org.bukkit.entity.Pose;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +31,6 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * Represents a configurable option for an NPC. Each option has a path, a default value, serialization/deserialization logic, and a function to generate a
@@ -205,12 +203,38 @@ public class NpcOption<T, S extends Serializable>
      * Serialized form uses item base64 strings.
      */
     public static final NpcOption<Map<EquipmentSlot, ItemStack>, HashMap<EquipmentSlot, String>> EQUIPMENT = new NpcOption<>("equipment", HashMap::new, HashMap::new,
-            map -> map.entrySet().stream().collect(
-                    Collectors.toMap(Map.Entry::getKey,
-                            entry -> ItemSerializer.itemStackToBase64(entry.getValue()), (a, b) -> b, HashMap::new)),
-            serializedMap -> serializedMap.entrySet().stream().collect(
-                    Collectors.toMap(Map.Entry::getKey,
-                            entry -> ItemSerializer.itemStackFromBase64(entry.getValue()), (a, b) -> b, HashMap::new)),
+            map ->
+            {
+                HashMap<EquipmentSlot, String> serializedMap = new HashMap<>();
+                map.forEach((slot, item) ->
+                {
+                    if(item == null || item.getType().isAir())
+                        return;
+
+                    String serialized = ItemSerializer.itemStackToBase64(item);
+                    if(serialized == null)
+                        return;
+
+                    serializedMap.put(slot, serialized);
+                });
+                return serializedMap;
+            },
+            serializedMap ->
+            {
+                HashMap<EquipmentSlot, ItemStack> map = new HashMap<>();
+                serializedMap.forEach((slot, string) ->
+                {
+                    if(string == null || string.isEmpty())
+                        return;
+
+                    ItemStack item = ItemSerializer.itemStackFromBase64(string);
+                    if(item == null)
+                        return;
+
+                    map.put(slot, item);
+                });
+                return map;
+            },
             (map, npc, player) ->
             {
                 if(map.isEmpty())
@@ -294,6 +318,7 @@ public class NpcOption<T, S extends Serializable>
                         data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) (handFlag & ~0x04));
                 }
 
+                Integer oldId = npc.toDeleteEntities.remove("sit");
                 if(nmsPose == de.eisi05.npc.api.wrapper.enums.Pose.SITTING)
                 {
                     WrappedTextDisplay textDisplay = WrappedTextDisplay.create(npc.entity.getBukkitPlayer().getLocation().getWorld());
@@ -309,36 +334,22 @@ public class NpcOption<T, S extends Serializable>
                     textDisplay.setPassengers(npc.entity);
 
                     SetPassengerPacket passengerPacket = new SetPassengerPacket(textDisplay);
-                    RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(npc.entity,
-                            (byte) (npc.getLocation().getYaw() * 256 / 360));
+                    RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(npc.entity, (byte) (npc.getLocation().getYaw() * 256 / 360));
 
-                    return new BundlePacket(addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
+                    if(oldId == null)
+                        return new BundlePacket(addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
+
+                    return new BundlePacket(new RemoveEntityPacket(oldId), addEntityPacket, entityDataPacket, passengerPacket, rotateHeadPacket);
                 }
                 else
                 {
-                    float yaw = npc.getLocation().getYaw();
-                    float pitch = npc.getLocation().getPitch();
-                    if(pose == Pose.SLEEPING)
-                        yaw = 180.0F - yaw + 90.0F;
+                    if(oldId == null)
+                        return packetWrapper == null ? new BundlePacket(SetEntityDataPacket.create(npc.entity.getId(), data)) :
+                                new BundlePacket(packetWrapper, SetEntityDataPacket.create(npc.entity.getId(), data));
 
-                    PacketWrapper packet1 = new TeleportEntityPacket(npc.entity, new TeleportEntityPacket.PositionMoveRotation(npc.getLocation().toVector(),
-                            new Vector(0, 0, 0), yaw, pitch), Set.of(), true);
-                    PacketWrapper packet2 = new MoveEntityPacket.Rot(npc.entity.getId(), (byte) (yaw  * 256 / 360), (byte) (pitch * 256 / 360),
-                            npc.getServerPlayer().isOnGround());
-                    PacketWrapper packet3 = new RotateHeadPacket(npc.entity, (byte) (yaw * 256 / 360));
-
-                    PacketWrapper bundle = new BundlePacket(packet1, packet2, packet3);
-
-                    Integer toDelete = npc.toDeleteEntities.get("sit");
-
-                    if(toDelete == null)
-                        return packetWrapper == null ? new BundlePacket(SetEntityDataPacket.create(npc.entity.getId(), data), bundle) :
-                                new BundlePacket(SetEntityDataPacket.create(npc.entity.getId(), data), packetWrapper, bundle);
-
-                    npc.toDeleteEntities.remove("sit");
                     return packetWrapper == null ?
-                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.entity.getId(), data), bundle) :
-                            new BundlePacket(new RemoveEntityPacket(toDelete), SetEntityDataPacket.create(npc.entity.getId(), data), packetWrapper, bundle);
+                            new BundlePacket(new RemoveEntityPacket(oldId), SetEntityDataPacket.create(npc.entity.getId(), data)) :
+                            new BundlePacket(packetWrapper, new RemoveEntityPacket(oldId), SetEntityDataPacket.create(npc.entity.getId(), data));
                 }
             });
 
@@ -628,7 +639,7 @@ public class NpcOption<T, S extends Serializable>
      * deserialization, goals must be re-instantiated by the plugin.
      */
     static final NpcOption<ArrayList<Goal>, ArrayList<Goal>> GOALS = new NpcOption<>("goals", ArrayList::new,
-            goals -> new ArrayList<>(goals.stream().map(goal -> goal.copy()).toList()),goals -> goals,
+            goals -> new ArrayList<>(goals.stream().map(Goal::copy).toList()), goals -> goals,
             goals -> goals,
             (data, npc, player) -> null);
 

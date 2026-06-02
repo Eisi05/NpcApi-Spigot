@@ -5,6 +5,7 @@ import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcOption;
 import de.eisi05.npc.api.utils.LocationUtils;
+import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.SerializableBiPredicate;
 import de.eisi05.npc.api.wrapper.enums.Pose;
 import de.eisi05.npc.api.wrapper.objects.WrappedEntityData;
@@ -38,10 +39,12 @@ public class AttackEntityGoal extends Goal
     @Serial
     private static final long serialVersionUID = 1L;
 
+    private static final double WEAPONMECHANICS_ATTACK_RANGE = 25.0;
     private static final double BOW_ATTACK_RANGE = 15.0;
     private static final double MELEE_ATTACK_RANGE = 3.0;
     private static final double LINE_OF_SIGHT_RANGE = 25.0;
     private static final int BOW_DRAW_DELAY_TICKS = 25;
+    private static final int WEAPONMECHANICS_SHOOT_DELAY_TICKS = 5;
     private static final double KITING_DISTANCE = 3.0;
     private static final double OPTIMAL_RANGED_DISTANCE = 6.0;
 
@@ -456,8 +459,10 @@ public class AttackEntityGoal extends Goal
         if(mainHand == null)
             return MELEE_ATTACK_RANGE;
 
-        Material type = mainHand.getType();
-        if(isRangedWeapon(type))
+        if(getWeaponTitle(mainHand) != null)
+            return WEAPONMECHANICS_ATTACK_RANGE;
+
+        if(isRangedWeapon(mainHand.getType()))
             return BOW_ATTACK_RANGE;
         else
             return MELEE_ATTACK_RANGE;
@@ -473,6 +478,36 @@ public class AttackEntityGoal extends Goal
 
         if(mainHand == null || !mainHand.hasItemMeta())
             return 5;
+
+        String weaponTitle = getWeaponTitle(mainHand);
+        if(weaponTitle != null)
+        {
+            try
+            {
+                Object config = Reflections.invokeMethod("me.deecaad.weaponmechanics.WeaponMechanics", "getInstance")
+                        .thanInvoke("getWeaponConfigurations").get();
+                if(config != null)
+                {
+
+                    int shotsPerSecond = (int) Reflections.invokeMethod(config, "getInt", weaponTitle + ".Shoot.Fully_Automatic_Shots_Per_Second", 0).get();
+                    if(shotsPerSecond > 0)
+                        return Math.max(1, 20 / shotsPerSecond);
+
+
+                    int burstDelay = (int) Reflections.invokeMethod(config, "getInt", weaponTitle + ".Shoot.Burst.Ticks_Between_Each_Shot", 0).get();
+                    if(burstDelay > 0)
+                        return burstDelay;
+
+
+                    int shootDelay = (int) Reflections.invokeMethod(config, "getInt", weaponTitle + ".Shoot.Delay_Between_Shots", 0).get();
+                    if(shootDelay > 0)
+                        return shootDelay;
+                }
+            }
+            catch(NoClassDefFoundError | Exception ignored) {}
+
+            return 10;
+        }
 
         ItemMeta meta = mainHand.getItemMeta();
         if(meta == null)
@@ -497,10 +532,64 @@ public class AttackEntityGoal extends Goal
         Map<EquipmentSlot, ItemStack> equipment = npc.getOption(NpcOption.EQUIPMENT);
         ItemStack mainHand = equipment != null ? equipment.get(EquipmentSlot.HAND) : null;
 
-        if(mainHand != null && isRangedWeapon(mainHand.getType()))
+        String weaponTitle = getWeaponTitle(mainHand);
+        if(weaponTitle != null)
+            performWeaponMechanicsAttack(npc, weaponTitle, mainHand);
+        else if(mainHand != null && isRangedWeapon(mainHand.getType()))
             performRangedAttack(npc);
         else
             performMeleeAttack(npc);
+    }
+
+    /**
+     * Utilizes WeaponMechanics API to gather weapon identification title safely.
+     */
+    private String getWeaponTitle(ItemStack item)
+    {
+        if(item == null || item.getType() == Material.AIR)
+            return null;
+
+        try
+        {
+            return (String) Reflections.invokeMethod("me.deecaad.weaponmechanics.WeaponMechanicsAPI", "getWeaponTitle", item).get();
+        }
+        catch (NoClassDefFoundError | Exception e)
+        {
+            return null;
+        }
+    }
+
+    /**
+     * Executes native programmatic WeaponMechanics shooting actions centered around the NPC.
+     */
+    private void performWeaponMechanicsAttack(@NotNull NPC npc, String weaponTitle, ItemStack weaponStack)
+    {
+        if(target == null || !target.isValid())
+            return;
+
+        Player npcPlayer = npc.getServerPlayer().getBukkitPlayer();
+        if(npcPlayer == null)
+            return;
+
+        if(target == null || !target.isValid())
+            return;
+
+        try
+        {
+            Vector direction = target.getLocation().subtract(npc.getLocation()).toVector().normalize();
+            Location location = npc.getLocation().clone().add(0, npc.getEyeHeight(null), 0);
+            location.setDirection(direction);
+
+            Object entityWrapper = Reflections.invokeMethod("me.deecaad.weaponmechanics.WeaponMechanics", "getInstance")
+                    .thanInvoke("getEntityWrapper", npcPlayer).get();
+            Reflections.invokeMethod("me.deecaad.weaponmechanics.WeaponMechanics", "getInstance")
+                    .thanInvoke("getWeaponHandler").thanInvoke("getShootHandler")
+                    .thanInvoke("shoot", entityWrapper, weaponTitle, weaponStack, location, true, true, false);
+        }
+        catch(NoClassDefFoundError | Exception e)
+        {
+            target.damage(getAttackDamage(npc), npcPlayer);
+        }
     }
 
     /**
@@ -630,7 +719,7 @@ public class AttackEntityGoal extends Goal
     {
         Map<EquipmentSlot, ItemStack> equipment = npc.getOption(NpcOption.EQUIPMENT);
         ItemStack mainHand = equipment != null ? equipment.get(EquipmentSlot.HAND) : null;
-        return mainHand != null && isRangedWeapon(mainHand.getType());
+        return (mainHand != null && isRangedWeapon(mainHand.getType())) || getWeaponTitle(mainHand) != null;
     }
 
     /**
