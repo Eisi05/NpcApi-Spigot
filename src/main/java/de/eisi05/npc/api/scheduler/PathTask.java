@@ -39,7 +39,8 @@ public class PathTask extends BukkitRunnable
     private final NPC npc;
     private final Path path;
     private final List<Location> pathPoints;
-    private final Player[] viewers;
+    private final Set<UUID> viewerIds = new HashSet<>();
+    private final boolean autoManageWalkingViewers;
     private final WrappedEntity<?> serverEntity;
     private final Consumer<WalkingResult> callback;
     private final boolean withRotation;
@@ -53,8 +54,10 @@ public class PathTask extends BukkitRunnable
     private boolean finished = false;
     private int index = 0;
     private Vector currentPos;
+    private float previousPitch;
     private float previousYaw;
     private double verticalVelocity = 0.0;
+    private int viewerRefreshTicks = 0;
 
     /**
      * Private constructor used by the Builder pattern.
@@ -66,7 +69,15 @@ public class PathTask extends BukkitRunnable
         this.npc = builder.npc;
         this.path = builder.path;
         this.pathPoints = new ArrayList<>(builder.path.asLocations());
-        this.viewers = builder.viewers;
+        if(builder.viewers != null)
+        {
+            for(Player viewer : builder.viewers)
+            {
+                if(viewer != null)
+                    this.viewerIds.add(viewer.getUniqueId());
+            }
+        }
+        this.autoManageWalkingViewers = builder.autoManageWalkingViewers;
         this.callback = builder.callback;
         this.withRotation = builder.withRotation;
 
@@ -74,6 +85,7 @@ public class PathTask extends BukkitRunnable
         this.updateRealLocation = builder.updateRealLocation;
 
         this.currentPos = npc.getLocation().toVector();
+        this.previousPitch = npc.getLocation().getPitch();
         this.previousYaw = npc.getLocation().getYaw();
         this.previousMoveDir = npc.getLocation().getDirection();
         this.serverEntity = npc.entity;
@@ -85,6 +97,12 @@ public class PathTask extends BukkitRunnable
     @Override
     public void run()
     {
+        if(autoManageWalkingViewers && viewerRefreshTicks++ >= 10)
+        {
+            viewerRefreshTicks = 0;
+            npc.refreshWalkingViewers();
+        }
+
         if(index >= pathPoints.size())
         {
             if(finishPath())
@@ -263,9 +281,10 @@ public class PathTask extends BukkitRunnable
         if(event.changeRealLocation())
         {
             Location loc = path.getWaypoints().isEmpty() ? pathPoints.get(pathPoints.size() - 1) : path.getWaypoints().get(path.getWaypoints().size() - 1);
-            npc.changeRealLocation(loc, viewers);
+            npc.changeRealLocation(loc, getViewers());
         }
 
+        npc.clearWalkingTask(this);
         cancel();
         return true;
     }
@@ -287,8 +306,8 @@ public class PathTask extends BukkitRunnable
         TeleportEntityPacket teleport = new TeleportEntityPacket(serverEntity,
                 new TeleportEntityPacket.PositionMoveRotation(loc.toVector(), new Vector(0, 0, 0), loc.getYaw(), loc.getPitch()), Set.of(), true);
 
-        npc.sendNpcMovePackets(teleport, head, viewers);
-        npc.sendNpcBodyPackets(body, viewers);
+        npc.sendNpcMovePackets(teleport, head, getViewers());
+        npc.sendNpcBodyPackets(body, getViewers());
     }
 
     /**
@@ -475,11 +494,11 @@ public class PathTask extends BukkitRunnable
     }
 
     /**
-     * Calculates the Y-coordinate of the ground at a given position.
+     * Calculates the feet Y-coordinate of the ground at a given position.
      *
      * @param world The world to check in
      * @param pos   The position to check
-     * @return The Y-coordinate of the ground
+     * @return The Y-coordinate where the NPC's feet should be
      */
     private double getGroundY(@NotNull World world, @NotNull Vector pos)
     {
@@ -487,24 +506,50 @@ public class PathTask extends BukkitRunnable
         int bz = pos.getBlockZ();
         int startY = pos.getBlockY();
 
-        for(int y = startY; y >= startY - 3; y--)
+        for(int y = startY; y >= startY - 4; y--)
         {
             Block block = world.getBlockAt(bx, y, bz);
 
             if(block.getBlockData() instanceof Openable)
                 continue;
 
-            if(Var.isCarpet(block.getType()) && Var.isCarpet(block.getRelative(BlockFace.UP).getType()))
-                return ++y;
+            if(block.isLiquid())
+                continue;
 
-            if(!block.getType().isSolid() || block.isPassable())
+            if(Var.isCarpet(block.getType()) && Var.isCarpet(block.getRelative(BlockFace.UP).getType()))
+                return y + 1.0;
+
+            if(Var.isCarpet(block.getType()))
                 return y;
 
-            OptionalDouble maxY = block.getCollisionShape().getBoundingBoxes().stream().mapToDouble(BoundingBox::getMaxY).max();
-            OptionalDouble minY = block.getCollisionShape().getBoundingBoxes().stream().mapToDouble(BoundingBox::getMinY).min();
+            if(!block.getType().isSolid() || block.isPassable())
+                continue;
 
-            if(minY.isPresent() && maxY.isPresent())
-                return y + minY.getAsDouble() + (maxY.getAsDouble() - minY.getAsDouble());
+            Collection<BoundingBox> boxes = block.getCollisionShape().getBoundingBoxes();
+            if(boxes.isEmpty())
+                return y + 1.0;
+
+            double lx = pos.getX() - bx;
+            double lz = pos.getZ() - bz;
+
+            double bestTop = -1.0;
+
+            for(BoundingBox bb : boxes)
+            {
+                if(lx >= bb.getMinX() && lx <= bb.getMaxX() && lz >= bb.getMinZ() && lz <= bb.getMaxZ())
+                    bestTop = Math.max(bestTop, bb.getMaxY());
+            }
+
+            if(bestTop < 0.0)
+            {
+                for(BoundingBox bb : boxes)
+                    bestTop = Math.max(bestTop, bb.getMaxY());
+            }
+
+            if(bestTop <= 0.0)
+                return y + 1.0;
+
+            return y + bestTop;
         }
 
         return world.getHighestBlockYAt(bx, bz);
@@ -564,6 +609,100 @@ public class PathTask extends BukkitRunnable
     }
 
     /**
+     * Checks whether this task allows automatic walking viewer management.
+     *
+     * @return true if viewers can be added automatically; false otherwise
+     */
+    public boolean isAutoManageWalkingViewers()
+    {
+        return autoManageWalkingViewers;
+    }
+
+    /**
+     * Gets the NPC's current walking location.
+     *
+     * @return the current walking location
+     */
+    public @NotNull Location getCurrentLocation()
+    {
+        World world = npc.getLocation().getWorld();
+        return currentPos.toLocation(world);
+    }
+
+    /**
+     * Adds a viewer to this path task and immediately syncs the NPC's current walking position.
+     *
+     * @param player the player to add
+     * @return true if the player was newly added; false if the player was already a viewer
+     */
+    public boolean addViewer(@NotNull Player player)
+    {
+        if(finished)
+            return false;
+
+        if(!viewerIds.add(player.getUniqueId()))
+            return false;
+
+        sendCurrentPosition(player);
+        return true;
+    }
+
+    /**
+     * Checks whether the specified player is already attached to this path task.
+     *
+     * @param player the player to check
+     * @return true if the player is already a viewer of this walking task; false otherwise
+     */
+    public boolean hasViewer(@NotNull Player player)
+    {
+        return viewerIds.contains(player.getUniqueId());
+    }
+
+    /**
+     * Removes a viewer from this path task.
+     *
+     * @param player the player to remove
+     */
+    public void removeViewer(@NotNull Player player)
+    {
+        viewerIds.remove(player.getUniqueId());
+    }
+
+    /**
+     * Gets all online viewers currently attached to this path task.
+     *
+     * @return online viewers
+     */
+    private Player @NotNull [] getViewers()
+    {
+        return viewerIds.stream()
+                .map(Bukkit::getPlayer)
+                .filter(Objects::nonNull)
+                .toArray(Player[]::new);
+    }
+
+    /**
+     * Sends the NPC's current walking position and rotation to a viewer.
+     *
+     * @param player the viewer to sync
+     */
+    private void sendCurrentPosition(@NotNull Player player)
+    {
+
+        if(serverEntity == null)
+            return;
+
+        RotateHeadPacket head = new RotateHeadPacket(serverEntity, (byte) (previousYaw * 256 / 360));
+
+        Vector currentVec = new Vector(currentPos.getX(), currentPos.getY(), currentPos.getZ());
+
+        TeleportEntityPacket teleport = new TeleportEntityPacket(serverEntity,
+                new TeleportEntityPacket.PositionMoveRotation(currentVec, new Vector(0, 0, 0), previousYaw, previousPitch), Set.of(), true);
+
+        npc.sendNpcMovePackets(teleport, head, player);
+    }
+
+    /**
      * Sends movement and rotation packets to update the NPC's position for viewers.
      *
      * @param movement The movement vector
@@ -576,11 +715,14 @@ public class PathTask extends BukkitRunnable
         if(serverEntity == null)
             return;
 
+        previousYaw = yaw;
+        previousPitch = pitch;
+
         RotateHeadPacket head = new RotateHeadPacket(serverEntity, (byte) (yaw * 256 / 360));
         TeleportEntityPacket teleport = new TeleportEntityPacket(serverEntity, new TeleportEntityPacket.PositionMoveRotation(currentPos, movement, yaw, pitch),
                 Set.of(), onGround);
 
-        npc.sendNpcMovePackets(teleport, head, viewers);
+        npc.sendNpcMovePackets(teleport, head, getViewers());
 
         if(updateRealLocation)
             npc.setLocation(currentPos.toLocation(npc.getLocation().getWorld()));
@@ -615,9 +757,9 @@ public class PathTask extends BukkitRunnable
             World world = path.getWaypoints().isEmpty() ? pathPoints.get(pathPoints.size() - 1).getWorld() :
                     path.getWaypoints().get(path.getWaypoints().size() - 1).getWorld();
             Location loc = new Location(world, currentPos.getX(), currentPos.getY(), currentPos.getZ());
-            npc.changeRealLocation(loc, viewers);
+            npc.changeRealLocation(loc, getViewers());
         }
-
+        npc.clearWalkingTask(this);
     }
 
     /**
@@ -655,6 +797,7 @@ public class PathTask extends BukkitRunnable
         private double speed = 1.0;
         private boolean updateRealLocation = false;
         private boolean withRotation = true;
+        private boolean autoManageWalkingViewers = false;
 
         /**
          * Creates a new Builder for a PathTask.
@@ -677,6 +820,20 @@ public class PathTask extends BukkitRunnable
         public @NotNull Builder viewers(@Nullable Player... viewers)
         {
             this.viewers = viewers;
+            return this;
+        }
+
+        /**
+         * Sets whether this path task should allow automatic walking viewer management.
+         * <p>
+         * When enabled, external library listeners may add eligible players to this task while the NPC is already walking.
+         *
+         * @param autoManageWalkingViewers true to allow automatic walking viewer management, false otherwise
+         * @return This builder instance for method chaining
+         */
+        public @NotNull Builder autoManageWalkingViewers(boolean autoManageWalkingViewers)
+        {
+            this.autoManageWalkingViewers = autoManageWalkingViewers;
             return this;
         }
 
