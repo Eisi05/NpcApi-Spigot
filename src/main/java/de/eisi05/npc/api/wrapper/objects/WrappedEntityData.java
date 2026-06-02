@@ -47,9 +47,7 @@ public class WrappedEntityData extends Wrapper
         return invokeWrappedMethod();
     }
 
-    //TODO: Check versions
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "markDirty")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "markDirty")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V26_1), path = "markDirty")
     public <T> void markDirty(@NotNull EntityDataAccessor<T> accessor)
     {
         invokeWrappedMethod(accessor);
