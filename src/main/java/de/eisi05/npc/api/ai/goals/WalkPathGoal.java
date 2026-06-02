@@ -170,7 +170,7 @@ public class WalkPathGoal extends Goal
         if(waypoints == null || waypoints.isEmpty())
             return false;
 
-        Location startLocation = waypoints.getFirst();
+        Location startLocation = waypoints.get(0);
         if(!startLocation.getWorld().equals(npc.getLocation().getWorld()))
             return false;
 
@@ -193,7 +193,7 @@ public class WalkPathGoal extends Goal
         if(waypoints == null || waypoints.isEmpty())
             return;
 
-        Location startLocation = waypoints.getFirst();
+        Location startLocation = waypoints.get(0);
         double distance = npc.getLocation().distance(startLocation);
 
         isWalking = true;
@@ -244,7 +244,7 @@ public class WalkPathGoal extends Goal
                 .filter(Objects::nonNull)
                 .toList();
 
-        Location finalLocation = waypoints.getLast();
+        Location finalLocation = waypoints.get(waypoints.size() - 1);
 
         npc.walkTo(path, speed, true, result ->
         {
