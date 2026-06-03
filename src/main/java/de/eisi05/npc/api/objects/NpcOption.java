@@ -42,9 +42,6 @@ import java.util.function.Supplier;
  */
 public class NpcOption<T, S extends Serializable>
 {
-    public static float value1;
-    public static float value2;
-
     /**
      * NPC option to determine if the NPC should use the skin of the viewing player. If true, the NPC's skin will be dynamically set to the skin of the player
      * looking at it.
