@@ -20,10 +20,12 @@ import java.util.Arrays;
 public class WrappedEntity<T extends Entity> extends Wrapper
 {
     public String data = "{}";
+    private final BoundingBox defaultBoundingBox;
 
     WrappedEntity(Object handle)
     {
         super(handle);
+        defaultBoundingBox = getBoundingBox();
     }
 
     public static <T extends Entity, V extends WrappedEntity<T>> @NotNull V fromEntity(@NotNull T entity, @NotNull Class<V> clazz)
@@ -156,6 +158,11 @@ public class WrappedEntity<T extends Entity> extends Wrapper
         return new BoundingBox(invokeWrappedMethod());
     }
 
+    public @NotNull BoundingBox getDefaultBoundingBox()
+    {
+        return defaultBoundingBox;
+    }
+
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "setId")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "e")
     public void setId(int id)
@@ -253,9 +260,23 @@ public class WrappedEntity<T extends Entity> extends Wrapper
             super(handle);
         }
 
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getXsize")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "b")
+        public double getXSize()
+        {
+            return invokeWrappedMethod();
+        }
+
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getYsize")
         @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "c")
         public double getYSize()
+        {
+            return invokeWrappedMethod();
+        }
+
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getZsize")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "d")
+        public double getZSize()
         {
             return invokeWrappedMethod();
         }

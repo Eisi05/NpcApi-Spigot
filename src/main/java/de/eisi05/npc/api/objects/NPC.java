@@ -1279,7 +1279,7 @@ public class NPC extends NpcHolder
         else
         {
             byte yawByte = (byte) (baseYaw * 256 / 360);
-            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), (byte) (yawByte + 35), (byte) (pitch * 256 / 360),
+            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), (byte) (yawByte - 35), (byte) (pitch * 256 / 360),
                     entity.getBukkitPlayer().isOnGround()), new RotateHeadPacket(entity, yawByte));
         }
 
@@ -1338,12 +1338,13 @@ public class NPC extends NpcHolder
         PacketWrapper rotPacket;
         if(getOption(NpcOption.POSE, player) == org.bukkit.entity.Pose.SLEEPING)
             rotPacket = new BundlePacket(
-                    new MoveEntityPacket.Rot(entity.getId(), (byte) (renderYawByte - 35), (byte) (pitch * 256 / 360), entity.getBukkitPlayer().isOnGround()),
+                    new MoveEntityPacket.Rot(entity.getId(), (byte) (renderYawByte - 35), (byte) (pitch * 256 / 360),
+                            entity.getBukkitPlayer().isOnGround()),
                     new RotateHeadPacket(entity, renderYawByte));
         else
         {
             byte yawByte = (byte) (baseYaw * 256 / 360);
-            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), (byte) (yawByte + 35), (byte) (pitch * 256 / 360),
+            rotPacket = new BundlePacket(new MoveEntityPacket.Rot(entity.getId(), (byte) (yawByte - 35), (byte) (pitch * 256 / 360),
                     entity.getBukkitPlayer().isOnGround()), new RotateHeadPacket(entity, yawByte));
         }
 

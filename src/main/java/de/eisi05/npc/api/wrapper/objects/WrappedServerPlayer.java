@@ -206,7 +206,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         return new WrappedCommandSourceStack(invokeWrappedMethod());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "stopUsingItem")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "stopUsingItem")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "gf")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "fU")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "fM")

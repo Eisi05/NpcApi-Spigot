@@ -440,7 +440,7 @@ public class NpcOption<T, S extends Serializable>
                     new BukkitRunnable()
                     {
                         int counter = 255;
-                        final Location startLocation = npc.getLocation();
+                        final Location startLocation = npc.getLocation().clone();
                         final float startYaw = startLocation.getYaw();
 
                         @Override
@@ -454,6 +454,17 @@ public class NpcOption<T, S extends Serializable>
                             counter += 35;
                         }
                     }.runTaskTimer(NpcApi.plugin, 10, 5);
+                }
+                else
+                {
+                    new BukkitRunnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            npc.updateLocationForPlayer(npc.getLocation(), player);
+                        }
+                    }.runTaskLater(NpcApi.plugin, 1);
                 }
 
                 Integer oldId = npc.toDeleteEntities.remove("sit");
@@ -627,7 +638,7 @@ public class NpcOption<T, S extends Serializable>
 
                 WrappedArmorStand armorStand = WrappedArmorStand.create(npc.getLocation().getWorld());
                 armorStand.moveTo(npc.getLocation().clone()
-                        .add(0, (npc.getServerPlayer().getBoundingBox().getYSize() * npc.getOption(SCALE, player)), 0));
+                        .add(0, (npc.entity.getBoundingBox().getYSize() * npc.getOption(SCALE, player)), 0));
 
                 PacketWrapper addPacket = armorStand.getAddEntityPacket();
 
