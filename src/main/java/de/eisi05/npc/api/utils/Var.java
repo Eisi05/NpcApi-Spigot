@@ -2,7 +2,6 @@ package de.eisi05.npc.api.utils;
 
 import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
 import de.eisi05.npc.api.wrapper.objects.WrappedEntitySnapshot;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -218,10 +217,5 @@ public class Var
             flags |= (byte) 0x80;
 
         return flags;
-    }
-
-    public static boolean isCarpet(@NotNull Material material)
-    {
-        return material.name().contains("CARPET");
     }
 }
