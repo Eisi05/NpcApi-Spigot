@@ -8,7 +8,6 @@ import de.eisi05.npc.api.utils.exceptions.VersionNotFound;
 import de.eisi05.npc.api.wrapper.Mapping;
 import de.eisi05.npc.api.wrapper.enums.Pose;
 import de.eisi05.npc.api.wrapper.packets.BundlePacket;
-import de.eisi05.npc.api.wrapper.packets.ChatPacket;
 import de.eisi05.npc.api.wrapper.packets.PacketWrapper;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
@@ -22,7 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.server.level.ServerPlayer")
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.server.level.EntityPlayer")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.server.level.EntityPlayer")
 public class WrappedServerPlayer extends WrappedEntity<Player>
 {
     private static final Map<UUID, WrappedServerPlayer> map = new HashMap<>();
@@ -54,9 +53,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
 
         WrappedServerPlayer wrappedServerPlayer = switch(Versions.getVersion())
         {
-            case V1_17, V1_18, V1_18_2, V1_19_3, V1_19_4, V1_20 -> createWrappedInstance(WrappedServerPlayer.class, mcServer, serverLevel, gameProfile);
-            case V1_19, V1_19_1 -> createWrappedInstance(WrappedServerPlayer.class, mcServer, serverLevel, gameProfile, null);
-            case V1_20_2, V1_20_4, V1_20_6, V1_21, V1_21_2, V1_21_4, V1_21_5, V1_21_6, V1_21_9, V1_21_11, V26_1 ->
+            case V1_20_4, V1_20_6, V1_21, V1_21_2, V1_21_4, V1_21_5, V1_21_6, V1_21_9, V1_21_11, V26_1 ->
             {
                 WrappedServerPlayer serverPlayer = createWrappedInstance(WrappedServerPlayer.class, mcServer, serverLevel, gameProfile,
                         WrappedClientInformation.createDefault().getHandle());
@@ -67,23 +64,15 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
 
                 yield serverPlayer;
             }
-            case NONE -> throw new VersionNotFound();
+            default -> throw new VersionNotFound();
         };
 
         if(nameDisplay != null)
             wrappedServerPlayer.setNameTag(nameDisplay);
-        else if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
-        {
-            WrappedArmorStand armorStand = WrappedArmorStand.create(location.getWorld());
-            armorStand.moveTo(location.clone().add(0, 0.2, 0));
-            wrappedServerPlayer.setNameTag(armorStand);
-        }
-        else
-        {
-            WrappedTextDisplay textDisplay = WrappedTextDisplay.create(location.getWorld());
-            textDisplay.moveTo(location.clone().add(0, 0.2, 0));
-            wrappedServerPlayer.setNameTag(textDisplay);
-        }
+
+        WrappedTextDisplay textDisplay = WrappedTextDisplay.create(location.getWorld());
+        textDisplay.moveTo(location.clone().add(0, 0.2, 0));
+        wrappedServerPlayer.setNameTag(textDisplay);
 
         wrappedServerPlayer.moveTo(location);
         wrappedServerPlayer.setListName(name);
@@ -115,15 +104,6 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21), path = "fX")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_6), path = "gb")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_4), path = "fR")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_2), path = "fQ")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20), path = "fM")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_4), path = "fI")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_3), path = "fD")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_1), path = "fy")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19), path = "fz")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_18_2), path = "fq")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_18), path = "fp")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getProfile")
     public @NotNull GameProfile getGameProfile()
     {
         return invokeWrappedMethod();
@@ -132,8 +112,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "connection")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "g")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_5), path = "f")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20, to = Versions.V1_21), path = "c")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_19_4), path = "b")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21), path = "c")
     public @NotNull WrappedConnection playerConnection()
     {
         return new WrappedConnection(getWrappedFieldValue());
@@ -142,45 +121,32 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "connection")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_6, to = Versions.V1_21_11), path = "g")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_5), path = "f")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20, to = Versions.V1_21), path = "c")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_19_4), path = "b")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21), path = "c")
     public void setConnection(@NotNull WrappedConnection newConnection)
     {
         setWrappedFieldValue(newConnection.getHandle());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V26_1), path = "listName")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V26_1), path = "listName")
     public void setListName(@Nullable WrappedComponent component)
     {
         setWrappedFieldValue(component.getHandle());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V26_1), path = "listName")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V26_1), path = "listName")
     public void setListName(@Nullable String name)
     {
         setListName(WrappedComponent.create(name));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V26_1), path = "listOrder")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V26_1), path = "listOrder")
     public void setListOrder(int order)
     {
         setWrappedFieldValue(order);
     }
 
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20), path = "f")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_19_4), path = "e")
-    public void setLatency(int i)
-    {
-        if(Versions.isCurrentVersionSmallerThan(Versions.V1_20_2))
-            setWrappedFieldValue(i);
-        else
-            setConnection(new WrappedConnection(WrappedMinecraftServer.INSTANCE, playerConnection().networkManager(), this,
-                    new WrappedConnection.CommonListenerCookie(getGameProfile(), i, true)));
-    }
-
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "setPose")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "b")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setPose")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "b")
     public void setPose(@NotNull Pose pose)
     {
         invokeWrappedMethod(pose);
@@ -193,14 +159,6 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_4), path = "A")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "dg")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_4), path = "dd")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_2), path = "dc")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20), path = "da")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_4), path = "cZ")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_3), path = "cY")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_1), path = "cT")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19), path = "cU")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_18_2), path = "cQ")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getCommandListener")
     public WrappedCommandSourceStack createCommandStack()
     {
         return new WrappedCommandSourceStack(invokeWrappedMethod());
@@ -214,32 +172,20 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21), path = "fx")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_6), path = "fB")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_4), path = "ft")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_2), path = "fs")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20), path = "fo")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_4), path = "fk")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_3), path = "ff")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_1), path = "eZ")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19), path = "fa")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_18_2), path = "eS")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_18), path = "eR")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "clearActiveItem")
     public void stopUsingItem()
     {
         invokeWrappedMethod();
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "sendSystemMessage")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "a")
     public void sendRawMessage(@NotNull WrappedComponent component)
     {
-        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19))
-            sendPacket(new ChatPacket(component, ChatPacket.ChatType.CHAT));
-        else
-            invokeWrappedMethod(component);
+        invokeWrappedMethod(component);
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "remove")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19, to = Versions.V1_21_11), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "a")
     public void remove()
     {
         map.remove(getUUID());
@@ -255,11 +201,6 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_4), path = "S-a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21), path = "R-a")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_20_6), path = "Q-a")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_2), path = "O-a")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V1_20), path = "M-a")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_19_3), path = "N-a")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_19_1), path = "M-a")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getAdvancementData-a")
     public void stopAdvancementListening()
     {
         String path = getPath();

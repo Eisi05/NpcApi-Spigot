@@ -365,9 +365,9 @@ public class Reflections
         {
             if(this == o)
                 return true;
-            if(!(o instanceof MethodKey methodKey))
+            if(!(o instanceof MethodKey(Class<?> clazz1, String name, Class<?>[] types)))
                 return false;
-            return clazz.equals(methodKey.clazz) && methodName.equals(methodKey.methodName) && Arrays.equals(paramTypes, methodKey.paramTypes);
+            return clazz.equals(clazz1) && methodName.equals(name) && Arrays.equals(paramTypes, types);
         }
 
         @Override
@@ -387,9 +387,9 @@ public class Reflections
         {
             if(this == o)
                 return true;
-            if(!(o instanceof FieldKey fieldKey))
+            if(!(o instanceof FieldKey(Class<?> clazz1, String name)))
                 return false;
-            return clazz.equals(fieldKey.clazz) && fieldName.equals(fieldKey.fieldName);
+            return clazz.equals(clazz1) && fieldName.equals(name);
         }
 
         @Override
@@ -432,16 +432,7 @@ public class Reflections
             if(value == null)
                 return new ReflectionChain<>(null);
 
-            args = Wrapper.checkArgs(args);
-            try
-            {
-                Method method = findMethod(value.getClass(), methodName, args);
-                method.setAccessible(true);
-                return new ReflectionChain<>((V) method.invoke(value, args));
-            } catch(Exception e)
-            {
-                throw new RuntimeException(e);
-            }
+            return invokeMethod(value, methodName, args);
         }
 
         /**

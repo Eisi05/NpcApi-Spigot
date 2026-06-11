@@ -7,7 +7,7 @@ import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
 @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.commands.CommandSourceStack")
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.commands.CommandListenerWrapper")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.commands.CommandListenerWrapper")
 public class WrappedCommandSourceStack extends Wrapper
 {
     public WrappedCommandSourceStack(Object handle)
@@ -15,7 +15,7 @@ public class WrappedCommandSourceStack extends Wrapper
         super(handle);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V26_1), path = "getBukkitSender")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V26_1), path = "getBukkitSender")
     public CommandSender getBukkitSender()
     {
         return invokeWrappedMethod();
@@ -23,7 +23,7 @@ public class WrappedCommandSourceStack extends Wrapper
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "withMaximumPermission")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "b")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_9), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_9), path = "a")
     public @NotNull WrappedCommandSourceStack withMaximumPermission()
     {
         if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_11))
@@ -32,7 +32,7 @@ public class WrappedCommandSourceStack extends Wrapper
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "withSuppressedOutput")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "a")
     public @NotNull WrappedCommandSourceStack withSuppressedOutput()
     {
         return new WrappedCommandSourceStack(invokeWrappedMethod());

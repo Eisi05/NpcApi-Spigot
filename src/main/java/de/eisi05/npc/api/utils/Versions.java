@@ -22,38 +22,47 @@ public enum Versions
     /**
      * Minecraft 1.17 version.
      */
+    @Deprecated(since = "2.4.0")
     V1_17("v1_17_R1"),
     /**
      * Minecraft 1.18 version.
      */
+    @Deprecated(since = "2.4.0")
     V1_18("v1_18_R1"),
     /**
      * Minecraft 1.18.2 version.
      */
+    @Deprecated(since = "2.4.0")
     V1_18_2("v1_18_R2"),
     /**
      * Minecraft 1.19 version.
      */
+    @Deprecated(since = "2.4.0")
     V1_19("v1_19_R1"),
     /**
      * Minecraft 1.19.1 version.
      */
+    @Deprecated(since = "2.4.0")
     V1_19_1("v1_19_R1"),
     /**
      * Minecraft 1.19.3 version.
      */
+    @Deprecated(since = "2.4.0")
     V1_19_3("v1_19_R2"),
     /**
      * Minecraft 1.19.4 version.
      */
+    @Deprecated(since = "2.4.0")
     V1_19_4("v1_19_R3"),
     /**
      * Minecraft 1.20 version.
      */
+    @Deprecated(since = "2.4.0")
     V1_20("v1_20_R1"),
     /**
      * Minecraft 1.20.2 version.
      */
+    @Deprecated(since = "2.4.0")
     V1_20_2("v1_20_R2"),
     /**
      * Minecraft 1.20.4 version.
@@ -137,6 +146,17 @@ public enum Versions
 
         return VERSION = Arrays.stream(Versions.values())
                 .filter(v -> v.path.equalsIgnoreCase(nmsVersion))
+                .filter(versions ->
+                {
+                    try
+                    {
+                        return !Versions.class.getDeclaredField(versions.name()).isAnnotationPresent(Deprecated.class);
+                    }
+                    catch(NoSuchFieldException e)
+                    {
+                        return true;
+                    }
+                })
                 .reduce((a, b) -> Bukkit.getBukkitVersion().startsWith("1.19.1") ? Versions.V1_19_1 : Versions.V1_19)
                 .orElseThrow(() ->
                 {

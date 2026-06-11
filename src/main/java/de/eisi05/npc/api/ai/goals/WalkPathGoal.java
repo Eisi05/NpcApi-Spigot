@@ -47,7 +47,7 @@ public class WalkPathGoal extends Goal
         super(Priority.MEDIUM);
         this.path = builder.path;
         this.serializablePath = path != null ? path.toSerializablePath() : null;
-        this.speed = Math.max(0.1, Math.min(1.0, builder.speed));
+        this.speed = Math.clamp(builder.speed, 0.1, 1.0);
         this.completionCallback = builder.completionCallback;
         this.withRotation = builder.withRotation;
     }
@@ -104,7 +104,7 @@ public class WalkPathGoal extends Goal
      */
     public void setSpeed(double speed)
     {
-        this.speed = Math.max(0.1, Math.min(1.0, speed));
+        this.speed = Math.clamp(speed, 0.1, 1.0);
     }
 
 
@@ -170,7 +170,7 @@ public class WalkPathGoal extends Goal
         if(waypoints == null || waypoints.isEmpty())
             return false;
 
-        Location startLocation = waypoints.get(0);
+        Location startLocation = waypoints.getFirst();
         if(!startLocation.getWorld().equals(npc.getLocation().getWorld()))
             return false;
 
@@ -193,7 +193,7 @@ public class WalkPathGoal extends Goal
         if(waypoints == null || waypoints.isEmpty())
             return;
 
-        Location startLocation = waypoints.get(0);
+        Location startLocation = waypoints.getFirst();
         double distance = npc.getLocation().distance(startLocation);
 
         isWalking = true;
@@ -244,7 +244,7 @@ public class WalkPathGoal extends Goal
                 .filter(Objects::nonNull)
                 .toList();
 
-        Location finalLocation = waypoints.get(waypoints.size() - 1);
+        Location finalLocation = waypoints.getLast();
 
         npc.walkTo(path, speed, true, result ->
         {
@@ -365,7 +365,7 @@ public class WalkPathGoal extends Goal
          */
         public Builder speed(double speed)
         {
-            this.speed = Math.max(0.1, Math.min(1.0, speed));
+            this.speed = Math.clamp(speed, 0.1, 1.0);
             return this;
         }
 

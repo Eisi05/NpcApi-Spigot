@@ -262,7 +262,7 @@ public class PathTask extends BukkitRunnable
      */
     private boolean finishPath()
     {
-        Location last = path.getWaypoints().isEmpty() ? null : path.getWaypoints().get(path.getWaypoints().size() - 1);
+        Location last = path.getWaypoints().isEmpty() ? null : path.getWaypoints().getLast();
 
         if(last != null)
         {
@@ -286,7 +286,7 @@ public class PathTask extends BukkitRunnable
 
         if(event.changeRealLocation())
         {
-            Location loc = path.getWaypoints().isEmpty() ? pathPoints.get(pathPoints.size() - 1) : path.getWaypoints().get(path.getWaypoints().size() - 1);
+            Location loc = path.getWaypoints().isEmpty() ? pathPoints.getLast() : path.getWaypoints().getLast();
             npc.changeRealLocation(loc, getViewers());
         }
 
@@ -534,7 +534,7 @@ public class PathTask extends BukkitRunnable
         targetYaw = normalizeAngle(targetYaw);
 
         float diff = normalizeAngle(targetYaw - previousYaw);
-        diff = Math.max(-15f, Math.min(15f, diff));
+        diff = Math.clamp(diff, -15f, 15f);
 
         float yaw = previousYaw + diff;
         previousYaw = yaw;
@@ -708,8 +708,8 @@ public class PathTask extends BukkitRunnable
 
         if(event.changeRealLocation())
         {
-            World world = path.getWaypoints().isEmpty() ? pathPoints.get(pathPoints.size() - 1).getWorld() :
-                    path.getWaypoints().get(path.getWaypoints().size() - 1).getWorld();
+            World world = path.getWaypoints().isEmpty() ? pathPoints.getLast().getWorld() :
+                    path.getWaypoints().getLast().getWorld();
             Location loc = new Location(world, currentPos.getX(), currentPos.getY(), currentPos.getZ());
             npc.changeRealLocation(loc, getViewers());
         }

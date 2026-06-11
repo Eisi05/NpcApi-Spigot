@@ -142,7 +142,7 @@ public class WrappedEntitySnapshot implements Serializable
      * A wrapper for Minecraft's NBT (Named Binary Tag) compound tag system, providing a type-safe way to read and write NBT data.
      */
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.nbt.CompoundTag")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.nbt.NBTTagCompound")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.nbt.NBTTagCompound")
     public static class WrappedCompoundTag extends Wrapper
     {
         /**
@@ -177,8 +177,7 @@ public class WrappedEntitySnapshot implements Serializable
                 if(!Versions.isCurrentVersionSmallerThan(Versions.V26_1))
                     return new WrappedCompoundTag(Reflections.invokeStaticMethod("net.minecraft.nbt.TagParser", "parseCompoundFully", s).get());
 
-                String methodName = Versions.isCurrentVersionSmallerThan(Versions.V1_18) ? "parse" : "a";
-                return new WrappedCompoundTag(Reflections.invokeStaticMethod("net.minecraft.nbt.MojangsonParser", methodName, s).get());
+                return new WrappedCompoundTag(Reflections.invokeStaticMethod("net.minecraft.nbt.MojangsonParser", "a", s).get());
             }
             catch(RuntimeException e1)
             {
@@ -217,8 +216,7 @@ public class WrappedEntitySnapshot implements Serializable
          * @param value The string value to store
          */
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "putString")
-        @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
-        @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setString")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "a")
         public void putString(@NotNull String key, @NotNull String value)
         {
             invokeWrappedMethod(key, value);
@@ -232,8 +230,7 @@ public class WrappedEntitySnapshot implements Serializable
          */
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getBooleanOr")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "b")
-        @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_4), path = "q")
-        @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getBoolean")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_4), path = "q")
         public boolean getBoolean(@NotNull String key)
         {
             if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_5))
@@ -259,7 +256,7 @@ public class WrappedEntitySnapshot implements Serializable
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.nbt.NbtAccounter")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.nbt.NBTReadLimiter")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.nbt.NBTReadLimiter")
     public static class NbtAccounter extends Wrapper
     {
         private NbtAccounter(Object handle)
@@ -269,7 +266,7 @@ public class WrappedEntitySnapshot implements Serializable
 
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "unlimitedHeap")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "c")
-        @Mapping(range = @Mapping.Range(from = Versions.V1_20_2, to = Versions.V1_21_9), path = "a")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_9), path = "a")
         public static NbtAccounter unlimitedHeap()
         {
             return new NbtAccounter(invokeStaticWrappedMethod());

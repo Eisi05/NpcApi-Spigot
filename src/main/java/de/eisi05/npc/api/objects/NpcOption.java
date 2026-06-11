@@ -154,10 +154,7 @@ public class NpcOption<T, S extends Serializable>
                         @Override
                         public void run()
                         {
-                            if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_3) && player != null)
-                                WrappedServerPlayer.fromPlayer(player).sendPacket(
-                                        new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.REMOVE_PLAYER, npc.getServerPlayer()));
-                            else if(player != null && npc.getUUID() != null)
+                            if(player != null && npc.getUUID() != null)
                                 WrappedServerPlayer.fromPlayer(player).sendPacket(new PlayerInfoRemovePacket(List.of(npc.getUUID())));
                         }
                     }.runTaskLater(NpcApi.plugin, 50);
@@ -171,10 +168,7 @@ public class NpcOption<T, S extends Serializable>
     public static final NpcOption<Integer, Integer> LATENCY = new NpcOption<>("latency", () -> 0,
             aInteger -> aInteger, aInteger -> aInteger, aInteger -> aInteger,
             (latency, npc, player) ->
-            {
-                npc.getServerPlayer().setLatency(latency);
-                return new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LATENCY, npc.getServerPlayer());
-            });
+                    new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LATENCY, npc.getServerPlayer()));
 
     /**
      * NPC option to control the visibility of the NPC's nametag.
@@ -598,7 +592,7 @@ public class NpcOption<T, S extends Serializable>
                 data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), false);
                 packets.add(SetEntityDataPacket.create(entity.getId(), data));
 
-                if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || !npc.getOption(NpcOption.HIDE_NAMETAG, player))
+                if(!npc.getOption(NpcOption.HIDE_NAMETAG, player))
                 {
                     if(Versions.isCurrentVersionSmallerThan(Versions.V1_21))
                         npc.serverPlayer.getNameTag()
@@ -608,15 +602,12 @@ public class NpcOption<T, S extends Serializable>
                     packets.add(npc.serverPlayer.getNameTag().getAddEntityPacket());
 
                     packets.add(SetEntityDataPacket.create(npc.serverPlayer.getNameTag().getId(), npc.serverPlayer.getNameTag().applyData(
-                            Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || npc.isEnabled() ? npc.name.getName(player) :
+                            npc.isEnabled() ? npc.name.getName(player) :
                                     WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
                                     .append(WrappedComponent.create("\n").append(npc.name.getName(player))))));
 
-                    if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
-                    {
-                        entity.setPassengers(npc.serverPlayer.getNameTag());
-                        packets.add(new SetPassengerPacket(entity));
-                    }
+                    entity.setPassengers(npc.serverPlayer.getNameTag());
+                    packets.add(new SetPassengerPacket(entity));
                 }
 
                 return new BundlePacket(packets.toArray(new PacketWrapper[0]));
@@ -630,30 +621,7 @@ public class NpcOption<T, S extends Serializable>
             aBoolean -> aBoolean, aBoolean -> aBoolean, aBoolean -> aBoolean,
             (enabled, npc, player) ->
             {
-                if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
-                    return null;
-
-                if(enabled)
-                    return null;
-
-                WrappedArmorStand armorStand = WrappedArmorStand.create(npc.getLocation().getWorld());
-                armorStand.moveTo(npc.getLocation().clone()
-                        .add(0, (npc.entity.getBoundingBox().getYSize() * npc.getOption(SCALE, player)), 0));
-
-                PacketWrapper addPacket = armorStand.getAddEntityPacket();
-
-                WrappedEntityData data = armorStand.getEntityData();
-
-                data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(0), (byte) 0x20);
-                data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2),
-                        Optional.of(WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player)).getHandle()));
-                data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), true);
-                data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(4), true);
-                data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(15), (byte) 0x10);
-
-                npc.toDeleteEntities.put("name", armorStand.getId());
-
-                return new BundlePacket(addPacket, SetEntityDataPacket.create(armorStand.getId(), data));
+                return null;
             });
 
     /**
@@ -708,7 +676,7 @@ public class NpcOption<T, S extends Serializable>
     private final Function<S, T> deserializer;
     private final Function<T, T> copyFunction;
     private final TriFunction<T, NPC, Player, PacketWrapper> packet;
-    private Versions since = Versions.V1_17;
+    private Versions since = Versions.V1_20_4;
     private boolean loadBefore = false;
 
     /**

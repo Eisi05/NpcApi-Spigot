@@ -473,9 +473,8 @@ public class NPC extends NpcHolder
     public void updateName(@NotNull Player player)
     {
         WrappedServerPlayer.fromPlayer(player)
-                .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag().applyData(
-                        Versions.isCurrentVersionSmallerThan(Versions.V1_19_4) || isEnabled() ? name.getName(player) :
-                                WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
+                .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag()
+                        .applyData(isEnabled() ? name.getName(player) : WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
                                 .append(WrappedComponent.create("\n").append(name.getName(player))))));
     }
 
@@ -599,9 +598,7 @@ public class NPC extends NpcHolder
 
         //packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.ADD_PLAYER, serverPlayer));
         packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, serverPlayer));
-
-        if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_3))
-            packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LISTED, serverPlayer));
+        packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LISTED, serverPlayer));
 
         if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_2))
             packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, serverPlayer));
@@ -612,9 +609,7 @@ public class NPC extends NpcHolder
         NpcOption.ENABLED.getPacket(isEnabled(), this, player).ifPresent(packets::add);
 
         packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, wrappedServerPlayer));
-
-        if(!Versions.isCurrentVersionSmallerThan(Versions.V1_19_3))
-            packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LISTED, wrappedServerPlayer));
+        packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LISTED, wrappedServerPlayer));
 
         packets.forEach(wrappedServerPlayer::sendPacket);
 
@@ -667,10 +662,7 @@ public class NPC extends NpcHolder
 
         toDeleteEntities.values().forEach(integer -> wrappedServerPlayer.sendPacket(new RemoveEntityPacket(integer)));
 
-        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_3))
-            wrappedServerPlayer.sendPacket(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.REMOVE_PLAYER, serverPlayer));
-        else
-            wrappedServerPlayer.sendPacket(new PlayerInfoRemovePacket(List.of(getUUID())));
+        wrappedServerPlayer.sendPacket(new PlayerInfoRemovePacket(List.of(getUUID())));
 
         viewers.remove(player.getUniqueId());
 
@@ -694,6 +686,7 @@ public class NPC extends NpcHolder
 
         npcPath.toFile().getParentFile().mkdirs();
         Files.deleteIfExists(npcPath);
+        super.save();
     }
 
     /**
@@ -949,7 +942,7 @@ public class NPC extends NpcHolder
             if(isWalking(player))
                 cancelWalking(player);
         }
-        final double speed = Math.max(Math.min(walkSpeed, 1), 0.1);
+        final double speed = Math.clamp(walkSpeed, 0.1, 1);
         NpcStartWalkingEvent event = new NpcStartWalkingEvent(this, path, speed, changeRealLocation);
         Bukkit.getPluginManager().callEvent(event);
         if(event.isCancelled())

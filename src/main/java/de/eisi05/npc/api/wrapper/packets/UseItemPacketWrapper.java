@@ -4,7 +4,7 @@ import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.wrapper.Mapping;
 
 @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game.ServerboundUseItemPacket")
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayInUseItem")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayInUseItem")
 public class UseItemPacketWrapper extends PacketWrapper.PacketHolder
 {
     protected UseItemPacketWrapper(Object handle)

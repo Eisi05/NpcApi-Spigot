@@ -274,7 +274,7 @@ public class GoalSelector
             if(usableGoals.isEmpty())
                 selectedGoal = null;
             else if(usableGoals.size() == 1)
-                selectedGoal = usableGoals.get(0);
+                selectedGoal = usableGoals.getFirst();
             else
             {
                 int totalWeight = usableGoals.stream()
@@ -300,7 +300,7 @@ public class GoalSelector
                     }
 
                     if(selectedGoal == null)
-                        selectedGoal = usableGoals.get(usableGoals.size() - 1);
+                        selectedGoal = usableGoals.getLast();
                 }
             }
         }

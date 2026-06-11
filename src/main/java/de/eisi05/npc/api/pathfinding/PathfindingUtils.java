@@ -130,7 +130,7 @@ public class PathfindingUtils
                 throw new PathfindingException("Could not find path between waypoint " + i + " and " + (i + 1));
 
             if(!fullPathPoints.isEmpty() && !segment.isEmpty())
-                segment.remove(0);
+                segment.removeFirst();
 
             fullPathPoints.addAll(segment.stream().map(Location::clone).toList());
 

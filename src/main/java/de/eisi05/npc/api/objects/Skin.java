@@ -70,10 +70,7 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
         if(Versions.getVersion() == Versions.NONE)
             throw new VersionNotFound();
 
-        return Versions.isCurrentVersionSmallerThan(Versions.V1_20_2) ?
-                new Skin(player.getName(), Reflections.<String>invokeMethod(property, "getValue").get(),
-                        Reflections.<String>invokeMethod(property, "getSignature").get()) :
-                new Skin(player.getName(), Reflections.<String>invokeMethod(property, "value").get(),
+        return new Skin(player.getName(), Reflections.<String>invokeMethod(property, "value").get(),
                         Reflections.<String>invokeMethod(property, "signature").get());
     }
 
@@ -98,7 +95,7 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
             {
                 String response = scanner.useDelimiter("\\A").next();
 
-                JsonObject json = new JsonParser().parse(response).getAsJsonObject();
+                JsonObject json = JsonParser.parseString(response).getAsJsonObject();
                 String name = json.get("name").getAsString();
 
                 JsonArray properties = json.getAsJsonArray("properties");
@@ -139,14 +136,14 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
 
         try
         {
-            URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
+            URL url = URI.create("https://api.mojang.com/users/profiles/minecraft/" + name).toURL();
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setReadTimeout(10000);
 
             try(InputStream is = conn.getInputStream(); Scanner scanner = new Scanner(is))
             {
                 String response = scanner.useDelimiter("\\A").next();
-                JsonObject json = new JsonParser().parse(response).getAsJsonObject();
+                JsonObject json = JsonParser.parseString(response).getAsJsonObject();
                 String id = json.get("id").getAsString();
                 return fetchSkin(UUID.fromString(id.replaceFirst(
                         "(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})",
@@ -175,9 +172,8 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
         if(skinCacheFile.containsKey(skinFile))
             return Optional.ofNullable(skinCacheFile.get(skinFile));
 
-        try
+        try(HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build())
         {
-            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
             String boundary = "----MineSkinBoundary" + System.currentTimeMillis();
             String CRLF = "\r\n";
 
@@ -199,7 +195,7 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            JsonObject obj = new JsonParser().parse(response.body()).getAsJsonObject();
+            JsonObject obj = JsonParser.parseString(response.body()).getAsJsonObject();
             JsonObject texture = obj.getAsJsonObject("data").getAsJsonObject("texture");
 
             String value = texture.get("value").getAsString();

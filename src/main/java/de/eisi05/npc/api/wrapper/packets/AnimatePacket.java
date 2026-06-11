@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.Serializable;
 
 @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game.ClientboundAnimatePacket")
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutAnimation")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutAnimation")
 public class AnimatePacket extends PacketWrapper
 {
     protected AnimatePacket(@NotNull WrappedEntity<?> entity, int animationId)
@@ -21,7 +21,7 @@ public class AnimatePacket extends PacketWrapper
 
     public static @Nullable PacketWrapper create(@NotNull WrappedEntity<?> entity, @NotNull Animation animation)
     {
-        if(animation != Animation.HURT || Versions.isCurrentVersionSmallerThan(Versions.V1_19_4))
+        if(animation != Animation.HURT)
             return new AnimatePacket(entity, animation.ordinal());
 
         if(!(entity.getBukkitPlayer() instanceof LivingEntity))
@@ -40,7 +40,7 @@ public class AnimatePacket extends PacketWrapper
         MAGIC_CRITICAL_HIT
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_4, to = Versions.V26_1),
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V26_1),
             path = "net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket")
     public static class HurtAnimationPacket extends PacketWrapper
     {

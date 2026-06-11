@@ -8,11 +8,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game.ServerboundInteractPacket")
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayInUseEntity")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayInUseEntity")
 public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
 {
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_11), path = "e")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_20_6), path = "d")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "e")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_4), path = "d")
     public final static Action ATTACK_ACTION = new Action(getStaticWrappedFieldValue("ATTACK_ACTION").orElse(null));
 
     protected UseEntityPacketWrapper(Object handle)
@@ -22,7 +22,7 @@ public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "entityId")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_11), path = "b")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_20_6), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_20_6), path = "a")
     public int getId()
     {
         return getWrappedFieldValue();
@@ -46,11 +46,11 @@ public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
         return getWrappedFieldValue();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_11), path = "c")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_20_6), path = "b")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "c")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_4), path = "b")
     public @NotNull Action getAction()
     {
-        Object value = getWrappedFieldValue();
+        Object value = getWrappedFieldValue();  
 
         if(value.equals(ATTACK_ACTION.getHandle()))
             return ATTACK_ACTION;
@@ -58,17 +58,17 @@ public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
         return new Action(value);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game" +
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game" +
             ".PacketPlayInUseEntity$b")
     public enum ActionType implements EnumWrapper
     {
-        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "a")
         INTERACT,
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "b")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "b")
         ATTACK,
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "c")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "c")
         INTERACT_AT;
 
         @Override
@@ -78,7 +78,7 @@ public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
         }
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game" +
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game" +
             ".PacketPlayInUseEntity$EnumEntityUseAction")
     public static class Action extends Wrapper
     {
@@ -87,7 +87,7 @@ public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
             super(handle);
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "a")
         public @Nullable ActionType getActionType()
         {
             Object enumHandle = invokeWrappedMethod();
@@ -99,7 +99,7 @@ public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
             return null;
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "a")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "a")
         public @Nullable InteractionHand getHand()
         {
             try

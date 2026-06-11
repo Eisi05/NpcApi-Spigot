@@ -95,8 +95,8 @@ public class Path implements ConfigurationSerializable
         if(locations.isEmpty())
             return "Empty path";
 
-        Vector start = vectors.get(0);
-        Vector end = vectors.get(vectors.size() - 1);
+        Vector start = vectors.getFirst();
+        Vector end = vectors.getLast();
 
         return String.format("Start: [%.2f, %.2f, %.2f] -> End: [%.2f, %.2f, %.2f]",
                 start.getX(), start.getY(), start.getZ(),

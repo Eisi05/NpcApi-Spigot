@@ -87,7 +87,7 @@ public record MovementRecording(@NotNull ArrayList<MovementData> movements, long
      */
     public @Nullable MovementData getFirstMovement()
     {
-        return movements.isEmpty() ? null : movements.get(0);
+        return movements.isEmpty() ? null : movements.getFirst();
     }
 
     /**
@@ -97,7 +97,7 @@ public record MovementRecording(@NotNull ArrayList<MovementData> movements, long
      */
     public @Nullable MovementData getLastMovement()
     {
-        return movements.isEmpty() ? null : movements.get(movements.size() - 1);
+        return movements.isEmpty() ? null : movements.getLast();
     }
 
     @Override

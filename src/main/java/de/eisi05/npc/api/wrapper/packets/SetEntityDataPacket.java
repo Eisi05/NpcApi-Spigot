@@ -9,18 +9,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket")
-@Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutEntityMetadata")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutEntityMetadata")
 public class SetEntityDataPacket extends PacketWrapper
 {
     public List<?> data;
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_19_1), path = "")
-    private SetEntityDataPacket(int id, @NotNull WrappedEntityData data, boolean nonDefaults)
-    {
-        super(SetEntityDataPacket.class, id, data, nonDefaults);
-    }
-
-    @Mapping(range = @Mapping.Range(from = Versions.V1_19_3, to = Versions.V26_1), path = "")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V26_1), path = "")
     private SetEntityDataPacket(int id, @NotNull List<?> data)
     {
         super(SetEntityDataPacket.class, id, data);
@@ -29,12 +23,7 @@ public class SetEntityDataPacket extends PacketWrapper
 
     public static SetEntityDataPacket create(int id, @NotNull WrappedEntityData data)
     {
-        if(Versions.isCurrentVersionSmallerThan(Versions.V1_19_3))
-            return new SetEntityDataPacket(id, data, true);
-        else
-        {
-            List<?> dataList = data.packDirty();
-            return new SetEntityDataPacket(id, dataList == null ? new ArrayList<>() : dataList);
-        }
+        List<?> dataList = data.packDirty();
+        return new SetEntityDataPacket(id, dataList == null ? new ArrayList<>() : dataList);
     }
 }
