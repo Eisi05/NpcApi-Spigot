@@ -67,6 +67,7 @@ public enum Versions
     /**
      * Minecraft 1.20.4 version.
      */
+    @Deprecated
     V1_20_4("v1_20_R3"),
     /**
      * Minecraft 1.20.6 version.

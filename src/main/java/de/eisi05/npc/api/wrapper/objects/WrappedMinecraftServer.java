@@ -8,7 +8,7 @@ import de.eisi05.npc.api.wrapper.Wrapper;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V26_1), path = "net.minecraft.server.MinecraftServer")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_1), path = "net.minecraft.server.MinecraftServer")
 public class WrappedMinecraftServer extends Wrapper
 {
     public static final WrappedMinecraftServer INSTANCE = new WrappedMinecraftServer(Reflections.invokeMethod(Bukkit.getServer(), "getServer").get());
@@ -23,7 +23,7 @@ public class WrappedMinecraftServer extends Wrapper
         return Reflections.getStaticField(INSTANCE.handle.getClass(), "currentTick");
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V26_1), path = "vanillaCommandDispatcher")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_1), path = "vanillaCommandDispatcher")
     public @NotNull WrappedMinecraftServer commands()
     {
         return new WrappedMinecraftServer(getWrappedFieldValue());
@@ -34,14 +34,13 @@ public class WrappedMinecraftServer extends Wrapper
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "bg")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_6), path = "ba")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "bc")
-    @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_4), path = "aZ")
     public Object registryAccess()
     {
         return invokeWrappedMethod();
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getDispatcher")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
     @SuppressWarnings("unchecked")
     public @NotNull CommandDispatcher<Object> getCommandDispatcher()
     {

@@ -3,7 +3,6 @@ package de.eisi05.npc.api.wrapper.packets;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.wrapper.Mapping;
 import de.eisi05.npc.api.wrapper.objects.WrappedEntity;
-import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import org.bukkit.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -11,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.Serializable;
 
 @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game.ClientboundAnimatePacket")
-@Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutAnimation")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutAnimation")
 public class AnimatePacket extends PacketWrapper
 {
     protected AnimatePacket(@NotNull WrappedEntity<?> entity, int animationId)
@@ -40,7 +39,7 @@ public class AnimatePacket extends PacketWrapper
         MAGIC_CRITICAL_HIT
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V26_1),
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_1),
             path = "net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket")
     public static class HurtAnimationPacket extends PacketWrapper
     {

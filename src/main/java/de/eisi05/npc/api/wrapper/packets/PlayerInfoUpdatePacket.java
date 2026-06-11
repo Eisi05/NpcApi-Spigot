@@ -5,7 +5,7 @@ import de.eisi05.npc.api.wrapper.Mapping;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import org.jetbrains.annotations.NotNull;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V26_1), path = "net.minecraft.network.protocol.game" +
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_1), path = "net.minecraft.network.protocol.game" +
         ".ClientboundPlayerInfoUpdatePacket")
 public class PlayerInfoUpdatePacket extends PacketWrapper
 {
@@ -16,32 +16,32 @@ public class PlayerInfoUpdatePacket extends PacketWrapper
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game" +
             ".ClientboundPlayerInfoUpdatePacket$Action")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game" +
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game" +
             ".ClientboundPlayerInfoUpdatePacket$a")
     public enum Action implements EnumWrapper
     {
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "ADD_PLAYER")
-        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "a")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
         ADD_PLAYER,
 
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "INITIALIZE_CHAT")
-        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "b")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "b")
         INITIALIZE_CHAT,
 
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "UPDATE_GAME_MODE")
-        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "c")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "c")
         UPDATE_GAME_MODE,
 
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "UPDATE_LISTED")
-        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "d")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "d")
         UPDATE_LISTED,
 
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "UPDATE_LATENCY")
-        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "e")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "e")
         UPDATE_LATENCY,
 
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "UPDATE_DISPLAY_NAME")
-        @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "f")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "f")
         UPDATE_DISPLAY_NAME,
 
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "UPDATE_LIST_ORDER")

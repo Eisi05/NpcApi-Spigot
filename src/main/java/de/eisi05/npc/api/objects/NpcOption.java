@@ -676,7 +676,7 @@ public class NpcOption<T, S extends Serializable>
     private final Function<S, T> deserializer;
     private final Function<T, T> copyFunction;
     private final TriFunction<T, NPC, Player, PacketWrapper> packet;
-    private Versions since = Versions.V1_20_4;
+    private Versions since = Versions.V1_20_6;
     private boolean loadBefore = false;
 
     /**
