@@ -11,8 +11,8 @@ import org.jetbrains.annotations.Nullable;
 @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayInUseEntity")
 public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
 {
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_11), path = "e")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_20_6), path = "d")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "e")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_20_4), path = "d")
     public final static Action ATTACK_ACTION = new Action(getStaticWrappedFieldValue("ATTACK_ACTION").orElse(null));
 
     protected UseEntityPacketWrapper(Object handle)
@@ -21,8 +21,8 @@ public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "entityId")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_11), path = "b")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_20_6), path = "a")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "b")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_20_4), path = "a")
     public int getId()
     {
         return getWrappedFieldValue();

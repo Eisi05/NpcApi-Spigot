@@ -177,6 +177,9 @@ public class NPC extends NpcHolder
     @Override
     public void save() throws IOException
     {
+        if(getUUID() == null)
+            return;
+
         npcPath.toFile().getParentFile().mkdirs();
         new ObjectSaver(npcPath.toFile()).write(SerializedNPC.serializedNPC(this), false);
         super.save();
@@ -694,6 +697,7 @@ public class NPC extends NpcHolder
 
         npcPath.toFile().getParentFile().mkdirs();
         Files.deleteIfExists(npcPath);
+        super.save();
     }
 
     /**
