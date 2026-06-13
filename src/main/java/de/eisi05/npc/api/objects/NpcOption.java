@@ -288,8 +288,9 @@ public class NpcOption<T, S extends Serializable>
 
         boolean modified = WrappedPlayerTeam.exists(player, teamName) || playerTeam.getHandle() != null;
         WrappedPlayerTeam wrappedPlayerTeam = playerTeam.getHandle() != null ? playerTeam : WrappedPlayerTeam.create(player, teamName);
-        wrappedPlayerTeam.setCanSeeFriendlyInvisible(true);
-        wrappedPlayerTeam.setNameTagVisibility(WrappedPlayerTeam.Visibility.HIDE_FOR_OWN_TEAM);
+
+        //if(!wrappedPlayerTeam.canSeeFriendlyInvisible()) //TODO: Implement
+            wrappedPlayerTeam.setCanSeeFriendlyInvisible(true);
 
         var teamPacket = SetPlayerTeamPacket.createAddOrModifyPacket(wrappedPlayerTeam, !modified);
 
@@ -578,7 +579,8 @@ public class NpcOption<T, S extends Serializable>
 
                 var teamPair = getTeam(player, npc);
                 WrappedPlayerTeam team = teamPair.getFirst();
-                team.setNameTagVisibility(WrappedPlayerTeam.Visibility.NEVER);
+                //if(team.getNameTagVisibility() != WrappedPlayerTeam.Visibility.NEVER) //TODO: Implement
+                    team.setNameTagVisibility(WrappedPlayerTeam.Visibility.NEVER);
 
                 if(!team.getName().startsWith("trans"))
                     team.getPlayers().add(npc.getServerPlayer().getName());
