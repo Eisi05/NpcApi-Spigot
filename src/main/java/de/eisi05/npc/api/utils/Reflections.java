@@ -66,7 +66,7 @@ public class Reflections
         try
         {
             Class<?>[] argTypes = args == null ? new Class<?>[0] : Arrays.stream(args)
-                                                                   .map(Object::getClass)
+                                                                   .map(o -> o == null ? Object.class : o.getClass())
                                                                    .toArray(Class<?>[]::new);
 
             ConstructorKey key = new ConstructorKey(clazz, argTypes);
@@ -109,7 +109,7 @@ public class Reflections
     private static @NotNull Method findMethod(@NotNull Class<?> clazz, @NotNull String name, @Nullable Object[] args) throws NoSuchMethodException
     {
         Class<?>[] argTypes = args == null ? new Class<?>[0] : Arrays.stream(args)
-                                                               .map(Object::getClass)
+                                                               .map(o -> o == null ? Object.class : o.getClass())
                                                                .toArray(Class<?>[]::new);
 
         MethodKey key = new MethodKey(clazz, name, argTypes);
