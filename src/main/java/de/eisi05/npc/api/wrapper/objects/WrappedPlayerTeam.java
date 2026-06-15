@@ -7,6 +7,7 @@ import de.eisi05.npc.api.wrapper.Wrapper;
 import de.eisi05.npc.api.wrapper.enums.ChatFormat;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -80,6 +81,21 @@ public class WrappedPlayerTeam extends Wrapper
         return teams.getOrDefault(player.getUniqueId(), new HashMap<>()).containsKey(name);
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getNameTagVisibility")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "k")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_4), path = "j")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "getNameTagVisibility")
+    public @Nullable Visibility getNameTagVisibility()
+    {
+        Object enumHandle = getWrappedFieldValue();
+        for(Visibility visibility : Visibility.values())
+        {
+            if(visibility.getHandle().equals(enumHandle))
+                return visibility;
+        }
+        return null;
+    }
+
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "setNameTagVisibility")
     @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_11), path = "a")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "setNameTagVisibility")
@@ -102,6 +118,15 @@ public class WrappedPlayerTeam extends Wrapper
     public void setCanSeeFriendlyInvisible(boolean canSeeFriendlyInvisible)
     {
         invokeWrappedMethod(canSeeFriendlyInvisible);
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "canSeeFriendlyInvisibles")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "j")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_18, to = Versions.V1_21_4), path = "i")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_17), path = "canSeeFriendlyInvisibles")
+    public boolean canSeeFriendlyInvisible()
+    {
+        return invokeWrappedMethod();
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getPlayers")
@@ -139,7 +164,8 @@ public class WrappedPlayerTeam extends Wrapper
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.world.scores.Team$Visibility")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.scores.ScoreboardTeamBase$EnumNameTagVisibility")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_17, to = Versions.V1_21_11), path = "net.minecraft.world.scores" +
+            ".ScoreboardTeamBase$EnumNameTagVisibility")
     public enum Visibility implements EnumWrapper
     {
         @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "ALWAYS")
