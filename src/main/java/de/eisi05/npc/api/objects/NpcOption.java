@@ -621,10 +621,7 @@ public class NpcOption<T, S extends Serializable>
      */
     static final NpcOption<Boolean, Boolean> ENABLED = new NpcOption<>("enabled", () -> false,
             aBoolean -> aBoolean, aBoolean -> aBoolean, aBoolean -> aBoolean,
-            (enabled, npc, player) ->
-            {
-                return null;
-            });
+            (enabled, npc, player) -> null);
 
     /**
      * NPC option to control if the NPC is enabled (visible and interactable). If false, a "DISABLED" marker may be shown. This is an internal option, typically
