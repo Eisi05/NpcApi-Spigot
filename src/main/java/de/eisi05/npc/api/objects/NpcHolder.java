@@ -25,6 +25,7 @@ public abstract class NpcHolder implements InventoryHolder
 {
     protected static final UUID GLOBAL_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
     protected final Map<UUID, Map<NpcOption<?, ?>, Object>> options = new HashMap<>();
+    private final Map<UUID, NamespacedKey> playerKeyCache = new HashMap<>();
 
     protected NpcName name;
 
@@ -235,7 +236,8 @@ public abstract class NpcHolder implements InventoryHolder
      */
     protected @NotNull NamespacedKey getKey(@NotNull Player player)
     {
-        return new NamespacedKey(NpcApi.plugin, getUUID() + "-" + player.getUniqueId());
+        return playerKeyCache.computeIfAbsent(player.getUniqueId(),
+                uuid -> new NamespacedKey(NpcApi.plugin, getUUID() + "-" + uuid));
     }
 
     /**

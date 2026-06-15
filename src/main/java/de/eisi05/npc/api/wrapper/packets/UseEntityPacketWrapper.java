@@ -47,7 +47,7 @@ public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "c")
     public @NotNull Action getAction()
     {
-        Object value = getWrappedFieldValue();  
+        Object value = getWrappedFieldValue();
 
         if(value.equals(ATTACK_ACTION.getHandle()))
             return ATTACK_ACTION;

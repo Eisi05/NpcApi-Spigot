@@ -1,7 +1,6 @@
 package de.eisi05.npc.api.utils;
 
 import com.google.common.primitives.Primitives;
-import de.eisi05.npc.api.wrapper.Wrapper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,14 +12,15 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Utility class providing methods for reflective operations such as loading classes,
- * invoking methods, and accessing fields dynamically at runtime.
+ * Utility class providing methods for reflective operations such as loading classes, invoking methods, and accessing fields dynamically at runtime.
  */
 @SuppressWarnings("unchecked")
 public class Reflections
 {
     private static final ConcurrentHashMap<MethodKey, Method> METHOD_CACHE = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<FieldKey, Field> FIELD_CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<ConstructorKey, Constructor<?>> CONSTRUCTOR_CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>();
 
     /**
      * Loads a class by its fully qualified name.
@@ -33,8 +33,16 @@ public class Reflections
     {
         try
         {
-            return Optional.of((Class<T>) Class.forName(path));
-        } catch(ClassNotFoundException e)
+            Class<?> cached = CLASS_CACHE.get(path);
+            if(cached != null)
+                return Optional.of((Class<T>) cached);
+
+            Class<?> clazz = Class.forName(path);
+            CLASS_CACHE.put(path, clazz);
+
+            return Optional.of((Class<T>) clazz);
+        }
+        catch(ClassNotFoundException e)
         {
             return Optional.empty();
         }
@@ -55,39 +63,35 @@ public class Reflections
 
     public static <T> @NotNull Optional<T> getInstance(@NotNull Class<T> clazz, @Nullable Object... args)
     {
-        final Object[] newArgs = Wrapper.checkArgs(args);
-
         try
         {
-            Class<?>[] argTypes = Arrays.stream(newArgs)
-                    .map(Object::getClass)
-                    .toArray(Class[]::new);
+            Class<?>[] argTypes = args == null ? new Class<?>[0] : Arrays.stream(args)
+                                                                   .map(o -> o == null ? Object.class : o.getClass())
+                                                                   .toArray(Class<?>[]::new);
 
-            for(Constructor<?> ctor : clazz.getDeclaredConstructors())
+            ConstructorKey key = new ConstructorKey(clazz, argTypes);
+            Constructor<?> ctor = CONSTRUCTOR_CACHE.get(key);
+
+            if(ctor == null)
             {
-                Class<?>[] paramTypes = ctor.getParameterTypes();
-                if(paramTypes.length != argTypes.length)
-                    continue;
-
-                boolean match = true;
-                for(int i = 0; i < paramTypes.length; i++)
+                for(Constructor<?> constructor : clazz.getDeclaredConstructors())
                 {
-                    if(!paramTypes[i].isAssignableFrom(argTypes[i]))
+                    if(isCompatible(argTypes, constructor.getParameterTypes(), constructor.isVarArgs()))
                     {
-                        match = false;
+                        ctor = constructor;
+                        ctor.setAccessible(true);
+                        CONSTRUCTOR_CACHE.put(key, ctor);
                         break;
                     }
                 }
-
-                if(match)
-                {
-                    ctor.setAccessible(true);
-                    return Optional.of((T) ctor.newInstance(newArgs));
-                }
             }
 
-            return Optional.empty();
-        } catch(Exception e)
+            if(ctor == null)
+                throw new NoSuchMethodException("No compatible constructor found in class " + clazz.getName() + " for arguments " + Arrays.toString(argTypes));
+
+            return Optional.of((T) ctor.newInstance(args));
+        }
+        catch(Exception e)
         {
             return Optional.empty();
         }
@@ -105,7 +109,7 @@ public class Reflections
     private static @NotNull Method findMethod(@NotNull Class<?> clazz, @NotNull String name, @Nullable Object[] args) throws NoSuchMethodException
     {
         Class<?>[] argTypes = args == null ? new Class<?>[0] : Arrays.stream(args)
-                                                               .map(Object::getClass)
+                                                               .map(o -> o == null ? Object.class : o.getClass())
                                                                .toArray(Class<?>[]::new);
 
         MethodKey key = new MethodKey(clazz, name, argTypes);
@@ -140,8 +144,7 @@ public class Reflections
     /**
      * Checks if a given set of argument types is compatible with the parameter types of a method.
      * <p>
-     * This method supports both regular and varargs methods. It also handles primitive-to-wrapper
-     * type conversions (e.g., int to Integer).
+     * This method supports both regular and varargs methods. It also handles primitive-to-wrapper type conversions (e.g., int to Integer).
      *
      * @param args      The types of the provided arguments.
      * @param params    The types of the method's parameters.
@@ -190,13 +193,13 @@ public class Reflections
      */
     public static <V> @NotNull ReflectionChain<V> invokeMethod(@NotNull Object object, @NotNull String methodName, @Nullable Object... args)
     {
-        args = Wrapper.checkArgs(args);
         try
         {
             Method method = findMethod(object.getClass(), methodName, args);
             method.setAccessible(true);
             return new ReflectionChain<>((V) method.invoke(object, args));
-        } catch(Exception e)
+        }
+        catch(Exception e)
         {
             throw new RuntimeException(e);
         }
@@ -213,14 +216,37 @@ public class Reflections
      */
     public static <V> @NotNull ReflectionChain<V> invokeStaticMethod(@NotNull String classPath, @NotNull String methodName, @Nullable Object... args)
     {
-        args = Wrapper.checkArgs(args);
         try
         {
             Class<?> clazz = Class.forName(classPath);
             Method method = findMethod(clazz, methodName, args);
             method.setAccessible(true);
             return new ReflectionChain<>((V) method.invoke(null, args));
-        } catch(Exception e)
+        }
+        catch(Exception e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Invokes a static method of a class given its fully qualified name.
+     *
+     * @param clazz      the class of the method
+     * @param methodName name of the static method
+     * @param args       method arguments
+     * @param <V>        return type of the method
+     * @return a ReflectionChain wrapping the method's return value
+     */
+    public static <V> @NotNull ReflectionChain<V> invokeStaticMethod(@NotNull Class<?> clazz, @NotNull String methodName, @Nullable Object... args)
+    {
+        try
+        {
+            Method method = findMethod(clazz, methodName, args);
+            method.setAccessible(true);
+            return new ReflectionChain<>((V) method.invoke(null, args));
+        }
+        catch(Exception e)
         {
             throw new RuntimeException(e);
         }
@@ -249,7 +275,8 @@ public class Reflections
                 field.setAccessible(true);
                 FIELD_CACHE.put(key, field);
                 return field;
-            } catch(NoSuchFieldException ignored)
+            }
+            catch(NoSuchFieldException ignored)
             {
                 clazz = clazz.getSuperclass();
             }
@@ -271,7 +298,8 @@ public class Reflections
         {
             Field field = findField(object.getClass(), fieldName);
             return new ReflectionChain<>((T) field.get(object));
-        } catch(Exception e)
+        }
+        catch(Exception e)
         {
             throw new RuntimeException(e);
         }
@@ -292,7 +320,8 @@ public class Reflections
         {
             Field field = findField(clazz, fieldName);
             return (V) field.get(null);
-        } catch(Exception e)
+        }
+        catch(Exception e)
         {
             throw new RuntimeException(e);
         }
@@ -313,7 +342,8 @@ public class Reflections
             Class<?> clazz = Class.forName(classPath);
             Field field = findField(clazz, fieldName);
             return (T) field.get(null);
-        } catch(Exception e)
+        }
+        catch(Exception e)
         {
             throw new RuntimeException(e);
         }
@@ -332,7 +362,8 @@ public class Reflections
         {
             Field field = findField(object.getClass(), fieldName);
             field.set(object, value);
-        } catch(Exception e)
+        }
+        catch(Exception e)
         {
             throw new RuntimeException(e);
         }
@@ -352,7 +383,8 @@ public class Reflections
             Class<?> clazz = Class.forName(classPath);
             Field field = findField(clazz, fieldName);
             field.set(null, value);
-        } catch(Exception e)
+        }
+        catch(Exception e)
         {
             throw new RuntimeException(e);
         }
@@ -365,9 +397,9 @@ public class Reflections
         {
             if(this == o)
                 return true;
-            if(!(o instanceof MethodKey(Class<?> clazz1, String name, Class<?>[] types)))
+            if(!(o instanceof MethodKey methodKey))
                 return false;
-            return clazz.equals(clazz1) && methodName.equals(name) && Arrays.equals(paramTypes, types);
+            return clazz.equals(methodKey.clazz) && methodName.equals(methodKey.methodName) && Arrays.equals(paramTypes, methodKey.paramTypes);
         }
 
         @Override
@@ -387,9 +419,9 @@ public class Reflections
         {
             if(this == o)
                 return true;
-            if(!(o instanceof FieldKey(Class<?> clazz1, String name)))
+            if(!(o instanceof FieldKey fieldKey))
                 return false;
-            return clazz.equals(clazz1) && fieldName.equals(name);
+            return clazz.equals(fieldKey.clazz) && fieldName.equals(fieldKey.fieldName);
         }
 
         @Override
@@ -397,6 +429,27 @@ public class Reflections
         {
             int result = clazz.hashCode();
             result = 31 * result + fieldName.hashCode();
+            return result;
+        }
+    }
+
+    private record ConstructorKey(Class<?> clazz, Class<?>[] paramTypes)
+    {
+        @Override
+        public boolean equals(Object o)
+        {
+            if(this == o)
+                return true;
+            if(!(o instanceof ConstructorKey constructorKey))
+                return false;
+            return clazz.equals(constructorKey.clazz) && Arrays.equals(paramTypes, constructorKey.paramTypes);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = clazz.hashCode();
+            result = 31 * result + Arrays.hashCode(paramTypes);
             return result;
         }
     }
@@ -432,7 +485,16 @@ public class Reflections
             if(value == null)
                 return new ReflectionChain<>(null);
 
-            return invokeMethod(value, methodName, args);
+            try
+            {
+                Method method = findMethod(value.getClass(), methodName, args);
+                method.setAccessible(true);
+                return new ReflectionChain<>((V) method.invoke(value, args));
+            }
+            catch(Exception e)
+            {
+                throw new RuntimeException(e);
+            }
         }
 
         /**
@@ -449,7 +511,8 @@ public class Reflections
             {
                 Field field = findField(value.getClass(), fieldName);
                 return new ReflectionChain<>((V) field.get(value));
-            } catch(Exception e)
+            }
+            catch(Exception e)
             {
                 throw new RuntimeException(e);
             }
