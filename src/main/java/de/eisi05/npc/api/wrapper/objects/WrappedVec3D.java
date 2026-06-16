@@ -6,7 +6,7 @@ import de.eisi05.npc.api.wrapper.Wrapper;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
-@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.world.phys.Vec3")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.world.phys.Vec3")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.world.phys.Vec3D")
 public class WrappedVec3D extends Wrapper
 {
@@ -30,7 +30,7 @@ public class WrappedVec3D extends Wrapper
         return new WrappedVec3D(handle);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "x")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "x")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "g")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_6), path = "d")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "c")
@@ -39,7 +39,7 @@ public class WrappedVec3D extends Wrapper
         return getWrappedFieldValue();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "y")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "y")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "h")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_6), path = "e")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "d")
@@ -48,7 +48,7 @@ public class WrappedVec3D extends Wrapper
         return getWrappedFieldValue();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "z")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "z")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "i")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_6), path = "f")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "e")

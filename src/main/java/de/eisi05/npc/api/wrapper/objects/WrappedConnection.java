@@ -9,7 +9,7 @@ import io.netty.channel.Channel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.server.network.ServerGamePacketListenerImpl")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.server.network.ServerGamePacketListenerImpl")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.server.network.PlayerConnection")
 public class WrappedConnection extends Wrapper
 {
@@ -24,14 +24,14 @@ public class WrappedConnection extends Wrapper
         super(createInstance(WrappedConnection.class, server, networkManager, player, commonListenerCookie));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "sendPacket")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "sendPacket")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "b")
     public void sendPacket(@NotNull PacketWrapper packet)
     {
         invokeWrappedMethod(packet);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "connection")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "connection")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "e")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_20_6), path = "c")
     public @NotNull WrappedNetworkManager networkManager()
@@ -39,7 +39,7 @@ public class WrappedConnection extends Wrapper
         return new WrappedNetworkManager(getWrappedFieldValue());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.Connection")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.network.Connection")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.NetworkManager")
     public static class WrappedNetworkManager extends Wrapper
     {
@@ -53,7 +53,7 @@ public class WrappedConnection extends Wrapper
             return new WrappedNetworkManager(createInstance(WrappedNetworkManager.class, packetFlow));
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "channel")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "channel")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "k")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "n")
         public @NotNull Channel channel()
@@ -61,7 +61,7 @@ public class WrappedConnection extends Wrapper
             return getWrappedFieldValue();
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "channel")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "channel")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "k")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "n")
         public void setChannel(@Nullable Channel channel)
@@ -69,15 +69,15 @@ public class WrappedConnection extends Wrapper
             setWrappedFieldValue(channel);
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.PacketFlow")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.network.protocol.PacketFlow")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.EnumProtocolDirection")
         public enum PacketFlow implements EnumWrapper
         {
-            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "SERVERBOUND")
+            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "SERVERBOUND")
             @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
             SERVERBOUND,
 
-            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "CLIENTBOUND")
+            @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "CLIENTBOUND")
             @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "b")
             CLIENTBOUND;
 
@@ -89,7 +89,7 @@ public class WrappedConnection extends Wrapper
         }
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_1), path = "net.minecraft.server.network.CommonListenerCookie")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_2), path = "net.minecraft.server.network.CommonListenerCookie")
     public static class CommonListenerCookie extends Wrapper
     {
         public CommonListenerCookie(@NotNull GameProfile profile, int latency, boolean transferred)

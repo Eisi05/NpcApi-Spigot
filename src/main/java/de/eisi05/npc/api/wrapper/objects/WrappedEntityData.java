@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 
-@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.syncher.SynchedEntityData")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.network.syncher.SynchedEntityData")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.syncher.DataWatcher")
 public class WrappedEntityData extends Wrapper
 {
@@ -22,7 +22,7 @@ public class WrappedEntityData extends Wrapper
         super(handle);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "set")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "set")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
     public <T> void set(@NotNull EntityDataAccessor<T> accessor, @Nullable T value)
     {
@@ -30,33 +30,34 @@ public class WrappedEntityData extends Wrapper
         markDirty(accessor);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "get")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "get")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
     public <T> @Nullable T get(@NotNull EntityDataAccessor<T> accessor)
     {
         return invokeWrappedMethod(accessor);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "packDirty")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "packDirty")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "b")
     public @NotNull List<?> packDirty()
     {
         return invokeWrappedMethod();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_1), path = "markDirty")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_2), path = "markDirty")
     public <T> void markDirty(@NotNull EntityDataAccessor<T> accessor)
     {
         invokeWrappedMethod(accessor);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "getNonDefaultValues")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "getNonDefaultValues")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "c")
     public List<?> getAll()
     {
         return invokeWrappedMethod();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.syncher.EntityDataAccessor")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.network.syncher.EntityDataAccessor")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.syncher.DataWatcherObject")
     public static class EntityDataAccessor<T> extends Wrapper
     {
@@ -71,7 +72,7 @@ public class WrappedEntityData extends Wrapper
         }
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.syncher.EntityDataSerializer")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.network.syncher.EntityDataSerializer")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.syncher.DataWatcherSerializer")
     public static class EntityDataSerializer<T> extends Wrapper
     {
@@ -86,83 +87,83 @@ public class WrappedEntityData extends Wrapper
         }
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.syncher.EntityDataSerializers")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.network.syncher.EntityDataSerializers")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.syncher.DataWatcherRegistry")
     public static class EntityDataSerializers extends Wrapper
     {
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "BYTE")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "BYTE")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
         public static final EntityDataSerializer<Byte> BYTE = new EntityDataSerializer<>(getStaticWrappedFieldValue("BYTE").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "INT")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "INT")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_4, to = Versions.V1_21_11), path = "b")
         public static final EntityDataSerializer<Integer> INT = new EntityDataSerializer<>(getStaticWrappedFieldValue("INT").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "LONG")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "LONG")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "c")
         public static final EntityDataSerializer<Long> LONG = new EntityDataSerializer<>(getStaticWrappedFieldValue("LONG").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "FLOAT")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "FLOAT")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "d")
         public static final EntityDataSerializer<Float> FLOAT = new EntityDataSerializer<>(getStaticWrappedFieldValue("FLOAT").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "STRING")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "STRING")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "e")
         public static final EntityDataSerializer<String> STRING = new EntityDataSerializer<>(getStaticWrappedFieldValue("STRING").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "COMPONENT")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "COMPONENT")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "f")
         public static final EntityDataSerializer<?> CHAT_COMPONENT = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("CHAT_COMPONENT").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "OPTIONAL_COMPONENT")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "OPTIONAL_COMPONENT")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "g")
         public static final EntityDataSerializer<Optional<?>> OPTIONAL_CHAT_COMPONENT = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("OPTIONAL_CHAT_COMPONENT").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "ITEM_STACK")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "ITEM_STACK")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "h")
         public static final EntityDataSerializer<?> ITEM_STACK = new EntityDataSerializer<>(getStaticWrappedFieldValue("ITEM_STACK").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "BLOCK_STATE")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "BLOCK_STATE")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "i")
         public static final EntityDataSerializer<?> BLOCK_DATA = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("BLOCK_DATA").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "OPTIONAL_BLOCK_STATE")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "OPTIONAL_BLOCK_STATE")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "j")
         public static final EntityDataSerializer<Optional<?>> OPTIONAL_BLOCK_DATA = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("OPTIONAL_BLOCK_DATA").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "BOOLEAN")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "BOOLEAN")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "k")
         public static final EntityDataSerializer<Boolean> BOOLEAN = new EntityDataSerializer<>(getStaticWrappedFieldValue("BOOLEAN").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "PARTICLE")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "PARTICLE")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "l")
         public static final EntityDataSerializer<?> PARTICLE_PARAM = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("PARTICLE_PARAM").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "PARTICLES")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "PARTICLES")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "m")
         public static final EntityDataSerializer<List<?>> PARTICLE_PARAM_LIST = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("PARTICLE_PARAM_LIST").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "ROTATIONS")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "ROTATIONS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "n")
         public static final EntityDataSerializer<?> VECTOR = new EntityDataSerializer<>(getStaticWrappedFieldValue("VECTOR").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "BLOCK_POS")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "BLOCK_POS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "o")
         public static final EntityDataSerializer<?> BLOCK_POSITION = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("BLOCK_POSITION").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "OPTIONAL_BLOCK_POS")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "OPTIONAL_BLOCK_POS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "p")
         public static final EntityDataSerializer<?> OPTIONAL_BLOCK_POSITION = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("OPTIONAL_BLOCK_POSITION").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "DIRECTION")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "DIRECTION")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "q")
         public static final EntityDataSerializer<?> ENUM_DIRECTION = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("ENUM_DIRECTION").orElse(null));
@@ -171,12 +172,12 @@ public class WrappedEntityData extends Wrapper
         public static final EntityDataSerializer<Optional<UUID>> OPTIONAL_UUID = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("OPTIONAL_UUID").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "OPTIONAL_LIVING_ENTITY_REFERENCE")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "OPTIONAL_LIVING_ENTITY_REFERENCE")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_11), path = "r")
         public static final EntityDataSerializer<Optional<?>> OPTIONAL_ENTITY_REFERENCE = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("OPTIONAL_ENTITY_REFERENCE").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "OPTIONAL_GLOBAL_POS")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "OPTIONAL_GLOBAL_POS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "s")
         public static final EntityDataSerializer<Optional<?>> OPTIONAL_GLOBAL_POS = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("OPTIONAL_GLOBAL_POS").orElse(null));
@@ -184,25 +185,25 @@ public class WrappedEntityData extends Wrapper
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_6), path = "t")
         public static final EntityDataSerializer<?> NBT_TAG = new EntityDataSerializer<>(getStaticWrappedFieldValue("NBT_TAG").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "VILLAGER_DATA")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "VILLAGER_DATA")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "t")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_6), path = "u")
         public static final EntityDataSerializer<?> VILLAGER_DATA = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("VILLAGER_DATA").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "OPTIONAL_UNSIGNED_INT")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "OPTIONAL_UNSIGNED_INT")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "u")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_6), path = "v")
         public static final EntityDataSerializer<OptionalInt> OPTIONAL_INT = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("OPTIONAL_INT").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "POSE")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "POSE")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_9, to = Versions.V1_21_11), path = "v")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_6), path = "w")
         public static final EntityDataSerializer<Pose> ENTITY_POSE = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("ENTITY_POSE").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "VECTOR3")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "VECTOR3")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "J")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "I")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_6), path = "H")
@@ -210,7 +211,7 @@ public class WrappedEntityData extends Wrapper
         public static final EntityDataSerializer<Vector3f> VECTOR3 = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("VECTOR3").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "QUARTERNION")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "QUARTERNION")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "K")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "J")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_6), path = "I")
@@ -218,13 +219,13 @@ public class WrappedEntityData extends Wrapper
         public static final EntityDataSerializer<?> QUARTERNION = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("QUARTERNION").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "RESOLVABLE_PROFILE")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "RESOLVABLE_PROFILE")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "L")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "K")
         public static final EntityDataSerializer<?> RESOLVABLE_PROFILE = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("RESOLVABLE_PROFILE").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "HUMANOID_ARM")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "HUMANOID_ARM")
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "M")
         public static final EntityDataSerializer<?> HAND = new EntityDataSerializer<>(
                 getStaticWrappedFieldValue("HAND").orElse(null));

@@ -7,7 +7,7 @@ import de.eisi05.npc.api.wrapper.enums.InteractionHand;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game.ServerboundInteractPacket")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.network.protocol.game.ServerboundInteractPacket")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayInUseEntity")
 public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
 {
@@ -19,14 +19,14 @@ public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
         super(handle);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "entityId")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "entityId")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "b")
     public int getId()
     {
         return getWrappedFieldValue();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "hand")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "hand")
     public @Nullable InteractionHand getHand()
     {
         Object enumHandle = getWrappedFieldValue();
@@ -38,7 +38,7 @@ public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
         return null;
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "usingSecondaryAction")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "usingSecondaryAction")
     public boolean usingSecondaryAction()
     {
         return getWrappedFieldValue();

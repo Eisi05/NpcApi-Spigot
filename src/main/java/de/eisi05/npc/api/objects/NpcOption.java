@@ -178,19 +178,10 @@ public class NpcOption<T, S extends Serializable>
             (hide, npc, player) ->
             {
                 WrappedEntity<?> nameTag = npc.getServerPlayer().getNameTag();
-
-                WrappedEntityData data = npc.getServerPlayer().getNameTag().getEntityData();
-                if(nameTag instanceof WrappedArmorStand)
-                    data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), !hide);
-                else if(nameTag instanceof WrappedTextDisplay)
-                {
-                    if(!hide)
-                        return null;
-
+                if(nameTag instanceof WrappedTextDisplay && hide)
                     return new RemoveEntityPacket(npc.getServerPlayer().getNameTag().getId());
-                }
 
-                return SetEntityDataPacket.create(npc.getServerPlayer().getNameTag().getId(), data);
+                return null;
             });
 
     /**
@@ -606,7 +597,7 @@ public class NpcOption<T, S extends Serializable>
                     packets.add(SetEntityDataPacket.create(npc.serverPlayer.getNameTag().getId(), npc.serverPlayer.getNameTag().applyData(
                             npc.isEnabled() ? npc.name.getName(player) :
                                     WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                                    .append(WrappedComponent.create("\n").append(npc.name.getName(player))))));
+                                    .append(WrappedComponent.create("\n").append(npc.name.getName(player))), npc.name.getDisplayOptions())));
 
                     entity.setPassengers(npc.serverPlayer.getNameTag());
                     packets.add(new SetPassengerPacket(entity));

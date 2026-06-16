@@ -6,7 +6,7 @@ import de.eisi05.npc.api.wrapper.Wrapper;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.commands.CommandSourceStack")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.commands.CommandSourceStack")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.commands.CommandListenerWrapper")
 public class WrappedCommandSourceStack extends Wrapper
 {
@@ -15,13 +15,13 @@ public class WrappedCommandSourceStack extends Wrapper
         super(handle);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_1), path = "getBukkitSender")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_2), path = "getBukkitSender")
     public CommandSender getBukkitSender()
     {
         return invokeWrappedMethod();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "withMaximumPermission")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withMaximumPermission")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "b")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "a")
     public @NotNull WrappedCommandSourceStack withMaximumPermission()
@@ -31,21 +31,21 @@ public class WrappedCommandSourceStack extends Wrapper
         return new WrappedCommandSourceStack(invokeWrappedMethod(WrappedPermissionSet.ALL.getHandle()));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "withSuppressedOutput")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withSuppressedOutput")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
     public @NotNull WrappedCommandSourceStack withSuppressedOutput()
     {
         return new WrappedCommandSourceStack(invokeWrappedMethod());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V26_1), path = "net.minecraft.server.permissions.PermissionSet")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V26_2), path = "net.minecraft.server.permissions.PermissionSet")
     private static class WrappedPermissionSet extends Wrapper
     {
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "NO_PERMISSIONS")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "NO_PERMISSIONS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "g")
         public static final WrappedPermissionSet NO = new WrappedPermissionSet(getStaticWrappedFieldValue("NO").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "ALL_PERMISSIONS")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "ALL_PERMISSIONS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "h")
         public static final WrappedPermissionSet ALL = new WrappedPermissionSet(getStaticWrappedFieldValue("ALL").orElse(null));
 

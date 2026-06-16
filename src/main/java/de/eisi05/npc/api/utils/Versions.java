@@ -9,9 +9,8 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Arrays;
 
 /**
- * The {@link Versions} enum represents the supported Minecraft server versions
- * and provides utility methods for working with version-specific paths and comparisons.
- * It helps in adapting the plugin's functionality to different server environments.
+ * The {@link Versions} enum represents the supported Minecraft server versions and provides utility methods for working with version-specific paths and
+ * comparisons. It helps in adapting the plugin's functionality to different server environments.
  */
 public enum Versions
 {
@@ -104,7 +103,11 @@ public enum Versions
     /**
      * Minecraft 26.1 version.
      */
-    V26_1("v26_1");
+    V26_1("v26_1"),
+    /**
+     * Minecraft 26.1 version.
+     */
+    V26_2("v26_2");
 
     /**
      * Caches the determined current server version to avoid repeated lookups.
@@ -112,8 +115,7 @@ public enum Versions
     private static Versions VERSION;
 
     /**
-     * The NMS (Net Minecraft Server) path component corresponding to this version.
-     * For example, "v1_17_R1" for Minecraft 1.17.
+     * The NMS (Net Minecraft Server) path component corresponding to this version. For example, "v1_17_R1" for Minecraft 1.17.
      */
     private final String path;
 
@@ -128,9 +130,8 @@ public enum Versions
     }
 
     /**
-     * Determines and returns the current Minecraft server version based on the Bukkit server's package name.
-     * The determined version is cached for later calls. If the version is not recognized,
-     * the plugin will be disabled and a {@link VersionNotFound} exception will be thrown.
+     * Determines and returns the current Minecraft server version based on the Bukkit server's package name. The determined version is cached for later calls.
+     * If the version is not recognized, the plugin will be disabled and a {@link VersionNotFound} exception will be thrown.
      *
      * @return The {@link Versions} enum entry corresponding to the current server version. Must not be {@code null}.
      * @throws VersionNotFound If the current server version cannot be determined or is not supported.
@@ -140,8 +141,15 @@ public enum Versions
         if(VERSION != null)
             return VERSION;
 
-        if(Bukkit.getServer().getBukkitVersion().startsWith("26.1"))
-            return V26_1;
+        VERSION = switch(Bukkit.getServer().getBukkitVersion())
+        {
+            case String v when v.startsWith("26.1") -> V26_1;
+            case String v when v.startsWith("26.2") -> V26_2;
+            default -> null;
+        };
+
+        if(VERSION != null)
+            return VERSION;
 
         String nmsVersion = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
 
@@ -167,9 +175,8 @@ public enum Versions
     }
 
     /**
-     * Returns an array of {@link Versions} enum entries that fall inclusively between
-     * two specified versions (based on their ordinal values).
-     * The {@code NONE} version is excluded from the result.
+     * Returns an array of {@link Versions} enum entries that fall inclusively between two specified versions (based on their ordinal values). The {@code NONE}
+     * version is excluded from the result.
      *
      * @param versions1 The starting version (inclusive). Must not be {@code null}.
      * @param versions2 The ending version (inclusive). Must not be {@code null}.
@@ -184,8 +191,7 @@ public enum Versions
     }
 
     /**
-     * Checks if the current server version is numerically smaller than a specified version.
-     * This comparison is based on the ordinal value of the enum entries.
+     * Checks if the current server version is numerically smaller than a specified version. This comparison is based on the ordinal value of the enum entries.
      *
      * @param versions The version to compare against. Must not be {@code null}.
      * @return {@code true} if the current version is smaller, {@code false} otherwise.
@@ -196,8 +202,7 @@ public enum Versions
     }
 
     /**
-     * Checks if the current server version is contained within a given {@link Mapping}.
-     * A mapping can specify either a fixed version or a range of versions.
+     * Checks if the current server version is contained within a given {@link Mapping}. A mapping can specify either a fixed version or a range of versions.
      *
      * @param mapping The {@link Mapping} to check against. Must not be {@code null}.
      * @return {@code true} if the current version matches the mapping, {@code false} otherwise.
@@ -221,8 +226,7 @@ public enum Versions
     }
 
     /**
-     * Returns the name of the version, with underscores replaced by dots for better readability.
-     * For example, {@code V1_17} becomes "V1.17".
+     * Returns the name of the version, with underscores replaced by dots for better readability. For example, {@code V1_17} becomes "V1.17".
      *
      * @return The formatted name of the version as a {@link String}. Must not be {@code null}.
      */

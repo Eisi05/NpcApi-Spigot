@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collection;
 import java.util.Optional;
 
-@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutScoreboardTeam")
 public class SetPlayerTeamPacket extends PacketWrapper
 {
@@ -41,7 +41,7 @@ public class SetPlayerTeamPacket extends PacketWrapper
         REMOVE
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_1), path = "net.minecraft.network.protocol.game" +
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.network.protocol.game" +
             ".ClientboundSetPlayerTeamPacket$Parameters")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayOutScoreboardTeam$b")
     public static class Parameters extends Wrapper

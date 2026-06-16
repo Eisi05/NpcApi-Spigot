@@ -11,8 +11,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * Represents the name of an NPC, which can be either a fixed {@link WrappedComponent}
- * or dynamically generated based on a {@link Player}.
+ * Represents the name of an NPC, which can be either a fixed {@link WrappedComponent} or dynamically generated based on a {@link Player}.
  */
 public class NpcName implements Serializable
 {
@@ -21,9 +20,9 @@ public class NpcName implements Serializable
 
     private final WrappedComponent.SerializedComponent nameComponentSerialized;
     private final SerializableFunction<Player, WrappedComponent.SerializedComponent> nameFunctionSerialized;
-
     private transient final WrappedComponent nameComponent;
     private transient final SerializableFunction<Player, WrappedComponent> nameFunction;
+    private NameDisplayOptions displayOptions = new NameDisplayOptions();
 
     /**
      * Creates a static NPC name.
@@ -42,8 +41,7 @@ public class NpcName implements Serializable
     /**
      * Creates a dynamic NPC name with a fallback static component.
      * <p>
-     * The {@code nameFunction} generates the name for a player, but if needed,
-     * {@code fallback} will be used as a default static name.
+     * The {@code nameFunction} generates the name for a player, but if needed, {@code fallback} will be used as a default static name.
      *
      * @param nameFunction the function producing the name for a given player
      * @param fallback     the static fallback name component
@@ -71,8 +69,7 @@ public class NpcName implements Serializable
     /**
      * Creates a new {@link NpcName} from a legacy text string.
      * <p>
-     * The string is parsed using {@link WrappedComponent#parseFromLegacy(String)}
-     * to support Minecraft-style color codes and formatting.
+     * The string is parsed using {@link WrappedComponent#parseFromLegacy(String)} to support Minecraft-style color codes and formatting.
      *
      * @param name the legacy text string to convert into an NPC name
      * @return a new {@link NpcName} representing the given legacy text
@@ -109,10 +106,31 @@ public class NpcName implements Serializable
     @Serial
     private Object readResolve() throws ObjectStreamException
     {
-        if(nameFunctionSerialized == null)
-            return new NpcName(nameComponentSerialized.deserialize());
+        NpcName deserialized = nameFunctionSerialized == null ? new NpcName(nameComponentSerialized.deserialize()) :
+                new NpcName(player -> nameFunctionSerialized.apply(player).deserialize(), nameComponentSerialized.deserialize());
+        if(this.displayOptions != null)
+            deserialized.displayOptions = this.displayOptions;
+        return deserialized;
+    }
 
-        return new NpcName(player -> nameFunctionSerialized.apply(player).deserialize(), nameComponentSerialized.deserialize());
+    /**
+     * Gets the display options for this NPC name.
+     *
+     * @return the display options
+     */
+    public @NotNull NameDisplayOptions getDisplayOptions()
+    {
+        return this.displayOptions;
+    }
+
+    /**
+     * Sets the display options for this NPC name.
+     *
+     * @param displayOptions the display options to set
+     */
+    public void setDisplayOptions(@NotNull NameDisplayOptions displayOptions)
+    {
+        this.displayOptions = displayOptions;
     }
 
     /**
@@ -156,7 +174,9 @@ public class NpcName implements Serializable
      */
     public @NotNull NpcName copy()
     {
-        return isStatic() ? new NpcName(nameComponent) : new NpcName(nameFunction, nameComponent);
+        NpcName copied = isStatic() ? new NpcName(nameComponent) : new NpcName(nameFunction, nameComponent);
+        copied.displayOptions = this.displayOptions.copy();
+        return copied;
     }
 
     @Override

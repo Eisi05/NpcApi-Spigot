@@ -478,7 +478,7 @@ public class NPC extends NpcHolder
         WrappedServerPlayer.fromPlayer(player)
                 .sendPacket(SetEntityDataPacket.create(serverPlayer.getNameTag().getId(), serverPlayer.getNameTag()
                         .applyData(isEnabled() ? name.getName(player) : WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
-                                .append(WrappedComponent.create("\n").append(name.getName(player))))));
+                                .append(WrappedComponent.create("\n").append(name.getName(player))), name.getDisplayOptions())));
     }
 
     /**
