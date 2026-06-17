@@ -148,6 +148,12 @@ public class WalkPathGoal extends Goal
         this.withRotation = withRotation;
     }
 
+    @Override
+    protected @Nullable Location getLocation()
+    {
+        return path != null ? path.asLocations().getLast() : null;
+    }
+
     /**
      * Checks if this goal can be used by the NPC.
      *

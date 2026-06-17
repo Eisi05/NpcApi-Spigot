@@ -215,6 +215,12 @@ public class WalkToLocationGoal extends Goal
         return true;
     }
 
+    @Override
+    protected @Nullable Location getLocation()
+    {
+        return targetLocation;
+    }
+
     /**
      * Starts the walk to location goal, calculating the path.
      *

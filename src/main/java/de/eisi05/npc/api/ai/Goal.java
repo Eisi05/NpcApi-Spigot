@@ -1,7 +1,9 @@
 package de.eisi05.npc.api.ai;
 
 import de.eisi05.npc.api.objects.NPC;
+import de.eisi05.npc.api.utils.SerializableBiPredicate;
 import de.eisi05.npc.api.utils.SerializablePredicate;
+import org.bukkit.Location;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,7 +19,11 @@ public abstract class Goal implements Serializable
     @Serial
     private final static long serialVersionUID = 1L;
     private Priority priority;
+
+    @Deprecated(since = "2.4.1")
     private SerializablePredicate<NPC> condition;
+
+    private SerializableBiPredicate<Location, NPC> newCondition;
 
     /**
      * Creates a new goal with the specified priority.
@@ -33,14 +39,22 @@ public abstract class Goal implements Serializable
     {
     }
 
+    @Serial
+    private Object readResolve()
+    {
+        if(newCondition == null && condition != null)
+            newCondition = (loc, npc) -> condition.test(npc);
+        return this;
+    }
+
     /**
      * Gets the condition for this goal. The condition is checked before the goal is executed.
      *
      * @return The condition for this goal
      */
-    public @Nullable SerializablePredicate<NPC> getCondition()
+    public final @Nullable SerializableBiPredicate<Location, NPC> getCondition()
     {
-        return condition;
+        return newCondition;
     }
 
     /**
@@ -48,9 +62,9 @@ public abstract class Goal implements Serializable
      *
      * @param condition The condition to set
      */
-    public void setCondition(@Nullable SerializablePredicate<NPC> condition)
+    public void setCondition(@Nullable SerializableBiPredicate<Location, NPC> condition)
     {
-        this.condition = condition;
+        this.newCondition = condition;
     }
 
     /**
@@ -81,7 +95,7 @@ public abstract class Goal implements Serializable
      */
     protected boolean canUse(@NotNull NPC npc)
     {
-        return condition == null || condition.test(npc);
+        return newCondition == null || newCondition.test(getLocation(), npc);
     }
 
     /**
@@ -106,6 +120,16 @@ public abstract class Goal implements Serializable
     protected abstract void stop(@NotNull NPC npc);
 
     /**
+     * Gets the location associated with this goal.
+     *
+     * @return The location or null if not applicable
+     */
+    protected @Nullable Location getLocation()
+    {
+        return null;
+    }
+
+    /**
      * Checks whether this goal can continue executing. If this returns false, the goal will be stopped and a new goal will be selected.
      *
      * @param npc The NPC to check for
@@ -113,7 +137,7 @@ public abstract class Goal implements Serializable
      */
     protected boolean canContinue(@NotNull NPC npc)
     {
-        return condition == null || condition.test(npc);
+        return newCondition == null || newCondition.test(getLocation(), npc);
     }
 
     /**
