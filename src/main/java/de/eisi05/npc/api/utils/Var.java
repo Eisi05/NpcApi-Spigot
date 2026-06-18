@@ -101,6 +101,42 @@ public class Var
     }
 
     /**
+     * Converts a json text into a {@link WrappedComponent} (NMS chat component equivalent). This method uses reflection to call the appropriate
+     * {@code fromStringOrNull} method from CraftBukkit's CraftChatMessage utility, which handles parsing text into components.
+     *
+     * @param json The json text to convert. Must not be {@code null}.
+     * @return A {@link WrappedComponent} representing the given text.
+     * @throws java.util.NoSuchElementException If the reflection method is not found or cannot be invoked.
+     */
+    public static @NotNull WrappedComponent fromJson(@NotNull String json)
+    {
+        if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+            return WrappedComponent.fromHandle(
+                    Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".util.CraftChatMessage",
+                            "fromJSONOrNull", json).get());
+        return WrappedComponent.fromHandle(
+                Reflections.invokeStaticMethod("org.bukkit.craftbukkit.util.CraftChatMessage",
+                        "fromJSONOrNull", json).get());
+    }
+
+    /**
+     * Converts a {@link WrappedComponent} (NMS chat component equivalent) back into json format. This method uses reflection to call the appropriate
+     * {@code fromComponent} method from CraftBukkit's CraftChatMessage utility.
+     *
+     * @param component The {@link WrappedComponent} to convert to json. Must not be {@code null}.
+     * @return A json representation of the component.
+     * @throws java.util.NoSuchElementException If the reflection method is not found or cannot be invoked.
+     */
+    public static @NotNull String toJson(@NotNull WrappedComponent component)
+    {
+        if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+            return (String) Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".util.CraftChatMessage",
+                    "toJSON", component.getHandle()).get();
+        return (String) Reflections.invokeStaticMethod("org.bukkit.craftbukkit.util.CraftChatMessage",
+                "toJSON", component.getHandle()).get();
+    }
+
+    /**
      * Performs an unchecked cast of an object to a specified type. This method can be used to bypass Java's type checking at compile time, but it comes with
      * the risk of {@link ClassCastException} at runtime if the object is not an instance of the target type.
      *

@@ -46,4 +46,9 @@ public class WrappedMinecraftServer extends Wrapper
     {
         return (CommandDispatcher<Object>) Reflections.invokeMethod(commands().getHandle(), getPath()).get();
     }
+
+    public static Object vanillaRegistry() {
+        return Reflections.invokeStaticMethod("net.minecraft.data.registries.VanillaRegistries",
+                Versions.isCurrentVersionSmallerThan(Versions.V26_1) ? "a" : "createLookup").get();
+    }
 }

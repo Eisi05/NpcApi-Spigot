@@ -80,6 +80,16 @@ public class Path implements ConfigurationSerializable
     }
 
     /**
+     * Returns a new path that is the reverse of this path.
+     *
+     * @return a new path that is the reverse of this path
+     */
+    public @NotNull Path reverse()
+    {
+        return new Path(new ArrayList<>(locations).reversed(), new ArrayList<>(waypoints).reversed());
+    }
+
+    /**
      * Returns the path as an unmodifiable list of {@link Vector} objects.
      *
      * @return an unmodifiable list of vectors representing the path
