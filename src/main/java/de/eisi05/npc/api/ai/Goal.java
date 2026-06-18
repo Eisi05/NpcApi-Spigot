@@ -43,7 +43,20 @@ public abstract class Goal implements Serializable
     private Object readResolve()
     {
         if(newCondition == null && condition != null)
-            newCondition = (loc, npc) -> condition.test(npc);
+            newCondition = new SerializableBiPredicate<>()
+            {
+                @Override
+                public boolean test(Location location, NPC npc)
+                {
+                    return condition.test(npc);
+                }
+
+                @Override
+                public String toString()
+                {
+                    return condition.toString();
+                }
+            };
         return this;
     }
 
