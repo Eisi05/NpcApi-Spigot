@@ -591,9 +591,9 @@ public class NpcOption<T, S extends Serializable>
                 if(entity.getBukkitPlayer() instanceof BlockDisplay display)
                 {
                     Vector3f translation = display.getTransformation().getTranslation();
-                    if(!display.getPersistentDataContainer().has(WrappedEntity.displayKey, PersistentDataType.BOOLEAN))
+                    if(!display.getPersistentDataContainer().has(NpcApi.displayKey, PersistentDataType.BOOLEAN))
                     {
-                        display.getPersistentDataContainer().set(WrappedEntity.displayKey, PersistentDataType.BOOLEAN, true);
+                        display.getPersistentDataContainer().set(NpcApi.displayKey, PersistentDataType.BOOLEAN, true);
                         data.set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(11),
                                 new Vector3f(translation.x - 0.5f, translation.y, translation.z - 0.5f));
                     }
@@ -602,9 +602,9 @@ public class NpcOption<T, S extends Serializable>
                 if(entity.getBukkitPlayer() instanceof ItemDisplay display)
                 {
                     Vector3f translation = display.getTransformation().getTranslation();
-                    if(!display.getPersistentDataContainer().has(WrappedEntity.displayKey, PersistentDataType.BOOLEAN))
+                    if(!display.getPersistentDataContainer().has(NpcApi.displayKey, PersistentDataType.BOOLEAN))
                     {
-                        display.getPersistentDataContainer().set(WrappedEntity.displayKey, PersistentDataType.BOOLEAN, true);
+                        display.getPersistentDataContainer().set(NpcApi.displayKey, PersistentDataType.BOOLEAN, true);
                         data.set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(11), new Vector3f(translation.x, translation.y + 0.5f, translation.z));
                     }
                 }

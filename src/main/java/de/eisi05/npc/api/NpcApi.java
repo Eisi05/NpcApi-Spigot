@@ -12,6 +12,7 @@ import de.eisi05.npc.api.utils.PacketReader;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
@@ -40,6 +41,8 @@ public final class NpcApi
     public static Plugin plugin;
     public static Function<Player, String> DISABLED_MESSAGE_PROVIDER = player -> ChatColor.RED + "DISABLED";
 
+    public static NamespacedKey displayKey;
+
     /**
      * The configuration object for the NPC API, containing various settings like the look-at timer.
      */
@@ -58,6 +61,7 @@ public final class NpcApi
     {
         NpcApi.plugin = plugin;
         NpcApi.config = config;
+        displayKey = new NamespacedKey(NpcApi.plugin, "display");
 
         if(config.preciseSleepingHitbox())
             listeners.add(sleepListener = new NpcSleepListener());
