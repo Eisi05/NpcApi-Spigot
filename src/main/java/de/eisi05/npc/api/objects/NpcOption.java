@@ -18,14 +18,14 @@ import de.eisi05.npc.api.wrapper.objects.*;
 import de.eisi05.npc.api.wrapper.packets.*;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Pose;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
@@ -555,11 +555,15 @@ public class NpcOption<T, S extends Serializable>
                     entity = npc.entity;
 
                 npc.entity = entity;
+                if(entity instanceof WrappedEnderDragon dragon)
+                    dragon.getSubIds().forEach(id -> NpcManager.addID(id, npc));
+
                 NpcManager.addID(npc.entity.getId(), npc);
 
                 List<PacketWrapper> packets = new ArrayList<>();
 
                 packets.add(new RemoveEntityPacket(npc.getServerPlayer().getId()));
+                packets.add(new RemoveEntityPacket(npc.entity.getId()));
                 packets.add(entity.getAddEntityPacket());
 
                 var teamPair = getTeam(player, npc);
@@ -583,7 +587,51 @@ public class NpcOption<T, S extends Serializable>
                         (byte) (Var.nbtToEntityFlags(wrappedEntitySnapshot.getData()) | Var.extractFlagsFromBukkit(entity.getBukkitPlayer())));
                 data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2), Optional.of(WrappedComponent.create("NPC").getHandle()));
                 data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), false);
-                packets.add(SetEntityDataPacket.create(entity.getId(), data));
+
+                if(entity.getBukkitPlayer() instanceof BlockDisplay display)
+                {
+                    Vector3f translation = display.getTransformation().getTranslation();
+                    if(!display.getPersistentDataContainer().has(WrappedEntity.displayKey, PersistentDataType.BOOLEAN))
+                    {
+                        display.getPersistentDataContainer().set(WrappedEntity.displayKey, PersistentDataType.BOOLEAN, true);
+                        data.set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(11),
+                                new Vector3f(translation.x - 0.5f, translation.y, translation.z - 0.5f));
+                    }
+                }
+
+                if(entity.getBukkitPlayer() instanceof ItemDisplay display)
+                {
+                    Vector3f translation = display.getTransformation().getTranslation();
+                    if(!display.getPersistentDataContainer().has(WrappedEntity.displayKey, PersistentDataType.BOOLEAN))
+                    {
+                        display.getPersistentDataContainer().set(WrappedEntity.displayKey, PersistentDataType.BOOLEAN, true);
+                        data.set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(11), new Vector3f(translation.x, translation.y + 0.5f, translation.z));
+                    }
+                }
+
+                packets.add(SetEntityDataPacket.createNoneDefaults(entity.getId(), data));
+
+                List<WrappedEntity<?>> passengers = new ArrayList<>();
+                if(entity.getBukkitPlayer() instanceof Display display)
+                {
+                    Vector3f scale = display.getTransformation().getScale();
+
+                    WrappedInteraction interaction = WrappedInteraction.create(npc.getLocation().getWorld());
+                    interaction.moveTo(npc.getLocation());
+                    float width = Math.max(scale.x, scale.z);
+                    float height = scale.y;
+
+                    NpcManager.addID(interaction.getId(), npc);
+                    npc.toDeleteEntities.put("interaction", interaction.getId());
+                    passengers.add(interaction);
+
+                    npc.name.getDisplayOptions().setHeight(height);
+                    WrappedEntityData displayData = interaction.getData(width, height);
+                    packets.add(interaction.getAddEntityPacket());
+                    packets.add(SetEntityDataPacket.create(interaction.getId(), displayData));
+                }
+                else
+                    npc.name.getDisplayOptions().setHeight(0);
 
                 if(!npc.getOption(NpcOption.HIDE_NAMETAG, player))
                 {
@@ -599,7 +647,12 @@ public class NpcOption<T, S extends Serializable>
                                     WrappedComponent.parseFromLegacy(NpcApi.DISABLED_MESSAGE_PROVIDER.apply(player))
                                     .append(WrappedComponent.create("\n").append(npc.name.getName(player))), npc.name.getDisplayOptions())));
 
-                    entity.setPassengers(npc.serverPlayer.getNameTag());
+                    passengers.add(npc.serverPlayer.getNameTag());
+                }
+
+                if(!passengers.isEmpty())
+                {
+                    entity.setPassengers(passengers.toArray(new WrappedEntity<?>[0]));
                     packets.add(new SetPassengerPacket(entity));
                 }
 

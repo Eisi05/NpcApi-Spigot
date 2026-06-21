@@ -2,6 +2,7 @@ package de.eisi05.npc.api.objects;
 
 import org.bukkit.entity.TextDisplay;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -12,9 +13,6 @@ import java.util.Arrays;
  */
 public class NameDisplayOptions implements Serializable
 {
-    @Serial
-    private static final long serialVersionUID = 1L;
-
     public static final float[] DEFAULT_SCALE = new float[]{1.0f, 1.0f, 1.0f};
     public static final int DEFAULT_BRIGHTNESS = -1;
     public static final float DEFAULT_VIEW_RANGE = 1.0f;
@@ -24,6 +22,10 @@ public class NameDisplayOptions implements Serializable
     public static final boolean DEFAULT_SEE_THROUGH = false;
     public static final int DEFAULT_ALIGNMENT = TextDisplay.TextAlignment.CENTER.ordinal();
 
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    private float height = 0;
     private float[] scale = DEFAULT_SCALE.clone();
     private int brightness = DEFAULT_BRIGHTNESS;
     private float viewRange = DEFAULT_VIEW_RANGE;
@@ -222,14 +224,24 @@ public class NameDisplayOptions implements Serializable
 
     /**
      * Sets the horizontal alignment formatting applied to multi-line text strings.
-     * @param alignment
-     * alignment
      *
+     * @param alignment alignment
      * @return this options instance for method chaining
      */
     public @NotNull NameDisplayOptions setAlignment(@NotNull TextDisplay.TextAlignment alignment)
     {
         this.alignment = alignment.ordinal();
+        return this;
+    }
+
+    public float getHeight()
+    {
+        return this.height;
+    }
+
+    @NotNull NameDisplayOptions setHeight(float height)
+    {
+        this.height = height;
         return this;
     }
 

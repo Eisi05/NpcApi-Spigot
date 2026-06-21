@@ -179,7 +179,7 @@ public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
         data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2), Optional.of(component.getHandle()));
         data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(4), true);
 
-        translation(0, 0.25f, 0);
+        translation(0, 0.25f + displayOptions.getHeight(), 0);
         billboardConstraints(BillboardConstraints.CENTER);
 
         float[] scale = displayOptions.getScale();

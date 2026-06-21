@@ -26,4 +26,10 @@ public class SetEntityDataPacket extends PacketWrapper
         List<?> dataList = data.packDirty();
         return new SetEntityDataPacket(id, dataList == null ? new ArrayList<>() : dataList);
     }
+
+    public static SetEntityDataPacket createNoneDefaults(int id, @NotNull WrappedEntityData data)
+    {
+        List<?> dataList = data.getAll();
+        return new SetEntityDataPacket(id, dataList == null ? new ArrayList<>() : dataList);
+    }
 }

@@ -654,6 +654,7 @@ public class NPC extends NpcHolder
 
         WrappedServerPlayer wrappedServerPlayer = WrappedServerPlayer.fromPlayer(player);
         wrappedServerPlayer.sendPacket(new RemoveEntityPacket(serverPlayer.getId()));
+        wrappedServerPlayer.sendPacket(new RemoveEntityPacket(entity.getId()));
         wrappedServerPlayer.sendPacket(new RemoveEntityPacket(serverPlayer.getNameTag().getId()));
 
         if(WrappedPlayerTeam.exists(player, getServerPlayer().getName()))
@@ -664,6 +665,7 @@ public class NPC extends NpcHolder
         }
 
         toDeleteEntities.values().forEach(integer -> wrappedServerPlayer.sendPacket(new RemoveEntityPacket(integer)));
+        toDeleteEntities.clear();
 
         wrappedServerPlayer.sendPacket(new PlayerInfoRemovePacket(List.of(getUUID())));
 

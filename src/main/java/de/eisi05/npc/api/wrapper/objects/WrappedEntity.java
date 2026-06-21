@@ -1,6 +1,7 @@
 package de.eisi05.npc.api.wrapper.objects;
 
 import com.google.common.collect.ImmutableList;
+import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.objects.NameDisplayOptions;
 import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.Versions;
@@ -9,6 +10,7 @@ import de.eisi05.npc.api.wrapper.Wrapper;
 import de.eisi05.npc.api.wrapper.packets.CustomPacket;
 import de.eisi05.npc.api.wrapper.packets.PacketWrapper;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.jetbrains.annotations.NotNull;
@@ -20,6 +22,7 @@ import java.util.Arrays;
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_2), path = "net.minecraft.world.entity.Entity")
 public class WrappedEntity<T extends Entity> extends Wrapper
 {
+    public static final NamespacedKey displayKey = new NamespacedKey(NpcApi.plugin, "display");
     public String data = "{}";
     private final BoundingBox defaultBoundingBox;
 
@@ -211,6 +214,16 @@ public class WrappedEntity<T extends Entity> extends Wrapper
         @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_2), path = "bv")
         @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "bb")
         public static final Object TEXT_DISPLAY = getStaticWrappedFieldValue("TEXT_DISPLAY").orElse(null);
+
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "INTERACTION")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "at")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "as")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "aq")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_5), path = "ap")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_4), path = "ao")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_2), path = "ap")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "ae")
+        public static final Object INTERACTION = getStaticWrappedFieldValue("INTERACTION").orElse(null);
 
         private EntityTypes()
         {

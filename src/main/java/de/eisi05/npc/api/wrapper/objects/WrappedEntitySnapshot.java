@@ -100,39 +100,35 @@ public class WrappedEntitySnapshot implements Serializable
     @SuppressWarnings("unchecked")
     public @NotNull WrappedEntity<?> create(@NotNull World world)
     {
-        WrappedEntity<?> entity;
+        Object handle;
         WrappedCompoundTag data = getData();
         if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_2))
         {
             data.putString("id", type.toLowerCase());
-
-            entity = new WrappedEntity<>(Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a",
-                    data.getHandle(), Var.getNmsLevel(world), Function.identity()).get());
+            handle = Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a",
+                    data.getHandle(), Var.getNmsLevel(world), Function.identity()).get();
         }
         else if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_9))
         {
             data.putString("id", type.toLowerCase());
-            entity = new WrappedEntity<>(
-                    Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a",
-                            data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get());
+            handle = Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a",
+                            data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get();
         }
         else if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_11))
-            entity = new WrappedEntity<>(
-                    Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()), data.getHandle(),
-                            Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get());
+            handle = Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()), data.getHandle(),
+                            Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get();
         else if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
-            entity = new WrappedEntity<>(
-                    Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()),
+            handle = Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()),
                             data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(),
-                            WrappedEntity.EntityProcessor.NOP).get());
+                            WrappedEntity.EntityProcessor.NOP).get();
         else
-            entity = new WrappedEntity<>(
-                    Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityType", "loadEntityRecursive",
+            handle = Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityType", "loadEntityRecursive",
                             Var.toNmsEntityType(getType()), data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(),
-                            WrappedEntity.EntityProcessor.NOP).get());
+                            WrappedEntity.EntityProcessor.NOP).get();
 
+        WrappedEntity<?> entity = getType() == EntityType.ENDER_DRAGON ? new WrappedEnderDragon(handle) : new WrappedEntity<>(handle);
         WrappedEntity<?> finalEntity = entityFunction == null ? entity :
-                WrappedEntity.fromEntity(entityFunction.apply(Var.unsafeCast(entity.getBukkitPlayer())), WrappedEntity.class);
+                WrappedEntity.fromEntity(entityFunction.apply(Var.unsafeCast(entity.getBukkitPlayer())), entity.getClass());
         finalEntity.data = data.toString();
         return finalEntity;
     }

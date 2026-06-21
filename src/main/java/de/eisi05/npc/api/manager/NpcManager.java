@@ -48,9 +48,9 @@ public class NpcManager
      *
      * @return the set of NPCs
      */
-    public static @NotNull Collection<NPC> getList()
+    public static @NotNull Set<NPC> getList()
     {
-        return npcById.values();
+        return new HashSet<>(npcById.values());
     }
 
     /**
