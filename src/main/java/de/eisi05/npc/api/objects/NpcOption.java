@@ -13,6 +13,7 @@ import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.manager.NpcVisibilityManager;
 import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.*;
+import de.eisi05.npc.api.utils.serialize.ItemSerializer;
 import de.eisi05.npc.api.wrapper.enums.ChatFormat;
 import de.eisi05.npc.api.wrapper.objects.*;
 import de.eisi05.npc.api.wrapper.packets.*;
@@ -188,29 +189,23 @@ public class NpcOption<T, S extends Serializable>
      * NPC option to set the equipment worn by the NPC (armor, items in hand). The map uses {@link EquipmentSlot} as keys and {@link ItemStack} as values.
      * Serialized form uses item base64 strings.
      */
-    public static final NpcOption<Map<EquipmentSlot, ItemStack>, HashMap<EquipmentSlot, String>> EQUIPMENT = new NpcOption<>("equipment", HashMap::new, HashMap::new,
-            map ->
-            {
-                HashMap<EquipmentSlot, String> serializedMap = new HashMap<>();
-                map.forEach((slot, item) ->
-                {
-                    if(item == null || item.getType().isAir())
-                        return;
-
-                    String serialized = ItemSerializer.itemStackToBase64(item);
-                    if(serialized == null)
-                        return;
-
-                    serializedMap.put(slot, serialized);
-                });
-                return serializedMap;
-            },
+    public static final NpcOption<Map<EquipmentSlot, ItemStack>, HashMap<EquipmentSlot, ?>> EQUIPMENT = new NpcOption<>("equipment", HashMap::new,
+            HashMap::new, HashMap::new,
             serializedMap ->
             {
                 HashMap<EquipmentSlot, ItemStack> map = new HashMap<>();
-                serializedMap.forEach((slot, string) ->
+                serializedMap.forEach((slot, object) ->
                 {
-                    if(string == null || string.isEmpty())
+                    if(object == null)
+                        return;
+
+                    if(object instanceof ItemStack)
+                    {
+                        map.put(slot, (ItemStack) object);
+                        return;
+                    }
+
+                    if(!(object instanceof String string) || string.isEmpty())
                         return;
 
                     ItemStack item = ItemSerializer.itemStackFromBase64(string);
@@ -903,7 +898,16 @@ public class NpcOption<T, S extends Serializable>
      */
     public @Nullable T deserialize(@Nullable S var1)
     {
-        return deserializer.apply(var1);
+        System.out.println(path + " -> " + var1);
+        try
+        {
+            return deserializer.apply(var1);
+        }
+        catch(ClassCastException e)
+        {
+            //throw new RuntimeException(path + " -> " + var1, e);
+            return null;
+        }
     }
 
     /**

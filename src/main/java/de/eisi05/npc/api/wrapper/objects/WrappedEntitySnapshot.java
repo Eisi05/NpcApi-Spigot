@@ -31,7 +31,7 @@ public class WrappedEntitySnapshot implements Serializable
 
     private final String type;
     private final byte[] data;
-    private final SerializableFunction<? extends Entity, ? extends Entity> entityFunction;
+    private transient final SerializableFunction<? extends Entity, ? extends Entity> entityFunction;
 
     /**
      * Creates a new entity snapshot with the specified entity type and NBT data.

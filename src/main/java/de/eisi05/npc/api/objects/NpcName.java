@@ -1,5 +1,6 @@
 package de.eisi05.npc.api.objects;
 
+import com.google.gson.annotations.SerializedName;
 import de.eisi05.npc.api.utils.SerializableFunction;
 import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
 import org.bukkit.entity.Player;
@@ -18,6 +19,7 @@ public class NpcName implements Serializable
     @Serial
     private static final long serialVersionUID = 1L;
 
+    @SerializedName("component")
     private final WrappedComponent.SerializedComponent nameComponentSerialized;
     private final SerializableFunction<Player, WrappedComponent.SerializedComponent> nameFunctionSerialized;
     private transient final WrappedComponent nameComponent;

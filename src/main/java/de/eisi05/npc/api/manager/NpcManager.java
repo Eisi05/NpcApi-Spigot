@@ -3,7 +3,7 @@ package de.eisi05.npc.api.manager;
 import com.mojang.datafixers.util.Either;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.objects.NPC;
-import de.eisi05.npc.api.utils.ObjectSaver;
+import de.eisi05.npc.api.utils.serialize.ObjectSaver;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -122,6 +122,7 @@ public class NpcManager
 
         long failCounter = 0;
         long successCounter = 0;
+        long migrations = 0;
 
         Exception exception = null;
         for(File file1 : files)
@@ -131,7 +132,19 @@ public class NpcManager
 
             try
             {
-                NPC.SerializedNPC serializedNPC = new ObjectSaver(file1).read();
+                ObjectSaver saver = new ObjectSaver(file1);
+
+                NPC.SerializedNPC serializedNPC;
+                if(!saver.isJson())
+                {
+                    serializedNPC = saver.read();
+                    file1.delete();
+                    new ObjectSaver(file1).write(serializedNPC, false);
+                    migrations++;
+                }
+                else
+                    serializedNPC = saver.read(NPC.SerializedNPC.class);
+
                 Either<NPC, UUID> npcEither = serializedNPC.deserializedNPC();
 
                 if(npcEither.right().isPresent())
@@ -153,6 +166,9 @@ public class NpcManager
                 loadExceptions.put(file1.getName(), e);
             }
         }
+
+        if(migrations > 0)
+            NpcApi.plugin.getLogger().info("Successfully migrated " + migrations + " NPC's");
 
         if(successCounter == 1)
             NpcApi.plugin.getLogger().info("Successfully loaded " + successCounter + " NPC");
