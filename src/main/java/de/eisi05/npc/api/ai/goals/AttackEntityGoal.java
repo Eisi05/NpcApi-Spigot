@@ -1,5 +1,7 @@
 package de.eisi05.npc.api.ai.goals;
 
+import com.google.gson.*;
+import com.google.gson.annotations.JsonAdapter;
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.objects.NPC;
@@ -7,6 +9,7 @@ import de.eisi05.npc.api.objects.NpcOption;
 import de.eisi05.npc.api.utils.LocationUtils;
 import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.SerializableBiPredicate;
+import de.eisi05.npc.api.utils.serialize.ConditionRegistry;
 import de.eisi05.npc.api.wrapper.enums.Pose;
 import de.eisi05.npc.api.wrapper.objects.WrappedEntityData;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
@@ -26,7 +29,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.Serial;
+import java.io.*;
+import java.lang.reflect.Type;
 import java.util.*;
 
 /**
@@ -48,6 +52,7 @@ public class AttackEntityGoal extends Goal
     private static final double KITING_DISTANCE = 3.0;
     private static final double OPTIMAL_RANGED_DISTANCE = 6.0;
 
+    @JsonAdapter(TargetFilterAdapter.class)
     private SerializableBiPredicate<LivingEntity, NPC> targetFilter;
     private double customAttackRange;
     private double speed;
@@ -385,7 +390,7 @@ public class AttackEntityGoal extends Goal
         {
             Location npcLoc = npc.getLocation();
             Location below = npcLoc.clone().subtract(0, 0.1, 0);
-            
+
             if(below.getBlock().getType().isAir())
                 return false;
         }
@@ -553,7 +558,7 @@ public class AttackEntityGoal extends Goal
         {
             return (String) Reflections.invokeMethod("me.deecaad.weaponmechanics.WeaponMechanicsAPI", "getWeaponTitle", item).get();
         }
-        catch (NoClassDefFoundError | Exception e)
+        catch(NoClassDefFoundError | Exception e)
         {
             return null;
         }
@@ -896,6 +901,71 @@ public class AttackEntityGoal extends Goal
         {
             movementGoal.stop(npc);
             movementGoal = null;
+        }
+    }
+
+    private static class TargetFilterAdapter
+            implements JsonSerializer<SerializableBiPredicate<LivingEntity, NPC>>, JsonDeserializer<SerializableBiPredicate<LivingEntity, NPC>>
+    {
+        @Override
+        public JsonElement serialize(SerializableBiPredicate<LivingEntity, NPC> src, Type typeOfSrc, JsonSerializationContext context)
+        {
+            if(src == null)
+                return JsonNull.INSTANCE;
+
+            String expression = src.toString();
+            if(expression != null && !expression.contains("$$Lambda") && !expression.contains("@"))
+            {
+                JsonObject obj = new JsonObject();
+                obj.addProperty("expression", expression);
+                return obj;
+            }
+
+            try(ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(baos))
+            {
+                oos.writeObject(src);
+                oos.flush();
+
+                JsonObject obj = new JsonObject();
+                obj.addProperty("lambda", Base64.getEncoder().encodeToString(baos.toByteArray()));
+                return obj;
+            }
+            catch(IOException e)
+            {
+                return JsonNull.INSTANCE;
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public SerializableBiPredicate<LivingEntity, NPC> deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+                throws JsonParseException
+        {
+            if(json == null || json.isJsonNull())
+                return null;
+
+            if(json.isJsonPrimitive())
+                return ConditionRegistry.compileTargetFilter(json.getAsString());
+
+            JsonObject obj = json.getAsJsonObject();
+            if(obj.has("expression"))
+                return ConditionRegistry.compileTargetFilter(obj.get("expression").getAsString());
+            else if(obj.has("lambda"))
+            {
+                byte[] data = Base64.getDecoder().decode(obj.get("lamda").getAsString());
+                try(ByteArrayInputStream bais = new ByteArrayInputStream(data);
+                    ObjectInputStream ois = new ObjectInputStream(bais))
+                {
+                    return (SerializableBiPredicate<LivingEntity, NPC>) ois.readObject();
+                }
+                catch(IOException | ClassNotFoundException e)
+                {
+                    return null;
+                }
+            }
+
+            return null;
         }
     }
 }

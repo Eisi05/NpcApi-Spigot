@@ -8,20 +8,14 @@ import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.interfaces.NpcClickAction;
-import de.eisi05.npc.api.objects.NpcName;
-import de.eisi05.npc.api.objects.NpcSkin;
-import de.eisi05.npc.api.utils.SerializableFunction;
-import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
+import de.eisi05.npc.api.objects.NpcOption;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -123,17 +117,16 @@ public class ObjectSaver
         }
     };
 
-    static final Gson CLEAN_GSON = new GsonBuilder()
-            .registerTypeAdapterFactory(new GsonDebugFactory())
+    public static final Gson CLEAN_GSON = new GsonBuilder()
+            //.registerTypeAdapterFactory(new GsonDebugFactory())
             .registerTypeAdapter(Instant.class, INSTANT_ADAPTER)
             .registerTypeHierarchyAdapter(ItemStack.class, ITEM_STACK_ADAPTER)
             .disableHtmlEscaping()
             .setPrettyPrinting()
             .create();
 
-    @SuppressWarnings("unchecked")
     static final Gson GSON = new GsonBuilder()
-            .registerTypeAdapterFactory(new GsonDebugFactory())
+            //.registerTypeAdapterFactory(new GsonDebugFactory())
             .registerTypeAdapter(Instant.class, INSTANT_ADAPTER)
             .registerTypeHierarchyAdapter(ItemStack.class, ITEM_STACK_ADAPTER)
             .registerTypeAdapter(Serializable.class, SERIALIZABLE_ADAPTER)
@@ -183,26 +176,11 @@ public class ObjectSaver
                             String key = entry.getKey();
                             JsonElement element = entry.getValue();
 
-                            if (key.equalsIgnoreCase("goals"))
-                            {
-                                ArrayList<Goal> goals = context.deserialize(element, new TypeToken<ArrayList<Goal>>(){}.getType());
-                                map.put(key, goals);
-                            }
-                            else if (key.equalsIgnoreCase("skin"))
-                            {
-                                NpcSkin skin = context.deserialize(element, NpcSkin.class);
-                                map.put(key, skin);
-                            }
-                            else if(key.equalsIgnoreCase("equipment"))
-                            {
-                                HashMap<EquipmentSlot, ItemStack> equipment = context.deserialize(element, new TypeToken<HashMap<EquipmentSlot, ItemStack>>(){}.getType());
-                                map.put(key, equipment);
-                            }
+                            var option = NpcOption.getOption(key);
+                            if(option.isEmpty() || option.get().getType() == null)
+                                map.put(key, context.deserialize(element, Serializable.class));
                             else
-                            {
-                                Serializable val = context.deserialize(element, Serializable.class);
-                                map.put(key, val);
-                            }
+                                map.put(key, context.deserialize(element, option.get().getType()));
                         }
                         return map;
                     })
@@ -240,45 +218,6 @@ public class ObjectSaver
                         });
                         return obj;
                     })
-            .registerTypeAdapter(NpcName.class, (JsonDeserializer<NpcName>) (json, typeOfT, context) ->
-            {
-                NpcName raw = CLEAN_GSON.fromJson(json, NpcName.class);
-                if(raw == null)
-                    return null;
-
-                try
-                {
-                    Field nameComponentSerializedField = NpcName.class.getDeclaredField("nameComponentSerialized");
-                    Field nameFunctionSerializedField = NpcName.class.getDeclaredField("nameFunctionSerialized");
-                    Field nameComponentField = NpcName.class.getDeclaredField("nameComponent");
-                    Field nameFunctionField = NpcName.class.getDeclaredField("nameFunction");
-
-                    nameComponentSerializedField.setAccessible(true);
-                    nameFunctionSerializedField.setAccessible(true);
-                    nameComponentField.setAccessible(true);
-                    nameFunctionField.setAccessible(true);
-
-                    var compSerialized = (WrappedComponent.SerializedComponent) nameComponentSerializedField.get(raw);
-                    var funcSerialized = (SerializableFunction<Player, ?>) nameFunctionSerializedField.get(raw);
-
-                    if(compSerialized != null)
-                        nameComponentField.set(raw, compSerialized.deserialize());
-                    if(funcSerialized != null)
-                    {
-                        nameFunctionField.set(raw, (SerializableFunction<Player, Object>) player ->
-                        {
-                            var res = (WrappedComponent.SerializedComponent) funcSerialized.apply(player);
-                            return res != null ? res.deserialize() : null;
-                        });
-                    }
-                }
-                catch(Exception e)
-                {
-                    throw new JsonParseException("Failed to post-deserialize NpcName transient fields", e);
-                }
-
-                return raw;
-            })
             .disableHtmlEscaping()
             .setPrettyPrinting()
             .create();

@@ -1,5 +1,7 @@
 package de.eisi05.npc.api.wrapper.objects;
 
+import com.google.gson.*;
+import com.google.gson.annotations.JsonAdapter;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.SerializableFunction;
@@ -18,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.Serial;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
 import java.util.function.Function;
 
 /**
@@ -30,6 +33,8 @@ public class WrappedEntitySnapshot implements Serializable
     private static final long serialVersionUID = 1L;
 
     private final String type;
+
+    @JsonAdapter(SnapshotDataJsonAdapter.class)
     private final byte[] data;
     private transient final SerializableFunction<? extends Entity, ? extends Entity> entityFunction;
 
@@ -88,7 +93,6 @@ public class WrappedEntitySnapshot implements Serializable
     {
         return data == null ? new WrappedCompoundTag() : WrappedCompoundTag.parse(data);
     }
-
 
     /**
      * Creates a new entity in the specified world using this snapshot's data.
@@ -262,6 +266,42 @@ public class WrappedEntitySnapshot implements Serializable
         public static NbtAccounter unlimitedHeap()
         {
             return new NbtAccounter(invokeStaticWrappedMethod());
+        }
+    }
+
+    private static class SnapshotDataJsonAdapter implements JsonSerializer<byte[]>, JsonDeserializer<byte[]>
+    {
+        @Override
+        public JsonElement serialize(byte[] src, Type typeOfSrc, JsonSerializationContext context)
+        {
+            if (src == null || src.length == 0)
+                return JsonNull.INSTANCE;
+
+            return new JsonPrimitive(WrappedCompoundTag.parse(src).toString());
+        }
+
+        @Override
+        public byte[] deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException
+        {
+            if (json == null || json.isJsonNull())
+                return null;
+
+            if (json.isJsonPrimitive())
+            {
+                try
+                {
+                    return WrappedCompoundTag.parse(json.getAsString()).getData();
+                }
+                catch (CommandSyntaxException e)
+                {
+                    throw new JsonParseException("Failed to parse SNBT string back to NBT byte array", e);
+                }
+            }
+
+            if (json.isJsonArray())
+                return context.deserialize(json, byte[].class);
+
+            return null;
         }
     }
 }

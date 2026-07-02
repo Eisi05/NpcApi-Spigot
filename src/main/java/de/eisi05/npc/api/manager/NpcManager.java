@@ -12,6 +12,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.*;
 import java.util.*;
 
@@ -137,6 +139,13 @@ public class NpcManager
                 NPC.SerializedNPC serializedNPC;
                 if(!saver.isJson())
                 {
+                    File backupFolder = new File(file, "backup");
+                    if (!backupFolder.exists())
+                        backupFolder.mkdirs();
+
+                    File backupFile = new File(backupFolder, file1.getName());
+                    Files.copy(file1.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
                     serializedNPC = saver.read();
                     file1.delete();
                     new ObjectSaver(file1).write(serializedNPC, false);

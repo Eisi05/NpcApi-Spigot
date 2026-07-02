@@ -6,14 +6,11 @@ import com.google.gson.stream.JsonWriter;
 import de.eisi05.npc.api.interfaces.NpcClickAction;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.util.Base64;
 import java.util.Map;
 
 public class NpcClickActionAdapter extends TypeAdapter<NpcClickAction>
 {
-    private static final String IMPL_CLASS_NAME = "NpcClickActionImpl";
-
     @Override
     public void write(JsonWriter out, NpcClickAction value) throws IOException
     {
@@ -44,50 +41,17 @@ public class NpcClickActionAdapter extends TypeAdapter<NpcClickAction>
         {
             out.name("className").value(clazz.getName());
 
-            Object originalParent = null;
-            boolean isImplInstance = clazz.getName().endsWith(IMPL_CLASS_NAME);
-            Field parentField = null;
-
-            if(isImplInstance)
+            JsonElement delegateElement = ObjectSaver.CLEAN_GSON.toJsonTree(value, clazz);
+            if(delegateElement.isJsonObject())
             {
-                try
+                JsonObject jsonObject = delegateElement.getAsJsonObject();
+                for(Map.Entry<String, JsonElement> entry : jsonObject.entrySet())
                 {
-                    parentField = clazz.getDeclaredField("parent");
-                    parentField.setAccessible(true);
-                    originalParent = parentField.get(value);
-                    parentField.set(value, null);
-                }
-                catch(Exception e)
-                {
-                    throw new IOException("Failed to temporarily clear parent field for migration", e);
-                }
-            }
+                    if(entry.getKey().equals("className") || entry.getKey().equals("bytes"))
+                        continue;
 
-            try
-            {
-                JsonElement delegateElement = ObjectSaver.CLEAN_GSON.toJsonTree(value, clazz);
-                if(delegateElement.isJsonObject())
-                {
-                    JsonObject jsonObject = delegateElement.getAsJsonObject();
-                    for(Map.Entry<String, JsonElement> entry : jsonObject.entrySet())
-                    {
-                        if(entry.getKey().equals("className") || entry.getKey().equals("bytes"))
-                            continue;
-
-                        out.name(entry.getKey());
-                        ObjectSaver.CLEAN_GSON.toJson(entry.getValue(), out);
-                    }
-                }
-            }
-            finally
-            {
-                if(isImplInstance && parentField != null)
-                {
-                    try
-                    {
-                        parentField.set(value, originalParent);
-                    }
-                    catch(Exception ignored) {}
+                    out.name(entry.getKey());
+                    ObjectSaver.CLEAN_GSON.toJson(entry.getValue(), out);
                 }
             }
         }
@@ -115,7 +79,8 @@ public class NpcClickActionAdapter extends TypeAdapter<NpcClickAction>
                 ObjectInputStream objIn = new ObjectInputStream(byteIn))
             {
                 NpcClickAction action = (NpcClickAction) objIn.readObject();
-                tryTriggerInitialize(action);
+                if(action != null)
+                    return action.initialize();
                 return action;
             }
             catch(ClassNotFoundException e)
@@ -132,10 +97,9 @@ public class NpcClickActionAdapter extends TypeAdapter<NpcClickAction>
                 Class<?> targetClass = Class.forName(className);
                 NpcClickAction action = (NpcClickAction) ObjectSaver.CLEAN_GSON.fromJson(jsonObject, targetClass);
 
-                if(className.equals(IMPL_CLASS_NAME) && action != null)
-                    fixActionParamTypes(action);
+                if(action != null)
+                    return action.initialize();
 
-                tryTriggerInitialize(action);
                 return action;
             }
             catch(ClassNotFoundException e)
@@ -145,69 +109,5 @@ public class NpcClickActionAdapter extends TypeAdapter<NpcClickAction>
         }
 
         throw new JsonParseException("Invalid NpcClickAction JSON object structure. Must contain either 'className' or 'bytes'.");
-    }
-
-    /**
-     * Reflectively iterates over the loaded actions list and re-serializes any LinkedTreeMap parameters into their true concrete types defined by their
-     * option.
-     */
-    @SuppressWarnings("unchecked")
-    private void fixActionParamTypes(NpcClickAction action)
-    {
-        //TODO: Correct serialization
-        try
-        {
-            Field actionsField = action.getClass().getDeclaredField("actions");
-            actionsField.setAccessible(true);
-            java.util.List<?> actionsList = (java.util.List<?>) actionsField.get(action);
-
-            if(actionsList == null)
-                return;
-
-            for(Object pluginAction : actionsList)
-            {
-                Field optionField = pluginAction.getClass().getDeclaredField("option");
-                Field paramField = pluginAction.getClass().getDeclaredField("param");
-                optionField.setAccessible(true);
-                paramField.setAccessible(true);
-
-                Object optionObj = optionField.get(pluginAction);
-                Object paramObj = paramField.get(pluginAction);
-
-                // Only fix it if Gson parsed it as a generic, untyped LinkedTreeMap
-                if(paramObj instanceof java.util.Map && optionObj != null)
-                {
-                    // Dynamically invoke the new getParamClass() method on the option instance
-                    java.lang.reflect.Method getParamClassMethod = optionObj.getClass().getMethod("getParamClass");
-                    getParamClassMethod.setAccessible(true);
-                    Class<?> trueType = (Class<?>) getParamClassMethod.invoke(optionObj);
-
-                    if(trueType != null)
-                    {
-                        // Re-serialize the generic map back into its true type-safe object form
-                        JsonElement jsonTree = ObjectSaver.CLEAN_GSON.toJsonTree(paramObj);
-                        Object typedParam = ObjectSaver.CLEAN_GSON.fromJson(jsonTree, trueType);
-
-                        paramField.set(pluginAction, typedParam);
-                    }
-                }
-            }
-        }
-        catch(Exception e)
-        {
-            System.err.println("[NpcPlugin] Failed to dynamically remap erased JSON generic parameters: " + e.getMessage());
-        }
-    }
-
-    private void tryTriggerInitialize(NpcClickAction action)
-    {
-        if(action != null && action.getClass().getName().endsWith(IMPL_CLASS_NAME))
-        {
-            try
-            {
-                action.initialize();
-            }
-            catch(Exception ignored) {}
-        }
     }
 }

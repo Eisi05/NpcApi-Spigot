@@ -1,7 +1,10 @@
 package de.eisi05.npc.api.objects;
 
-import com.google.gson.annotations.SerializedName;
+import com.google.common.reflect.TypeToken;
+import com.google.gson.*;
+import com.google.gson.annotations.JsonAdapter;
 import de.eisi05.npc.api.utils.SerializableFunction;
+import de.eisi05.npc.api.utils.Var;
 import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -10,20 +13,21 @@ import org.jetbrains.annotations.Nullable;
 import java.io.ObjectStreamException;
 import java.io.Serial;
 import java.io.Serializable;
+import java.lang.reflect.Type;
 
 /**
  * Represents the name of an NPC, which can be either a fixed {@link WrappedComponent} or dynamically generated based on a {@link Player}.
  */
+@JsonAdapter(NpcName.NpcNameAdapter.class)
 public class NpcName implements Serializable
 {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    @SerializedName("component")
     private final WrappedComponent.SerializedComponent nameComponentSerialized;
-    private final SerializableFunction<Player, WrappedComponent.SerializedComponent> nameFunctionSerialized;
     private transient final WrappedComponent nameComponent;
-    private transient final SerializableFunction<Player, WrappedComponent> nameFunction;
+    private SerializableFunction<Player, WrappedComponent.SerializedComponent> nameFunctionSerialized;
+    private transient SerializableFunction<Player, WrappedComponent> nameFunction;
     private NameDisplayOptions displayOptions = new NameDisplayOptions();
 
     /**
@@ -185,5 +189,91 @@ public class NpcName implements Serializable
     public String toString()
     {
         return "{" + (isStatic() ? "static" : "dynamic") + " -> " + getName().toLegacy(false) + "}";
+    }
+
+    static class NpcNameAdapter implements JsonSerializer<NpcName>, JsonDeserializer<NpcName>
+    {
+        @Override
+        public JsonElement serialize(NpcName src, Type typeOfSrc, JsonSerializationContext context)
+        {
+            if(src == null)
+                return JsonNull.INSTANCE;
+
+            JsonObject obj = new JsonObject();
+
+            if (src.getName() != null)
+            {
+                try
+                {
+                    String rawComponentJson = Var.toJson(src.getName());
+                    if (rawComponentJson != null && !rawComponentJson.isEmpty())
+                        obj.add("component", JsonParser.parseString(rawComponentJson));
+                }
+                catch (Exception e)
+                {
+                    obj.add("component", JsonNull.INSTANCE);
+                }
+            }
+
+            try
+            {
+                Object funcSerialized = src.nameFunctionSerialized;
+                if(funcSerialized != null)
+                    obj.add("nameFunctionSerialized", context.serialize(funcSerialized));
+            }
+            catch(Exception ignored) {}
+
+            if(src.getDisplayOptions() != null)
+                obj.add("displayOptions", context.serialize(src.getDisplayOptions(), NameDisplayOptions.class));
+
+            return obj;
+        }
+
+        @Override
+        public NpcName deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException
+        {
+            if(json == null || json.isJsonNull())
+                return null;
+
+            JsonObject obj = json.getAsJsonObject();
+            WrappedComponent component = null;
+
+            if(obj.has("component"))
+            {
+                JsonElement nameCompElement = obj.get("component");
+                if (!nameCompElement.isJsonNull())
+                    component = Var.fromJson(nameCompElement.toString());
+            }
+
+            if(component == null)
+                component = WrappedComponent.create(null);
+
+            NpcName npcName = NpcName.of(component);
+            if(obj.has("nameFunctionSerialized"))
+            {
+                Type funcType = new TypeToken<SerializableFunction<Player, WrappedComponent.SerializedComponent>>() {}.getType();
+                SerializableFunction<Player, WrappedComponent.SerializedComponent> funcSerialized =
+                        context.deserialize(obj.get("nameFunctionSerialized"), funcType);
+
+                if(funcSerialized != null)
+                {
+                    npcName.nameFunctionSerialized = funcSerialized;
+                    npcName.nameFunction = player ->
+                    {
+                        WrappedComponent.SerializedComponent serializedComp = funcSerialized.apply(player);
+                        return serializedComp != null ? serializedComp.deserialize() : null;
+                    };
+                }
+            }
+
+            if(obj.has("displayOptions"))
+            {
+                NameDisplayOptions options = context.deserialize(obj.get("displayOptions"), NameDisplayOptions.class);
+                if(options != null)
+                    npcName.displayOptions = options;
+            }
+
+            return npcName;
+        }
     }
 }
