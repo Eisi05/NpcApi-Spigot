@@ -32,7 +32,7 @@ public class NpcSkin implements SkinData
     private final Skin skin;
 
     private final String placeholder;
-    private final TriFunction<Player, NPC, String, Skin> newSkinFunction;
+    private transient final TriFunction<Player, NPC, String, Skin> newSkinFunction;
 
     /**
      * Creates a dynamic NPC skin that uses a function to determine the skin.
