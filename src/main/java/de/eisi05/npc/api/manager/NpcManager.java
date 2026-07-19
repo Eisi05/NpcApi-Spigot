@@ -77,6 +77,8 @@ public class NpcManager
     public static void clear()
     {
         npcById.clear();
+        toLoadNPCs.clear();
+        loadExceptions.clear();
     }
 
     /**
@@ -264,7 +266,9 @@ public class NpcManager
             if(either.left().isEmpty())
                 return false;
 
-            loadNpc(either.left().get());
+            NPC npc = either.left().get();
+            npc.markChange();
+            loadNpc(npc);
             return true;
         }
         catch(Exception e)
