@@ -261,27 +261,22 @@ public class NpcName implements Serializable
 
             JsonObject obj = new JsonObject();
 
-            if (src.getName() != null)
+            if(src.getName() != null)
             {
                 try
                 {
                     String rawComponentJson = Var.toJson(src.getName());
-                    if (rawComponentJson != null && !rawComponentJson.isEmpty())
+                    if(rawComponentJson != null && !rawComponentJson.isEmpty())
                         obj.add("component", JsonParser.parseString(rawComponentJson));
                 }
-                catch (Exception e)
+                catch(Exception e)
                 {
                     obj.add("component", JsonNull.INSTANCE);
                 }
             }
 
-            try
-            {
-                Object funcSerialized = src.nameFunctionSerialized;
-                if(funcSerialized != null)
-                    obj.add("nameFunctionSerialized", context.serialize(funcSerialized));
-            }
-            catch(Exception ignored) {}
+            if(src.nameFunctionKey != null)
+                obj.addProperty("nameFunctionKey", src.nameFunctionKey);
 
             if(src.getDisplayOptions() != null)
                 obj.add("displayOptions", context.serialize(src.getDisplayOptions(), NameDisplayOptions.class));
@@ -301,30 +296,54 @@ public class NpcName implements Serializable
             if(obj.has("component"))
             {
                 JsonElement nameCompElement = obj.get("component");
-                if (!nameCompElement.isJsonNull())
+                if(!nameCompElement.isJsonNull())
                     component = Var.fromJson(nameCompElement.toString());
             }
 
             if(component == null)
                 component = WrappedComponent.create(null);
 
-            NpcName npcName = NpcName.of(component);
-            if(obj.has("nameFunctionSerialized"))
-            {
-                Type funcType = new TypeToken<SerializableFunction<Player, WrappedComponent.SerializedComponent>>() {}.getType();
-                SerializableFunction<Player, WrappedComponent.SerializedComponent> funcSerialized =
-                        context.deserialize(obj.get("nameFunctionSerialized"), funcType);
+            NpcName npcName;
 
-                if(funcSerialized != null)
+            if(obj.has("nameFunctionKey"))
+            {
+                String key = obj.get("nameFunctionKey").getAsString();
+                npcName = NpcName.of(key, component);
+            }
+            else if(obj.has("nameFunctionSerialized"))
+            {
+                npcName = NpcName.of(component);
+                try
                 {
-                    npcName.nameFunctionSerialized = funcSerialized;
-                    npcName.nameFunction = player ->
+                    Type funcType = new TypeToken<SerializableFunction<Player, WrappedComponent.SerializedComponent>>() {}.getType();
+                    SerializableFunction<Player, WrappedComponent.SerializedComponent> funcSerialized = context.deserialize(obj.get("nameFunctionSerialized"),
+                            funcType);
+
+                    if(funcSerialized != null)
                     {
-                        WrappedComponent.SerializedComponent serializedComp = funcSerialized.apply(player);
-                        return serializedComp != null ? serializedComp.deserialize() : null;
-                    };
+                        npcName.nameFunctionSerialized = funcSerialized;
+                        npcName.nameFunctionKey = "placeholder";
+                        npcName.nameFunction = player ->
+                        {
+                            try
+                            {
+                                WrappedComponent.SerializedComponent serializedComp = funcSerialized.apply(player);
+                                return serializedComp != null ? serializedComp.deserialize() : null;
+                            }
+                            catch(Exception e)
+                            {
+                                return null;
+                            }
+                        };
+                    }
+                }
+                catch(Throwable t)
+                {
+                    npcName.nameFunctionKey = null;
                 }
             }
+            else
+                npcName = NpcName.of(component);
 
             if(obj.has("displayOptions"))
             {

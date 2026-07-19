@@ -6,7 +6,7 @@
 
     <groupId>de.eisi05</groupId>
     <artifactId>NpcApi</artifactId>
-    <version>3.0.0-alpha</version>
+    <version>3.0.1-alpha</version>
     <packaging>jar</packaging>
 
     <name>NpcApi</name>
