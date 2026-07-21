@@ -3,9 +3,13 @@ package de.eisi05.npc.api.objects;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.*;
 import com.google.gson.annotations.JsonAdapter;
+import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.SerializableFunction;
 import de.eisi05.npc.api.utils.Var;
+import de.eisi05.npc.api.utils.serialize.NpcRegistry;
 import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,8 +19,7 @@ import java.io.ObjectInputStream;
 import java.io.Serial;
 import java.io.Serializable;
 import java.lang.reflect.Type;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Arrays;
 import java.util.function.BiFunction;
 
 /**
@@ -27,7 +30,27 @@ public class NpcName implements Serializable
 {
     @Serial
     private static final long serialVersionUID = 1L;
-    private static final Map<String, BiFunction<Player, String, WrappedComponent>> REGISTRY = new ConcurrentHashMap<>();
+
+    static
+    {
+        NpcRegistry.registerNameFunction(NpcRegistry.KEY_PLACEHOLDER_API, (player, placeholder) ->
+        {
+            String newName = placeholder.replace("&", "§")
+                    .replace("\r\n", "\\n")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\n");
+            boolean hasColor = Arrays.stream(ChatColor.values())
+                    .anyMatch(chatColor -> newName.contains(chatColor.toString()) && chatColor.isColor());
+
+            if(!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI"))
+                return hasColor ? WrappedComponent.parseFromLegacy(newName) : WrappedComponent.parseFromLegacy(ChatColor.WHITE + newName);
+
+            String placeHolder = ((String) Reflections.invokeStaticMethod("me.clip.placeholderapi.PlaceholderAPI", "setPlaceholders", player, newName)
+                    .get()).replace("&", "§");
+            return hasColor ? WrappedComponent.parseFromLegacy(placeHolder) : WrappedComponent.parseFromLegacy(ChatColor.WHITE + placeHolder);
+        });
+    }
+
     private WrappedComponent.SerializedComponent nameComponentSerialized;
     private String nameFunctionKey;
     private transient WrappedComponent nameComponent;
@@ -58,21 +81,6 @@ public class NpcName implements Serializable
         this.nameComponent = fallback;
         this.nameComponentSerialized = fallback.serialize();
         this.nameFunctionKey = nameFunctionKey;
-    }
-
-    /**
-     * Registers a dynamic name generation function globally. Call this inside your JavaPlugin's {@code onEnable()} method.
-     *
-     * @param key      the unique identifier for the function (case-insensitive)
-     * @param function the function producing the name component given the viewer player and the fallback legacy text
-     * @throws IllegalArgumentException if the provided key is already registered
-     */
-    public static void registerFunction(@NotNull String key, @NotNull BiFunction<Player, String, WrappedComponent> function) throws IllegalArgumentException
-    {
-        if(REGISTRY.containsKey(key.toLowerCase()))
-            throw new IllegalArgumentException("Key " + key + " is already registered!");
-
-        REGISTRY.put(key.toLowerCase(), function);
     }
 
     /**
@@ -162,7 +170,7 @@ public class NpcName implements Serializable
         }
 
         if(oldStringFunc != null)
-            this.nameFunctionKey = "placeholder";
+            this.nameFunctionKey = NpcRegistry.KEY_PLACEHOLDER_API;
         else
             this.nameFunctionKey = null;
     }
@@ -218,7 +226,7 @@ public class NpcName implements Serializable
         if(isStatic() || player == null)
             return getName();
 
-        BiFunction<Player, String, WrappedComponent> runtimeFunc = REGISTRY.get(nameFunctionKey.toLowerCase());
+        BiFunction<Player, String, WrappedComponent> runtimeFunc = NpcRegistry.getNameFunction(nameFunctionKey.toLowerCase());
         if(runtimeFunc != null)
         {
             try
@@ -322,7 +330,7 @@ public class NpcName implements Serializable
                     if(funcSerialized != null)
                     {
                         npcName.nameFunctionSerialized = funcSerialized;
-                        npcName.nameFunctionKey = "placeholder";
+                        npcName.nameFunctionKey = NpcRegistry.KEY_PLACEHOLDER_API;
                         npcName.nameFunction = player ->
                         {
                             try
