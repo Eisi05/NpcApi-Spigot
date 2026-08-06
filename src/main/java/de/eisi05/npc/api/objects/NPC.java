@@ -55,7 +55,7 @@ import java.util.stream.Collectors;
 public class NPC extends NpcHolder
 {
     public transient final Map<UUID, String> nameCache = new HashMap<>();
-    final Map<String, Integer> toDeleteEntities = new HashMap<>();
+    transient final Map<UUID, Map<String, Integer>> toDeleteEntities = new HashMap<>();
     private final List<UUID> viewers = new ArrayList<>();
     private final Path npcPath;
     private final Map<UUID, PathTask> pathTasks = new HashMap<>();
@@ -633,6 +633,7 @@ public class NPC extends NpcHolder
         }
 
         Bukkit.getOnlinePlayers().forEach(this::hideNpcFromPlayer);
+        toDeleteEntities.clear();
     }
 
     /**
@@ -664,8 +665,9 @@ public class NPC extends NpcHolder
             WrappedPlayerTeam.clear(player.getUniqueId(), getServerPlayer().getName());
         }
 
-        toDeleteEntities.values().forEach(integer -> wrappedServerPlayer.sendPacket(new RemoveEntityPacket(integer)));
-        toDeleteEntities.clear();
+        var values = toDeleteEntities.remove(player.getUniqueId());
+        if(values != null)
+            values.values().forEach(integer -> wrappedServerPlayer.sendPacket(new RemoveEntityPacket(integer)));
 
         wrappedServerPlayer.sendPacket(new PlayerInfoRemovePacket(List.of(getUUID())));
 

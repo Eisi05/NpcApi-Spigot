@@ -451,12 +451,13 @@ public class NpcOption<T, S extends Serializable>
                     }.runTaskLater(NpcApi.plugin, 1);
                 }
 
-                Integer oldId = npc.toDeleteEntities.remove("sit");
+                Map<String, Integer> playerEntities = npc.toDeleteEntities.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>());
+                Integer oldId = playerEntities.remove("sit");
                 if(nmsPose == de.eisi05.npc.api.wrapper.enums.Pose.SITTING)
                 {
                     WrappedTextDisplay textDisplay = WrappedTextDisplay.create(npc.getLocation().getWorld());
                     textDisplay.moveTo(npc.getLocation());
-                    npc.toDeleteEntities.put("sit", textDisplay.getId());
+                    playerEntities.put("sit", textDisplay.getId());
 
                     PacketWrapper addEntityPacket = textDisplay.getAddEntityPacket();
 
@@ -547,7 +548,7 @@ public class NpcOption<T, S extends Serializable>
                 {
                     entity = wrappedEntitySnapshot.create(player.getWorld());
                     entity.moveTo(npc.getLocation());
-                    npc.toDeleteEntities.put("entity", entity.getId());
+                    npc.toDeleteEntities.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>()).put("entity", entity.getId());
                 }
                 else
                     entity = npc.entity;
@@ -620,7 +621,7 @@ public class NpcOption<T, S extends Serializable>
                     float height = scale.y;
 
                     NpcManager.addID(interaction.getId(), npc);
-                    npc.toDeleteEntities.put("interaction", interaction.getId());
+                    npc.toDeleteEntities.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>()).put("interaction", interaction.getId());
                     passengers.add(interaction);
 
                     npc.name.getDisplayOptions().setHeight(height);
