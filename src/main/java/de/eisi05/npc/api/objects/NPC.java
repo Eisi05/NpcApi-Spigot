@@ -594,7 +594,7 @@ public class NPC extends NpcHolder
         List<PacketWrapper> packets = new ArrayList<>();
 
         Arrays.stream(NpcOption.values()).filter(NpcOption::loadBefore)
-                .forEach(npcOption -> npcOption.getPacket(getOption(npcOption, player), this, player).ifPresent(packets::add));
+                .forEach(npcOption -> npcOption.getPacket(this, player).ifPresent(packets::add));
 
         if(!name.isStatic() && getOption(NpcOption.SHOW_TAB_LIST, player))
             setOption(NpcOption.SHOW_TAB_LIST, false);
@@ -607,9 +607,9 @@ public class NPC extends NpcHolder
             packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, serverPlayer));
 
         Arrays.stream(NpcOption.values()).filter(npcOption -> !npcOption.equals(NpcOption.ENABLED) && !npcOption.loadBefore())
-                .forEach(npcOption -> npcOption.getPacket(getOption(npcOption, player), this, player).ifPresent(packets::add));
+                .forEach(npcOption -> npcOption.getPacket(this, player).ifPresent(packets::add));
 
-        NpcOption.ENABLED.getPacket(isEnabled(), this, player).ifPresent(packets::add);
+        NpcOption.ENABLED.getPacket(this, player).ifPresent(packets::add);
 
         packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, wrappedServerPlayer));
         packets.add(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LISTED, wrappedServerPlayer));

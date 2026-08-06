@@ -930,18 +930,16 @@ public class NpcOption<T, S extends Serializable>
      * Generates the network packet(s) needed to apply this option's value to an NPC for a specific player. The method checks for version compatibility before
      * generating the packet.
      *
-     * @param object The value of the option to apply. Can be null.
      * @param npc    The {@link NPC} to apply the option to. Must not be null.
      * @param player The {@link Player} who will receive the update. Must not be null.
      * @return An {@link Optional} containing the {@link PacketWrapper} if one is generated and the option is compatible, otherwise an empty Optional.
      */
-    @SuppressWarnings("unchecked")
-    public @NotNull Optional<PacketWrapper> getPacket(@Nullable Object object, @NotNull NPC npc, @NotNull Player player)
+    public @NotNull Optional<PacketWrapper> getPacket(@NotNull NPC npc, @NotNull Player player)
     {
         if(packet == null || !isCompatible())
             return Optional.empty();
 
-        return Optional.ofNullable(packet.apply((T) object, npc, player));
+        return Optional.ofNullable(packet.apply(npc.getOption(this, player), npc, player));
     }
 
     @Override
