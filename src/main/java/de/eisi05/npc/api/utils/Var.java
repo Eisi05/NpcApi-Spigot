@@ -35,6 +35,23 @@ public class Var
     }
 
     /**
+     * Converts a NMS ItemsSack to its Bukkit equivalent {@link ItemStack}. This method uses reflection to call the appropriate {@code asBukkitCopy} method from
+     * the CraftBukkit library, which varies by server version.
+     *
+     * @param itemStack The NMS ItemStack to convert. Must not be {@code null}.
+     * @return The bukkit {@link ItemStack}.
+     * @throws java.util.NoSuchElementException If the reflection method is not found or cannot be invoked.
+     */
+    public static @NotNull ItemStack fromNmsItemStack(@NotNull Object itemStack)
+    {
+        if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+            return (ItemStack) Reflections.invokeStaticMethod("org.bukkit.craftbukkit." + Versions.getVersion().getPath() + ".inventory.CraftItemStack",
+                    "asBukkitCopy", itemStack).get();
+
+        return (ItemStack) Reflections.invokeStaticMethod("org.bukkit.craftbukkit.inventory.CraftItemStack", "asBukkitCopy", itemStack).get();
+    }
+
+    /**
      * Converts a Bukkit {@link EntityType} to its corresponding NMS (Netty Minecraft Server) entity type object. This is a utility method that uses reflection
      * to access the internal NMS classes.
      *
