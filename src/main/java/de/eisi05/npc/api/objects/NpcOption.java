@@ -1,7 +1,7 @@
 package de.eisi05.npc.api.objects;
 
 import com.google.common.collect.Multimaps;
-import com.google.gson.reflect.TypeToken;
+import com.google.common.reflect.TypeToken;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
@@ -172,7 +172,8 @@ public class NpcOption<T, S extends Serializable>
     public static final NpcOption<Integer, Integer> LATENCY = new NpcOption<>("latency", () -> 0,
             aInteger -> aInteger, aInteger -> aInteger, aInteger -> aInteger,
             (latency, npc, player) ->
-                    new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LATENCY, npc.getServerPlayer()));
+                    new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LATENCY, npc.getServerPlayer()))
+            .type(TypeToken.of(Integer.class).getType());
 
     /**
      * NPC option to control the visibility of the NPC's nametag.
@@ -251,7 +252,8 @@ public class NpcOption<T, S extends Serializable>
      */
     public static final NpcOption<Double, Double> LOOK_AT_PLAYER = new NpcOption<>("look-at-player", () -> 0.0,
             distance -> distance, distance -> distance, distance -> distance,
-            (distance, npc, player) -> null);
+            (distance, npc, player) -> null)
+            .type(TypeToken.of(Double.class).getType());
 
     /**
      * NPC option to control visibility with three states: fully visible, transparent, or invisible.
@@ -502,7 +504,7 @@ public class NpcOption<T, S extends Serializable>
                 instance.setBaseValue(scale);
 
                 return new UpdateAttributesPacket(npc.entity.getId(), instance);
-            }).since(Versions.V1_20_6);
+            }).since(Versions.V1_20_6).type(TypeToken.of(Double.class).getType());
 
     /**
      * NPC option to control the position of the NPC in the TAB list.
@@ -520,7 +522,7 @@ public class NpcOption<T, S extends Serializable>
                 npc.getServerPlayer().setListOrder(order);
 
                 return new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, npc.getServerPlayer());
-            }).since(Versions.V1_21_2);
+            }).since(Versions.V1_21_2).type(TypeToken.of(Integer.class).getType());
 
     /**
      * NPC option to change the entity type of the NPC. This allows transforming the NPC into any Minecraft entity type. The default is a PLAYER entity. When
@@ -697,10 +699,12 @@ public class NpcOption<T, S extends Serializable>
      * NPC option to store custom data for the NPC. This is an internal option, typically not directly set by users but controlled by
      * {@link NPC#addCustomData(Serializable, Serializable)}.
      */
-    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA = new NpcOption<>("custom-data",
+    static final NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>> CUSTOM_DATA =
+            new NpcOption<HashMap<Serializable, Serializable>, HashMap<Serializable, Serializable>>("custom-data",
             HashMap::new, HashMap::new,
             aHashMap -> aHashMap, aHashMap -> aHashMap,
-            (customData, npc, player) -> null);
+            (customData, npc, player) -> null)
+            .type(new TypeToken<HashMap<Serializable, Serializable>>() {}.getType());
 
     /**
      * NPC option to manage visibility settings for the NPC. This controls whether the NPC should be shown to all players (including new ones) or only to specific players.
