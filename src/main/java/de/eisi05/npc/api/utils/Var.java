@@ -1,6 +1,10 @@
 package de.eisi05.npc.api.utils;
 
+import de.eisi05.npc.api.wrapper.Mapping;
+import de.eisi05.npc.api.wrapper.Wrapper;
+import de.eisi05.npc.api.wrapper.objects.WrappedCommandSourceStack;
 import de.eisi05.npc.api.wrapper.objects.WrappedComponent;
+import de.eisi05.npc.api.wrapper.objects.WrappedEntity;
 import de.eisi05.npc.api.wrapper.objects.WrappedEntitySnapshot;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
@@ -154,6 +158,27 @@ public class Var
     }
 
     /**
+     * Resolves and updates a {@link WrappedComponent} in the context of a specific entity and command source stack. This method handles version differences in
+     * NMS chat component utilities, using reflection to interact with Minecraft's internal component resolution mechanisms.
+     *
+     * @param sourceStack The {@link WrappedCommandSourceStack} providing the context for the resolution. Can be {@code null}.
+     * @param component   The {@link WrappedComponent} to update. Must not be {@code null}.
+     * @param entity      The {@link WrappedEntity} acting as an entity override during resolution. Can be {@code null}.
+     * @param depth       The recursion depth limit for resolving nested components or selectors.
+     * @return A new {@link WrappedComponent} with updated and resolved content.
+     * @throws java.util.NoSuchElementException If the reflection method or necessary classes are not found or cannot be invoked.
+     */
+    public static @NotNull WrappedComponent updateForEntity(@Nullable WrappedCommandSourceStack sourceStack,
+                                                            @NotNull WrappedComponent component, @Nullable WrappedEntity<?> entity, int depth)
+    {
+        if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
+            return WrappedComponent.fromHandle(Reflections.invokeStaticMethod("net.minecraft.network.chat.ChatComponentUtils",
+                    "a", sourceStack.getHandle(), component.getHandle(), entity.getHandle(), depth).get());
+        return WrappedComponent.fromHandle(Reflections.invokeStaticMethod("net.minecraft.network.chat.ComponentUtils",
+                "resolve", new ResolutionContextBuilder().withSource(sourceStack).withEntityOverride(entity).build(), component.getHandle(), depth).get());
+    }
+
+    /**
      * Performs an unchecked cast of an object to a specified type. This method can be used to bypass Java's type checking at compile time, but it comes with
      * the risk of {@link ClassCastException} at runtime if the object is not an instance of the target type.
      *
@@ -270,5 +295,37 @@ public class Var
             flags |= (byte) 0x80;
 
         return flags;
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.network.chat.ResolutionContext$Builder")
+    private static class ResolutionContextBuilder extends Wrapper
+    {
+        private ResolutionContextBuilder()
+        {
+            super(createInstance(ResolutionContextBuilder.class));
+        }
+
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withSource")
+        public @NotNull ResolutionContextBuilder withSource(@Nullable WrappedCommandSourceStack sourceStack)
+        {
+            if(sourceStack == null)
+                return this;
+
+            invokeWrappedMethod(sourceStack.getHandle());
+            return this;
+        }
+
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withEntityOverride")
+        public @NotNull ResolutionContextBuilder withEntityOverride(@Nullable WrappedEntity<?> entityOverride)
+        {
+            invokeWrappedMethod(entityOverride == null ? null : entityOverride.getHandle());
+            return this;
+        }
+
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "build")
+        public @NotNull Object build()
+        {
+            return invokeWrappedMethod();
+        }
     }
 }

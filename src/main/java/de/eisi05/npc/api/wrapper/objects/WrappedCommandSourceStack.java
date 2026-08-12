@@ -1,10 +1,13 @@
 package de.eisi05.npc.api.wrapper.objects;
 
+import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.wrapper.Mapping;
 import de.eisi05.npc.api.wrapper.Wrapper;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
+
+import java.lang.reflect.Method;
 
 @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.commands.CommandSourceStack")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.commands.CommandListenerWrapper")
@@ -21,14 +24,42 @@ public class WrappedCommandSourceStack extends Wrapper
         return invokeWrappedMethod();
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "getEntity")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "g")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "f")
+    public @NotNull WrappedEntity<?> getEntity()
+    {
+        return new WrappedEntity<>(invokeWrappedMethod());
+    }
+
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withMaximumPermission")
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "b")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "b")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "a")
     public @NotNull WrappedCommandSourceStack withMaximumPermission()
     {
         if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_11))
             return new WrappedCommandSourceStack(invokeWrappedMethod(4));
         return new WrappedCommandSourceStack(invokeWrappedMethod(WrappedPermissionSet.ALL.getHandle()));
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withEntity")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
+    public @NotNull WrappedCommandSourceStack withEntity(WrappedEntity<?> entity)
+    {
+        try
+        {
+            Class<?> wrapperClass = getWrappedClass(getClass());
+            Method method = wrapperClass.getDeclaredMethod(getPath(), getWrappedClass(WrappedEntity.class));
+            method.setAccessible(true);
+            method.invoke(getHandle(), entity.getHandle());
+            return new WrappedCommandSourceStack(method.invoke(getHandle(), entity.getHandle()));
+        }
+        catch(Exception e)
+        {
+            if(NpcApi.config.debug())
+                e.printStackTrace();
+            return this;
+        }
     }
 
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withSuppressedOutput")
