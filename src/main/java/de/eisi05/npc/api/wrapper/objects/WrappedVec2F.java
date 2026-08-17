@@ -9,6 +9,11 @@ import de.eisi05.npc.api.wrapper.Wrapper;
 
 public class WrappedVec2F extends Wrapper
 {
+    public WrappedVec2F(float yaw, float pitch)
+    {
+        super(createInstance(WrappedVec2F.class, yaw, pitch));
+    }
+
     public WrappedVec2F(Object handle)
     {
         super(handle);
