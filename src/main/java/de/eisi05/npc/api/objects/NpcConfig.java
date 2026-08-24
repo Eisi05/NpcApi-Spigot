@@ -1,7 +1,11 @@
 package de.eisi05.npc.api.objects;
 
+import de.eisi05.npc.api.pathfinding.AbstractPathfinder;
 import de.eisi05.npc.api.utils.ApiOnly;
+import org.bukkit.block.Block;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.function.Predicate;
 
 /**
  * Configuration settings for NPC behavior. This class allows for customizing various aspects of an NPC, such as interaction timers.
@@ -91,10 +95,25 @@ public class NpcConfig
     private boolean preciseSleepingHitbox = false;
 
     /**
-     * If true, the NPC will asynchronously load unloaded chunks that it is walking into.
-     * Default: false
+     * If true, the NPC will asynchronously load unloaded chunks that it is walking into. Default: false
      */
     private boolean loadChunksOnPath = false;
+
+    /**
+     * The default factory used to create pathfinders for this NPC.
+     * <p>
+     * Default: {@link AbstractPathfinder.PathfinderFactory#ASTAR}
+     */
+    @ApiOnly
+    private AbstractPathfinder.PathfinderFactory pathfinderFactory = AbstractPathfinder.PathfinderFactory.ASTAR;
+
+    /**
+     * A predicate that determines whether a block is passable for pathfinding.
+     * <p>
+     * Default: {@code block -> false}
+     */
+    @ApiOnly
+    private Predicate<Block> pathfindingPassableOverride = block -> false;
 
     /**
      * Sets the duration an NPC will look at a player after an interaction.
@@ -252,6 +271,30 @@ public class NpcConfig
     }
 
     /**
+     * Sets the pathfinder factory that dictates how paths are calculated.
+     *
+     * @param factory the pathfinder factory to use
+     * @return This {@link NpcConfig} instance for method chaining. Never null.
+     */
+    public @NotNull NpcConfig pathfinderFactory(@NotNull AbstractPathfinder.PathfinderFactory factory)
+    {
+        this.pathfinderFactory = factory;
+        return this;
+    }
+
+    /**
+     * A predicate that determines whether a block is passable for pathfinding.
+     *
+     * @param pathfindingPassableOverride The predicate to use for pathfinding passability.
+     * @return This {@link NpcConfig} instance for method chaining. Never null.
+     */
+    public @NotNull NpcConfig pathfindingPassableOverride(@NotNull Predicate<Block> pathfindingPassableOverride)
+    {
+        this.pathfindingPassableOverride = pathfindingPassableOverride;
+        return this;
+    }
+
+    /**
      * Gets the configured duration an NPC will look at a player.
      *
      * @return The time in ticks.
@@ -369,5 +412,25 @@ public class NpcConfig
     public boolean loadChunksOnPath()
     {
         return loadChunksOnPath;
+    }
+
+    /**
+     * Gets the pathfinder factory mapped to the configuration.
+     *
+     * @return the factory
+     */
+    public @NotNull AbstractPathfinder.PathfinderFactory pathfinderFactory()
+    {
+        return pathfinderFactory;
+    }
+
+    /**
+     * Gets the predicate that determines whether a block is passable for pathfinding.
+     *
+     * @return the predicate
+     */
+    public @NotNull Predicate<Block> pathfindingPassableOverride()
+    {
+        return pathfindingPassableOverride;
     }
 }
