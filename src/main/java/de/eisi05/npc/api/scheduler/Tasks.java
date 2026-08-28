@@ -48,12 +48,18 @@ public class Tasks
         if(placeholderTask != null && !placeholderTask.isCancelled())
             placeholderTask.cancel();
 
+        lookAtTask = null;
+        placeholderTask = null;
+
+        List<CompletableFuture<?>> futuresToCancel;
         synchronized(activeFutures)
         {
-            for(CompletableFuture<?> future : activeFutures)
-                future.cancel(true);
+            futuresToCancel = new ArrayList<>(activeFutures);
             activeFutures.clear();
         }
+
+        for(CompletableFuture<?> future : futuresToCancel)
+            future.cancel(true);
     }
 
     /**
@@ -138,13 +144,12 @@ public class Tasks
         String newPlaceholder = (String) Reflections.invokeStaticMethod("me.clip.placeholderapi.PlaceholderAPI", "setPlaceholders", player,
                 npcSkin.getPlaceholder()).get();
 
-        Map<UUID, String> playerCache = placeholderCache.getOrDefault(npc.getUUID(), new ConcurrentHashMap<>());
+        Map<UUID, String> playerCache = placeholderCache.computeIfAbsent(npc.getUUID(), k -> new ConcurrentHashMap<>());
         String oldPlaceholder = playerCache.getOrDefault(player.getUniqueId(), null);
         if(newPlaceholder.equals(oldPlaceholder))
             return;
 
         playerCache.put(player.getUniqueId(), newPlaceholder);
-        placeholderCache.put(npc.getUUID(), playerCache);
 
         try
         {
@@ -166,12 +171,21 @@ public class Tasks
      */
     public static void trackFuture(@NotNull CompletableFuture<?> future)
     {
+        if(lookAtTask == null && placeholderTask == null)
+        {
+            future.cancel(true);
+            return;
+        }
+
         synchronized(activeFutures)
         {
             activeFutures.add(future);
         }
         future.whenComplete((result, error) ->
         {
+            if(lookAtTask == null && placeholderTask == null)
+                return;
+
             synchronized(activeFutures)
             {
                 activeFutures.remove(future);

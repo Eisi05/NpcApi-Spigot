@@ -200,6 +200,9 @@ public class WalkToLocationGoal extends Goal
         if(!super.canUse(npc))
             return false;
 
+        if(targetLocation == null && serializableLocation != null)
+            targetLocation = serializableLocation.toLocation();
+
         if(targetLocation == null || !targetLocation.getWorld().equals(npc.getLocation().getWorld()))
             return false;
 
@@ -230,7 +233,12 @@ public class WalkToLocationGoal extends Goal
     public void start(@NotNull NPC npc)
     {
         if(targetLocation == null)
-            return;
+        {
+            if(serializableLocation == null)
+                return;
+
+            targetLocation = serializableLocation.toLocation();
+        }
 
         calculatePath(npc);
     }
@@ -285,6 +293,9 @@ public class WalkToLocationGoal extends Goal
     @Override
     public boolean canContinue(@NotNull NPC npc)
     {
+        if(targetLocation == null && serializableLocation != null)
+            targetLocation = serializableLocation.toLocation();
+
         return isWalking && currentPath != null && targetLocation != null && npc.getLocation().distance(targetLocation) > 1.0
                 && super.canContinue(npc);
     }
@@ -319,6 +330,9 @@ public class WalkToLocationGoal extends Goal
      */
     public @NotNull Location getTargetLocation()
     {
+        if(targetLocation == null && serializableLocation != null)
+            targetLocation = serializableLocation.toLocation();
+
         return targetLocation.clone();
     }
 
