@@ -229,6 +229,6 @@ NPC npc = NpcManager.fromUUID(npcUuid);
 
 ## Requirements
 
-- Java 17+
-- Spigot 1.17+ (compatible with newer versions)
+- Java 21+
+- Spigot 1.20.6+ (compatible with newer versions)
 - Minecraft server with NPC support
