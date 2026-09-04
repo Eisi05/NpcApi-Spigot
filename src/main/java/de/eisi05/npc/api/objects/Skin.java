@@ -92,6 +92,7 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setReadTimeout(10000);
 
+            connection.getResponseCode();
             try(InputStream is = connection.getInputStream(); Scanner scanner = new Scanner(is))
             {
                 String response = scanner.useDelimiter("\\A").next();
@@ -119,6 +120,9 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
         }
         catch(IOException e)
         {
+            if(NpcApi.config.debug())
+                e.printStackTrace();
+
             skinCacheUUID.remove(uuid);
             return Optional.empty();
         }
@@ -144,6 +148,7 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setReadTimeout(10000);
 
+            conn.getResponseCode();
             try(InputStream is = conn.getInputStream(); Scanner scanner = new Scanner(is))
             {
                 String response = scanner.useDelimiter("\\A").next();
@@ -156,6 +161,9 @@ public record Skin(@Nullable String name, @Nullable String value, @Nullable Stri
         }
         catch(IOException e)
         {
+            if(NpcApi.config.debug())
+                e.printStackTrace();
+
             skinCacheName.remove(input);
             return Optional.empty();
         }
