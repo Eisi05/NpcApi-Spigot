@@ -8,10 +8,10 @@ import org.bukkit.util.io.BukkitObjectInputStream;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.Base64;
 
 /**
  * The {@link ItemSerializer} class provides utility methods for serializing and deserializing
@@ -96,7 +96,7 @@ public class ItemSerializer
                 dataOutput.writeObject(item);
 
             dataOutput.close();
-            return Base64Coder.encodeLines(outputStream.toByteArray());
+            return Base64.getEncoder().encodeToString(outputStream.toByteArray());
         } catch(Exception e)
         {
             return null;
@@ -123,7 +123,7 @@ public class ItemSerializer
                 dataOutput.writeObject(item);
 
             dataOutput.close();
-            return Base64Coder.encodeLines(outputStream.toByteArray());
+            return Base64.getEncoder().encodeToString(outputStream.toByteArray());
         } catch(Exception e)
         {
             return "";
@@ -157,7 +157,7 @@ public class ItemSerializer
     {
         try
         {
-            ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64Coder.decodeLines(data));
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.getMimeDecoder().decode(data));
             BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream);
             Inventory inventory = Bukkit.getServer().createInventory(null, dataInput.readInt());
 
@@ -183,7 +183,7 @@ public class ItemSerializer
     {
         try
         {
-            ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64Coder.decodeLines(data));
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.getMimeDecoder().decode(data));
             BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream);
             ItemStack[] items = new ItemStack[dataInput.readInt()];
 
