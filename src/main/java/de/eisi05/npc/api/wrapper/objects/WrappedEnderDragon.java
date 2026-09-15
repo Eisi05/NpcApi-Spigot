@@ -7,7 +7,7 @@ import org.bukkit.entity.EnderDragon;
 import java.util.Arrays;
 import java.util.List;
 
-@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.world.entity.boss.enderdragon.EnderDragon")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "net.minecraft.world.entity.boss.enderdragon.EnderDragon")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.world.entity.boss.EntityEnderDragon")
 public class WrappedEnderDragon extends WrappedEntity<EnderDragon>
 {
@@ -16,7 +16,7 @@ public class WrappedEnderDragon extends WrappedEntity<EnderDragon>
         super(handle);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "subEntities")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "subEntities")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "cF")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "cD")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_6), path = "cu")

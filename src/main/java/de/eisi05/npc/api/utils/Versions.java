@@ -105,9 +105,13 @@ public enum Versions
      */
     V26_1("v26_1"),
     /**
-     * Minecraft 26.1 version.
+     * Minecraft 26.2 version.
      */
-    V26_2("v26_2");
+    V26_2("v26_2"),
+    /**
+     * Minecraft 26.3 version.
+     */
+    V26_3("v26_3");
 
     /**
      * Caches the determined current server version to avoid repeated lookups.
@@ -145,6 +149,7 @@ public enum Versions
         {
             case String v when v.startsWith("26.1") -> V26_1;
             case String v when v.startsWith("26.2") -> V26_2;
+            case String v when v.startsWith("26.3") -> V26_3;
             default -> null;
         };
 

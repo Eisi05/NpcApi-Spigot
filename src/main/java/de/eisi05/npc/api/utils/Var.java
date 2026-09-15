@@ -297,7 +297,7 @@ public class Var
         return flags;
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.network.chat.ResolutionContext$Builder")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "net.minecraft.network.chat.ResolutionContext$Builder")
     private static class ResolutionContextBuilder extends Wrapper
     {
         private ResolutionContextBuilder()
@@ -305,7 +305,7 @@ public class Var
             super(createInstance(ResolutionContextBuilder.class));
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withSource")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "withSource")
         public @NotNull ResolutionContextBuilder withSource(@Nullable WrappedCommandSourceStack sourceStack)
         {
             if(sourceStack == null)
@@ -315,14 +315,14 @@ public class Var
             return this;
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withEntityOverride")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "withEntityOverride")
         public @NotNull ResolutionContextBuilder withEntityOverride(@Nullable WrappedEntity<?> entityOverride)
         {
             invokeWrappedMethod(entityOverride == null ? null : entityOverride.getHandle());
             return this;
         }
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "build")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "build")
         public @NotNull Object build()
         {
             return invokeWrappedMethod();

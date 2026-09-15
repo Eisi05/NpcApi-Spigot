@@ -7,7 +7,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Interaction;
 
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_2), path = "net.minecraft.world.entity.Interaction")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_3), path = "net.minecraft.world.entity.Interaction")
 public class WrappedInteraction extends WrappedEntity<Interaction>
 {
     WrappedInteraction(Object handle)

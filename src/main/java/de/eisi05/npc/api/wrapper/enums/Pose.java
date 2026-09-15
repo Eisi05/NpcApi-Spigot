@@ -9,79 +9,79 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 
-@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.world.entity.Pose")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "net.minecraft.world.entity.Pose")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.world.entity.EntityPose")
 public enum Pose implements Wrapper.EnumWrapper
 {
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "STANDING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "STANDING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
     STANDING(getBukkit("STANDING"), Material.ARMOR_STAND),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "FALL_FLYING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "FALL_FLYING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "b")
     FALL_FLYING(getBukkit("FALL_FLYING"), Material.FEATHER),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "SLEEPING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "SLEEPING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "c")
     SLEEPING(getBukkit("SLEEPING"), Material.RED_BED),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "SWIMMING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "SWIMMING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "d")
     SWIMMING(getBukkit("SWIMMING"), Material.WATER_BUCKET),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "SPIN_ATTACK")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "SPIN_ATTACK")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "e")
     SPIN_ATTACK(getBukkit("SPIN_ATTACK"), Material.TRIDENT),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "CROUCHING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "CROUCHING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "f")
     CROUCHING(getBukkit("SNEAKING"), Material.LEATHER_BOOTS),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "LONG_JUMPING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "LONG_JUMPING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "g")
     LONG_JUMPING(getBukkit("LONG_JUMPING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "DYING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "DYING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "h")
     DYING(getBukkit("DYING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "CROAKING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "CROAKING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "i")
     CROAKING(getBukkit("CROAKING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "USING_TONGUE")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "USING_TONGUE")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "j")
     USING_TONGUE(getBukkit("USING_TONGUE"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "SITTING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "SITTING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "k")
     SITTING(getBukkit("SITTING"), Material.OAK_STAIRS),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "ROARING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "ROARING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "l")
     ROARING(getBukkit("ROARING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "SNIFFING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "SNIFFING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "m")
     SNIFFING(getBukkit("SNIFFING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "EMERGING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "EMERGING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "n")
     EMERGING(getBukkit("EMERGING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "DIGGING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "DIGGING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "o")
     DIGGING(getBukkit("DIGGING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "SLIDING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "SLIDING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "p")
     SLIDING(getBukkit("SLIDING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "SHOOTING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "SHOOTING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "q")
     SHOOTING(getBukkit("SHOOTING"), null),
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "INHALING")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "INHALING")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "r")
     INHALING(getBukkit("INHALING"), null);
 

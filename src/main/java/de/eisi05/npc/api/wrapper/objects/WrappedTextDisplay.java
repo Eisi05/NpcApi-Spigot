@@ -15,7 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_2), path = "net.minecraft.world.entity.Display$TextDisplay")
+@Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_3), path = "net.minecraft.world.entity.Display$TextDisplay")
 public class WrappedTextDisplay extends WrappedEntity.WrappedNameTag<Entity>
 {
     private final Map<WrappedEntityData.EntityDataAccessor<?>, Object> dataMap = new LinkedHashMap<>();

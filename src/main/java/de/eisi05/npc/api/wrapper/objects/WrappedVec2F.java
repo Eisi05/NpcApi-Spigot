@@ -4,7 +4,7 @@ import de.eisi05.npc.api.utils.Versions;
 import de.eisi05.npc.api.wrapper.Mapping;
 import de.eisi05.npc.api.wrapper.Wrapper;
 
-@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.world.phys.Vec2")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "net.minecraft.world.phys.Vec2")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.world.phys.Vec2F")
 
 public class WrappedVec2F extends Wrapper
@@ -19,7 +19,7 @@ public class WrappedVec2F extends Wrapper
         super(handle);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "x")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "x")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "j")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "i")
     public float getPitch()
@@ -27,7 +27,7 @@ public class WrappedVec2F extends Wrapper
         return getWrappedFieldValue();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "y")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "y")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "k")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "j")
     public float getYaw()

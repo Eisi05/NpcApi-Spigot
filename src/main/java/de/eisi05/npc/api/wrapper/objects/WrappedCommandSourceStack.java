@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
 
-@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.commands.CommandSourceStack")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "net.minecraft.commands.CommandSourceStack")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.commands.CommandListenerWrapper")
 public class WrappedCommandSourceStack extends Wrapper
 {
@@ -23,13 +23,13 @@ public class WrappedCommandSourceStack extends Wrapper
         super(handle);
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_2), path = "getBukkitSender")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V26_3), path = "getBukkitSender")
     public CommandSender getBukkitSender()
     {
         return invokeWrappedMethod();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "getEntity")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "getEntity")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "g")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "f")
     public @NotNull WrappedEntity<?> getEntity()
@@ -37,7 +37,7 @@ public class WrappedCommandSourceStack extends Wrapper
         return new WrappedEntity<>(invokeWrappedMethod());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withMaximumPermission")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "withMaximumPermission")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "b")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "a")
     public @NotNull WrappedCommandSourceStack withMaximumPermission()
@@ -47,7 +47,7 @@ public class WrappedCommandSourceStack extends Wrapper
         return new WrappedCommandSourceStack(invokeWrappedMethod(WrappedPermissionSet.ALL.getHandle()));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withEntity")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "withEntity")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
     public @NotNull WrappedCommandSourceStack withEntity(WrappedEntity<?> entity)
     {
@@ -67,7 +67,7 @@ public class WrappedCommandSourceStack extends Wrapper
         }
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withSuppressedOutput")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "withSuppressedOutput")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
     public @NotNull WrappedCommandSourceStack withSuppressedOutput()
     {
@@ -86,28 +86,28 @@ public class WrappedCommandSourceStack extends Wrapper
         return new Location(getWorld(), position.getX(), position.getY(), position.getZ(), rotation.getPitch(), rotation.getYaw());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withPosition")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "withPosition")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
     public @NotNull WrappedCommandSourceStack withPosition(@NotNull Vector vector)
     {
         return new WrappedCommandSourceStack(invokeWrappedMethod(WrappedVec3D.fromVector(vector).getHandle()));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withRotation")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "withRotation")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
     public @NotNull WrappedCommandSourceStack withRotation(float yaw, float pitch)
     {
         return new WrappedCommandSourceStack(invokeWrappedMethod(new WrappedVec2F(yaw, pitch).getHandle()));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "withLevel")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "withLevel")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "a")
     public @NotNull WrappedCommandSourceStack withWorld(@NotNull World world)
     {
         return new WrappedCommandSourceStack(invokeWrappedMethod(Var.getNmsLevel(world)));
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "isSilent")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "isSilent")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "y")
     @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_9), path = "x")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "y")
@@ -116,7 +116,7 @@ public class WrappedCommandSourceStack extends Wrapper
         return invokeWrappedMethod();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "getPosition")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "getPosition")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "e")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "d")
     public @NotNull Vector getPosition()
@@ -124,7 +124,7 @@ public class WrappedCommandSourceStack extends Wrapper
         return WrappedVec3D.fromHandle(invokeWrappedMethod()).toVector();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "getRotation")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "getRotation")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "l")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "k")
     public @NotNull WrappedVec2F getRotation()
@@ -132,7 +132,7 @@ public class WrappedCommandSourceStack extends Wrapper
         return new WrappedVec2F(invokeWrappedMethod());
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "getLevel")
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "getLevel")
     @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "f")
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_9), path = "e")
     public @NotNull World getWorld()
@@ -140,14 +140,14 @@ public class WrappedCommandSourceStack extends Wrapper
         return (World) Reflections.invokeMethod(invokeWrappedMethod(), "getWorld").get();
     }
 
-    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V26_2), path = "net.minecraft.server.permissions.PermissionSet")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V26_3), path = "net.minecraft.server.permissions.PermissionSet")
     private static class WrappedPermissionSet extends Wrapper
     {
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "NO_PERMISSIONS")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "NO_PERMISSIONS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "g")
         public static final WrappedPermissionSet NO = new WrappedPermissionSet(getStaticWrappedFieldValue("NO").orElse(null));
 
-        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "ALL_PERMISSIONS")
+        @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "ALL_PERMISSIONS")
         @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V1_21_11), path = "h")
         public static final WrappedPermissionSet ALL = new WrappedPermissionSet(getStaticWrappedFieldValue("ALL").orElse(null));
 

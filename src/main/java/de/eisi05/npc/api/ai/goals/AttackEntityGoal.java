@@ -6,10 +6,7 @@ import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcOption;
-import de.eisi05.npc.api.utils.LocationUtils;
-import de.eisi05.npc.api.utils.Reflections;
-import de.eisi05.npc.api.utils.RegistryPredicate;
-import de.eisi05.npc.api.utils.SerializableBiPredicate;
+import de.eisi05.npc.api.utils.*;
 import de.eisi05.npc.api.utils.serialize.NpcRegistry;
 import de.eisi05.npc.api.wrapper.enums.Pose;
 import de.eisi05.npc.api.wrapper.objects.WrappedEntityData;
@@ -52,6 +49,17 @@ public class AttackEntityGoal extends Goal
 {
     @Serial
     private static final long serialVersionUID = 1L;
+
+    private static final Attribute ATTACK__DAMAGE_ATTRIBUTE =
+            Versions.isCurrentVersionSmallerThan(Versions.V1_21_2) ?
+            Attribute.GENERIC_ATTACK_DAMAGE : Reflections.getStaticField(Attribute.class, "ATTACK_DAMAGE");
+    private static final Attribute KNOCKBACK_RESISTANCE_ATTRIBUTE =
+            Versions.isCurrentVersionSmallerThan(Versions.V1_21_2) ?
+                    Attribute.GENERIC_KNOCKBACK_RESISTANCE : Reflections.getStaticField(Attribute.class, "KNOCKBACK_RESISTANCE");
+    private static final Attribute ATTACK_KNOCKBACK_ATTRIBUTE =
+            Versions.isCurrentVersionSmallerThan(Versions.V1_21_2) ?
+                    Attribute.GENERIC_ATTACK_KNOCKBACK : Reflections.getStaticField(Attribute.class, "ATTACK_KNOCKBACK");
+
 
     private static final double WEAPONMECHANICS_ATTACK_RANGE = 25.0;
     private static final double BOW_ATTACK_RANGE = 15.0;
@@ -529,7 +537,7 @@ public class AttackEntityGoal extends Goal
         if(meta == null)
             return 5;
 
-        Collection<AttributeModifier> modifiers = meta.getAttributeModifiers(Attribute.GENERIC_ATTACK_SPEED);
+        Collection<AttributeModifier> modifiers = meta.getAttributeModifiers(ATTACK__DAMAGE_ATTRIBUTE);
         if(modifiers == null)
             return 5;
 
@@ -763,7 +771,7 @@ public class AttackEntityGoal extends Goal
         if(meta == null)
             return 0.5;
 
-        Collection<AttributeModifier> modifiers = meta.getAttributeModifiers(Attribute.GENERIC_ATTACK_DAMAGE);
+        Collection<AttributeModifier> modifiers = meta.getAttributeModifiers(ATTACK__DAMAGE_ATTRIBUTE);
         if(modifiers == null)
             return 0.5;
 
@@ -802,7 +810,7 @@ public class AttackEntityGoal extends Goal
         if(meta == null)
             return 0.5;
 
-        Collection<AttributeModifier> modifiers = meta.getAttributeModifiers(Attribute.GENERIC_ATTACK_KNOCKBACK);
+        Collection<AttributeModifier> modifiers = meta.getAttributeModifiers(ATTACK_KNOCKBACK_ATTRIBUTE);
         if(modifiers == null)
             return 0.5;
 
@@ -821,10 +829,10 @@ public class AttackEntityGoal extends Goal
      */
     private double getKnockbackResistance(@NotNull LivingEntity target)
     {
-        if(target.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE) == null)
+        if(target.getAttribute(KNOCKBACK_RESISTANCE_ATTRIBUTE) == null)
             return 0;
 
-        return target.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
+        return target.getAttribute(KNOCKBACK_RESISTANCE_ATTRIBUTE).getValue();
     }
 
     /**

@@ -11,7 +11,7 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_2), path = "net.minecraft.server.level.ServerEntity")
+@Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "net.minecraft.server.level.ServerEntity")
 @Mapping(range = @Mapping.Range(from = Versions.V1_21, to = Versions.V1_21_11), path = "net.minecraft.server.level.EntityTrackerEntry")
 public class WrappedEntityTrackerEntry extends Wrapper
 {
@@ -32,7 +32,16 @@ public class WrappedEntityTrackerEntry extends Wrapper
             }, (BiConsumer<Object, List<UUID>>) (o, uuids) ->
             {
             }, Set.of());
-        else
+        else if(Versions.isCurrentVersionSmallerThan(Versions.V26_3))
             return createInstance(WrappedEntityTrackerEntry.class, entity.getServer(), entity, 0, false, null, Set.of());
+        else
+            return createInstance(WrappedEntityTrackerEntry.class, entity.getServer(), entity, UpdateInterval.NEVER, false, null, Set.of());
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V26_3, to = Versions.V26_3), path = "net.minecraft.world.entity.UpdateInterval")
+    private static class UpdateInterval
+    {
+        @Mapping(range = @Mapping.Range(from = Versions.V26_3, to = Versions.V26_3), path = "NEVER")
+        private static final Object NEVER = getStaticWrappedFieldValue("NEVER").orElse(null);
     }
 }
