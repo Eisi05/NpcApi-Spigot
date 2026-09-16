@@ -556,10 +556,11 @@ public class NpcOption<T, S extends Serializable>
                 else
                     entity = npc.entity;
 
+                Location location = npc.getLocation();
                 if(npc.getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SITTING)
-                    entity.moveTo(npc.getLocation().clone().subtract(0, npc.getOption(NpcOption.SCALE) * (entity.getDefaultBoundingBox().getYSize() / 3D),0));
-                else
-                    entity.moveTo(npc.getLocation());
+                    location = location.clone().subtract(0, npc.getOption(NpcOption.SCALE) * (entity.getDefaultBoundingBox().getYSize() / 3D),0);
+                entity.moveTo(location);
+                npc.serverPlayer.getNameTag().moveTo(location.clone().add(0, 0.25 + npc.getNpcName().getDisplayOptions().getHeight(), 0));
 
                 npc.entity = entity;
                 if(entity instanceof WrappedEnderDragon dragon)
