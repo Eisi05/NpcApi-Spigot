@@ -69,10 +69,12 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
 
         if(nameDisplay != null)
             wrappedServerPlayer.setNameTag(nameDisplay);
-
-        WrappedTextDisplay textDisplay = WrappedTextDisplay.create(location.getWorld());
-        textDisplay.moveTo(location.clone().add(0, 0.2, 0));
-        wrappedServerPlayer.setNameTag(textDisplay);
+        else
+        {
+            WrappedTextDisplay textDisplay = WrappedTextDisplay.create(location.getWorld());
+            textDisplay.moveTo(location.clone().add(0, 0.2, 0));
+            wrappedServerPlayer.setNameTag(textDisplay);
+        }
 
         wrappedServerPlayer.moveTo(location);
         wrappedServerPlayer.setListName(name);

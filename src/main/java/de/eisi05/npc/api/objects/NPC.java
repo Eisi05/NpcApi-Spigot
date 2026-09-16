@@ -761,8 +761,13 @@ public class NPC extends NpcHolder
     {
         org.bukkit.entity.Pose pose = viewer == null ? getOption(NpcOption.POSE) : getOption(NpcOption.POSE, viewer);
         double scale = viewer == null ? getOption(NpcOption.SCALE) : getOption(NpcOption.SCALE, viewer);
-        double eyeHeight = (entity.getBukkitPlayer() instanceof LivingEntity le ? le.getEyeHeight() :
-                entity.getBukkitPlayer().getHeight()) - (Pose.fromBukkit(pose) == Pose.SITTING ? 0.625 : 0);
+        Entity bukkitEntity = entity.getBukkitPlayer();
+        Pose nmsPose = Pose.fromBukkit(pose);
+
+        double eyeHeight = bukkitEntity instanceof LivingEntity living ? living.getEyeHeight() : bukkitEntity.getHeight();
+        if (nmsPose == Pose.SITTING)
+            eyeHeight -= Math.pow(entity.getDefaultBoundingBox().getYSize() / 1.8D, 1.175D) * 0.625D;
+
         return eyeHeight * scale;
     }
 
@@ -811,10 +816,7 @@ public class NPC extends NpcHolder
 
         double dx = playerLoc.getX() - npcLoc.getX();
 
-        double eyeHeight = (entity.getBukkitPlayer() instanceof LivingEntity le ? le.getEyeHeight() :
-                entity.getBukkitPlayer().getHeight()) - (Pose.fromBukkit(getOption(NpcOption.POSE, viewer)) == Pose.SITTING ? 0.625 : 0);
-
-        double dy = (playerLoc.getY() + viewer.getEyeHeight()) - (npcLoc.getY() + (eyeHeight * getOption(NpcOption.SCALE, viewer)));
+        double dy = (playerLoc.getY() + viewer.getEyeHeight()) - (npcLoc.getY() + getEyeHeight(viewer));
         double dz = playerLoc.getZ() - npcLoc.getZ();
 
         double distanceXZ = Math.sqrt(dx * dx + dz * dz);
@@ -853,11 +855,8 @@ public class NPC extends NpcHolder
 
         double dx = targetLoc.getX() - npcLoc.getX();
 
-        double eyeHeight = (entity.getBukkitPlayer() instanceof LivingEntity le ? le.getEyeHeight() :
-                entity.getBukkitPlayer().getHeight()) - (Pose.fromBukkit(getOption(NpcOption.POSE, viewer)) == Pose.SITTING ? 0.625 : 0);
-
         double dy = (targetLoc.getY() + (targetEntity instanceof LivingEntity le ? le.getEyeHeight() : targetEntity.getHeight())) -
-                (npcLoc.getY() + (eyeHeight * getOption(NpcOption.SCALE, viewer)));
+                (npcLoc.getY() + getEyeHeight(viewer));
         double dz = targetLoc.getZ() - npcLoc.getZ();
 
         double distanceXZ = Math.sqrt(dx * dx + dz * dz);

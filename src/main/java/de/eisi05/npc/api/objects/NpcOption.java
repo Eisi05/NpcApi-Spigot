@@ -469,6 +469,8 @@ public class NpcOption<T, S extends Serializable>
 
                     textDisplay.setPassengers(npc.entity);
 
+                    System.out.println(textDisplay.getBukkitPlayer().getLocation());
+
                     SetPassengerPacket passengerPacket = new SetPassengerPacket(textDisplay);
                     RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(npc.entity, (byte) (npc.getLocation().getYaw() * 256 / 360));
 
@@ -549,11 +551,15 @@ public class NpcOption<T, S extends Serializable>
                         !npc.entity.data.equals(wrappedEntitySnapshot.getData().toString()))
                 {
                     entity = wrappedEntitySnapshot.create(player.getWorld());
-                    entity.moveTo(npc.getLocation());
                     npc.toDeleteEntities.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>()).put("entity", entity.getId());
                 }
                 else
                     entity = npc.entity;
+
+                if(npc.getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SITTING)
+                    entity.moveTo(npc.getLocation().clone().subtract(0, npc.getOption(NpcOption.SCALE) * (entity.getDefaultBoundingBox().getYSize() / 3D),0));
+                else
+                    entity.moveTo(npc.getLocation());
 
                 npc.entity = entity;
                 if(entity instanceof WrappedEnderDragon dragon)
