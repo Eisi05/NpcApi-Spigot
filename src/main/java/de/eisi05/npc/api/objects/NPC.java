@@ -116,8 +116,11 @@ public class NPC extends NpcHolder
 
         npcPath = NpcApi.plugin.getDataFolder().toPath().resolve("NPC").resolve(uuid + ".npc.json");
 
+        boolean autoUpdate = NpcApi.config.autoUpdate();
+        NpcApi.config.autoUpdate(false);
         for(NpcOption<?, ?> value : NpcOption.values())
             setOption(value, Var.unsafeCast(value.getDefaultValue()));
+        NpcApi.config.autoUpdate(autoUpdate);
 
         NpcManager.addNPC(this);
         startGoals();
@@ -302,9 +305,16 @@ public class NPC extends NpcHolder
         Set<UUID> specificPlayers = visibilityManager.getSpecificPlayers();
         hideNpcFromAllPlayers();
         WrappedPlayerTeam.clear(getServerPlayer().getName());
-        visibilityManager.setShowToAllPlayers(shouldShowToAll);
-        specificPlayers.forEach(visibilityManager::addSpecificPlayer);
-        viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> showNPCToPlayer(Bukkit.getPlayer(uuid)));
+
+        if(shouldShowToAll)
+            showNpcToAllPlayers();
+        else
+        {
+            visibilityManager.setShowToAllPlayers(shouldShowToAll);
+            specificPlayers.forEach(visibilityManager::addSpecificPlayer);
+            viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> showNPCToPlayer(Bukkit.getPlayer(uuid)));
+        }
+
         if(!hasUnsavedChanges)
         {
             try
