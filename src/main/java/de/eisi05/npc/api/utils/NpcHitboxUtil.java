@@ -45,7 +45,14 @@ public class NpcHitboxUtil
         }
         catch(Exception e)
         {
-            maxDistance = player.getGameMode() == GameMode.CREATIVE ? 5.0 : 3.0;
+            try
+            {
+                maxDistance = player.getAttribute(Attribute.valueOf("ENTITY_INTERACTION_RANGE")).getValue();
+            }
+            catch(Exception e2)
+            {
+                maxDistance = player.getGameMode() == GameMode.CREATIVE ? 5.0 : 3.0;
+            }
         }
 
         Location base = npc.getLocation();

@@ -469,8 +469,6 @@ public class NpcOption<T, S extends Serializable>
 
                     textDisplay.setPassengers(npc.entity);
 
-                    System.out.println(textDisplay.getBukkitPlayer().getLocation());
-
                     SetPassengerPacket passengerPacket = new SetPassengerPacket(textDisplay);
                     RotateHeadPacket rotateHeadPacket = new RotateHeadPacket(npc.entity, (byte) (npc.getLocation().getYaw() * 256 / 360));
 
