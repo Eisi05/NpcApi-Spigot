@@ -1,20 +1,10 @@
 package de.eisi05.npc.api.manager;
 
-import de.eisi05.npc.api.NpcApi;
-import de.eisi05.npc.api.objects.NPC;
-import de.eisi05.npc.api.pathfinding.Path;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.entity.Player;
+import de.eisi05.npc.api.interfaces.NpcClickAction;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.Set;
-import java.util.UUID;
 
 /**
  * Manages the combat-related state and death behavior of an NPC.
@@ -30,10 +20,8 @@ public class NpcCombatManager implements Serializable
     private double maxHealth = 20.0; // -1 = invulnerable
     private double currentHealth = 20.0;
     private double knockbackMultiplier = 1.0;
-    private DeathBehavior deathBehavior = DeathBehavior.DISABLE;
 
-    private long respawnDelayTicks = 100;
-    private Path.SerializablePath.SerializableLocation respawnLocation = null;
+    private NpcClickAction deathAction = null;
 
     /**
      * Creates a copy of this combat manager with the same configuration and current state.
@@ -42,80 +30,12 @@ public class NpcCombatManager implements Serializable
      */
     public @NotNull NpcCombatManager copy()
     {
-        NpcCombatManager copy = new NpcCombatManager()
+        return new NpcCombatManager()
                 .setMaxHealth(maxHealth)
                 .setKnockbackMultiplier(knockbackMultiplier)
-                .setDeathBehavior(deathBehavior)
-                .setEnabled(enabled);
-
-        copy.currentHealth = this.currentHealth;
-        copy.respawnDelayTicks = this.respawnDelayTicks;
-        copy.respawnLocation = this.respawnLocation;
-        return copy;
-    }
-
-    // --- Death Handling Logic ---
-
-    /**
-     * Handles the NPC's death according to the configured death behavior.
-     *
-     * @param npc the NPC that died
-     */
-    public void handleDeath(@NotNull NPC npc)
-    {
-        switch(deathBehavior)
-        {
-            case DELETE ->
-            {
-                try
-                {
-                    npc.delete();
-                }
-                catch(IOException ignored)
-                {
-                }
-            }
-            case RESPAWN ->
-            {
-                boolean showToAll = npc.getVisibilityManager().shouldShowToAllPlayers();
-                Set<UUID> specific = npc.getVisibilityManager().getSpecificPlayers();
-
-                npc.hideNpcFromAllPlayers();
-
-                Location loc = getRespawnLocation(npc.getLocation().getWorld());
-                if(loc != null)
-                    npc.changeRealLocation(loc);
-
-                Bukkit.getScheduler().runTaskLater(NpcApi.plugin, () ->
-                {
-                    setCurrentHealth(maxHealth, npc);
-
-                    if(showToAll)
-                        npc.showNpcToAllPlayers();
-                    else
-                    {
-                        for(UUID uuid : specific)
-                        {
-                            Player player = Bukkit.getPlayer(uuid);
-                            if(player != null)
-                                npc.showNPCToPlayer(player);
-                        }
-                    }
-                }, respawnDelayTicks);
-            }
-            case DISABLE ->
-            {
-                setCurrentHealth(maxHealth, npc);
-                Location loc = getRespawnLocation(npc.getLocation().getWorld());
-                if(loc != null)
-                    npc.changeRealLocation(loc);
-
-                npc.setEnabled(false);
-            }
-            case NONE ->
-            {
-            }
-        }
+                .setDeathAction(deathAction)
+                .setEnabled(enabled)
+                .setCurrentHealth(currentHealth);
     }
 
     // --- Getters & Setters ---
@@ -158,16 +78,11 @@ public class NpcCombatManager implements Serializable
      * is triggered when an NPC is provided.</p>
      *
      * @param currentHealth the new health value
-     * @param npc           the affected NPC, or {@code null} to skip death handling
      * @return this combat manager
      */
-    public @NotNull NpcCombatManager setCurrentHealth(double currentHealth, @Nullable NPC npc)
+    public @NotNull NpcCombatManager setCurrentHealth(double currentHealth)
     {
         this.currentHealth = Math.min(currentHealth, maxHealth);
-
-        if(this.currentHealth <= 0 && this.currentHealth != this.maxHealth && npc != null)
-            handleDeath(npc);
-
         return this;
     }
 
@@ -227,98 +142,25 @@ public class NpcCombatManager implements Serializable
     }
 
     /**
-     * Gets the configured death behavior.
+     * Gets the action to be executed when the NPC dies.
      *
-     * @return the death behavior
+     * @return the death action
      */
-    public @NotNull DeathBehavior getDeathBehavior()
+    public @NotNull NpcClickAction getDeathAction()
     {
-        return deathBehavior;
+        return deathAction;
     }
 
+
     /**
-     * Sets the death behavior of the NPC.
+     * Sets the action to be executed when the NPC dies.
      *
-     * @param deathBehavior the new death behavior
+     * @param deathAction the new death action
      * @return this combat manager
      */
-    public @NotNull NpcCombatManager setDeathBehavior(@NotNull DeathBehavior deathBehavior)
+    public @NotNull NpcCombatManager setDeathAction(@NotNull NpcClickAction deathAction)
     {
-        this.deathBehavior = deathBehavior;
+        this.deathAction = deathAction;
         return this;
-    }
-
-    /**
-     * Gets the configured respawn delay.
-     *
-     * @return the respawn delay in ticks
-     */
-    public long getRespawnDelayTicks()
-    {
-        return respawnDelayTicks;
-    }
-
-    /**
-     * Sets the respawn delay.
-     *
-     * @param respawnDelayTicks the respawn delay in ticks
-     * @return this combat manager
-     */
-    public @NotNull NpcCombatManager setRespawnDelayTicks(long respawnDelayTicks)
-    {
-        this.respawnDelayTicks = respawnDelayTicks;
-        return this;
-    }
-
-    /**
-     * Gets the configured respawn location.
-     *
-     * @param fallback the fallback world used when converting the serialized location
-     * @return the respawn location, or {@code null} if unset
-     */
-    public @Nullable Location getRespawnLocation(@Nullable World fallback)
-    {
-        if(respawnLocation == null)
-            return null;
-
-        return respawnLocation.toLocation(fallback);
-    }
-
-    /**
-     * Sets the respawn location.
-     *
-     * @param respawnLocation the new respawn location, or {@code null} to unset it
-     * @return this combat manager
-     */
-    public @NotNull NpcCombatManager setRespawnLocation(@Nullable Location respawnLocation)
-    {
-        this.respawnLocation = respawnLocation == null ? null : new Path.SerializablePath.SerializableLocation(respawnLocation);
-        return this;
-    }
-
-    /**
-     * Defines how an NPC should behave when its health reaches zero.
-     */
-    public enum DeathBehavior
-    {
-        /**
-         * Permanently deletes the NPC via npc.delete().
-         */
-        DELETE,
-
-        /**
-         * Hides the NPC, waits for a delay, resets health/location, and shows it again.
-         */
-        RESPAWN,
-
-        /**
-         * Disables the NPC without removing it from memory, resetting health/location.
-         */
-        DISABLE,
-
-        /**
-         * Does nothing automatically; leaves handling entirely to external custom events.
-         */
-        NONE
     }
 }

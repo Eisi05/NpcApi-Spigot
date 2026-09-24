@@ -3,8 +3,6 @@ package de.eisi05.npc.api.events;
 import de.eisi05.npc.api.objects.NPC;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
-import org.bukkit.event.Event;
-import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -12,12 +10,8 @@ import org.jetbrains.annotations.NotNull;
  * <p>
  * This event can be cancelled to prevent the damage from being applied.
  */
-public class NpcDamageEvent extends Event implements Cancellable
+public class NpcDamageEvent extends NpcPlayerEvent implements Cancellable
 {
-    private static final HandlerList HANDLERS = new HandlerList();
-
-    private final NPC npc;
-    private final Player damager;
     private final boolean critical;
     private final boolean magic;
     private double damage;
@@ -33,32 +27,10 @@ public class NpcDamageEvent extends Event implements Cancellable
      */
     public NpcDamageEvent(@NotNull NPC npc, @NotNull Player damager, double damage, boolean critical, boolean magic)
     {
-        this.npc = npc;
-        this.damager = damager;
+        super(npc, damager);
         this.damage = damage;
         this.critical = critical;
         this.magic = magic;
-    }
-
-    /**
-     * Gets the handler list for this event.
-     *
-     * @return the event's handler list
-     */
-    public @NotNull
-    static HandlerList getHandlerList()
-    {
-        return HANDLERS;
-    }
-
-    /**
-     * Gets the NPC being damaged.
-     *
-     * @return the damaged NPC
-     */
-    public @NotNull NPC getNpc()
-    {
-        return npc;
     }
 
     /**
@@ -68,7 +40,7 @@ public class NpcDamageEvent extends Event implements Cancellable
      */
     public @NotNull Player getDamager()
     {
-        return damager;
+        return player;
     }
 
     /**
@@ -133,16 +105,5 @@ public class NpcDamageEvent extends Event implements Cancellable
     public void setCancelled(boolean cancel)
     {
         this.cancelled = cancel;
-    }
-
-    /**
-     * Gets the handler list for this event.
-     *
-     * @return the event's handler list
-     */
-    @Override
-    public @NotNull HandlerList getHandlers()
-    {
-        return HANDLERS;
     }
 }

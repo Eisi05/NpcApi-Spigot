@@ -10,7 +10,6 @@ import de.eisi05.npc.api.events.NpcPostShowEvent;
 import de.eisi05.npc.api.events.NpcPreShowEvent;
 import de.eisi05.npc.api.events.NpcStartWalkingEvent;
 import de.eisi05.npc.api.interfaces.NpcClickAction;
-import de.eisi05.npc.api.manager.NpcCombatManager;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.manager.NpcVisibilityManager;
 import de.eisi05.npc.api.pathfinding.AbstractPathfinder;
@@ -188,7 +187,7 @@ public class NPC extends NpcHolder
             return;
 
         npcPath.toFile().getParentFile().mkdirs();
-        new ObjectSaver(npcPath.toFile()).write(SerializedNPC.serializedNPC(this), false);
+        new ObjectSaver(npcPath.toFile()).write(SerializedNPC.serializedNPC(this));
         super.save();
     }
 
@@ -532,16 +531,6 @@ public class NPC extends NpcHolder
     public @NotNull NpcVisibilityManager getVisibilityManager()
     {
         return getOption(NpcOption.VISIBILITY_MANAGER, GLOBAL_UUID);
-    }
-
-    /**
-     * Gets the combat manager for this NPC.
-     *
-     * @return the {@link NpcCombatManager} for this NPC. Will not be null.
-     */
-    public @NotNull NpcCombatManager getCombatManager()
-    {
-        return getOption(NpcOption.COMBAT_MANAGER, GLOBAL_UUID);
     }
 
     /**

@@ -27,6 +27,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.enchantments.EnchantmentTarget;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -395,7 +396,7 @@ public class NpcDamageListener implements Listener
                 double maxHp = combatManager.getMaxHealth();
 
                 if (currentHp > 0 && currentHp < maxHp)
-                    combatManager.setCurrentHealth(Math.min(maxHp, currentHp + 1.0), npc);
+                    combatManager.setCurrentHealth(Math.min(maxHp, currentHp + 1.0));
             }
         }.runTaskTimer(NpcApi.plugin, 25L, 25L);
 
@@ -467,8 +468,11 @@ public class NpcDamageListener implements Listener
             }
             else
             {
+                combatManager.setCurrentHealth(Math.max(newHealth, 0.0));
                 NpcDeathEvent deathEvent = new NpcDeathEvent(npc, attacker);
                 Bukkit.getPluginManager().callEvent(deathEvent);
+
+                combatManager = npc.getCombatManager();
 
                 if(deathEvent.isCancelled())
                 {
@@ -492,12 +496,12 @@ public class NpcDamageListener implements Listener
             CombatState removedState = states.remove(npc);
             if (removedState != null && removedState.regenTask != null)
                 removedState.regenTask.cancel();
-            combatManager.setCurrentHealth(0, npc);
+            combatManager.setCurrentHealth(Math.max(0, combatManager.getCurrentHealth()));
         }
         else
         {
             applyProjectileKnockback(npc, projectile.getVelocity(), state, combatManager.getKnockbackMultiplier());
-            combatManager.setCurrentHealth(newHealth, npc);
+            combatManager.setCurrentHealth(newHealth);
         }
     }
 
@@ -510,13 +514,10 @@ public class NpcDamageListener implements Listener
             activeProjectiles.put(projectile, projectile.getLocation());
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onNpcHit(NpcInteractEvent event)
     {
         if(event.getAction() != ClickActionType.LEFT)
-            return;
-
-        if(event.isCancelled())
             return;
 
         NPC npc = event.getNpc();
@@ -601,8 +602,11 @@ public class NpcDamageListener implements Listener
             }
             else
             {
+                combatManager.setCurrentHealth(Math.max(newHealth, 0.0));
                 NpcDeathEvent deathEvent = new NpcDeathEvent(npc, attacker);
                 Bukkit.getPluginManager().callEvent(deathEvent);
+
+                combatManager = npc.getCombatManager();
 
                 if(deathEvent.isCancelled())
                 {
@@ -670,12 +674,12 @@ public class NpcDamageListener implements Listener
             CombatState removedState = states.remove(npc);
             if (removedState != null && removedState.regenTask != null)
                 removedState.regenTask.cancel();
-            combatManager.setCurrentHealth(0, npc);
+            combatManager.setCurrentHealth(Math.max(0, combatManager.getCurrentHealth()));
         }
         else
         {
             applyKnockback(npc, attacker, state, incoming.knockbackResistance(), combatManager.getKnockbackMultiplier());
-            combatManager.setCurrentHealth(newHealth, npc);
+            combatManager.setCurrentHealth(newHealth);
         }
 
         event.setDamage(damage);

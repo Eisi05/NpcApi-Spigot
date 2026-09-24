@@ -13,11 +13,8 @@ import java.io.Serializable;
 /**
  * Event triggered when a player interacts with an NPC. Contains information about the player, the NPC, and the type of click action.
  */
-public class NpcInteractEvent extends Event implements Serializable, Cancellable
+public class NpcInteractEvent extends NpcPlayerEvent implements Serializable, Cancellable
 {
-    private static final HandlerList HANDLERS = new HandlerList();
-    private final Player player;
-    private final NPC npc;
     private final ClickActionType action;
     private double damage;
     private boolean cancelled;
@@ -32,8 +29,7 @@ public class NpcInteractEvent extends Event implements Serializable, Cancellable
      */
     public NpcInteractEvent(@NotNull Player player, @NotNull NPC npc, @NotNull ClickActionType action, double damage)
     {
-        this.player = player;
-        this.npc = npc;
+        super(npc, player);
         this.action = action;
         this.damage = damage;
     }
@@ -48,36 +44,6 @@ public class NpcInteractEvent extends Event implements Serializable, Cancellable
     public NpcInteractEvent(@NotNull Player player, @NotNull NPC npc, @NotNull ClickActionType action)
     {
         this(player, npc, action, -1);
-    }
-
-    /**
-     * Returns the HandlerList for this event.
-     *
-     * @return the static HandlerList instance
-     */
-    public static HandlerList getHandlerList()
-    {
-        return HANDLERS;
-    }
-
-    /**
-     * Returns the player who triggered this event.
-     *
-     * @return the interacting player, never null
-     */
-    public @NotNull Player getPlayer()
-    {
-        return player;
-    }
-
-    /**
-     * Returns the NPC involved in this event.
-     *
-     * @return the interacted NPC, never null
-     */
-    public @NotNull NPC getNpc()
-    {
-        return npc;
     }
 
     /**
@@ -108,12 +74,6 @@ public class NpcInteractEvent extends Event implements Serializable, Cancellable
     public void setDamage(double damage)
     {
         this.damage = damage;
-    }
-
-    @Override
-    public @NotNull HandlerList getHandlers()
-    {
-        return getHandlerList();
     }
 
     @Override
