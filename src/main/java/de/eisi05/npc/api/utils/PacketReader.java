@@ -14,6 +14,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -118,6 +119,28 @@ public class PacketReader
 
             callNpc(player, npc, ClickActionType.LEFT);
             cancelUseUntilTick.put(player.getUniqueId(), currentTick + 10);
+            return;
+        }
+
+        if(!Versions.isCurrentVersionSmallerThan(Versions.V1_21_11) && PacketWrapper.PacketHolder.is(packet, PlayerActionPacket.class) &&
+                PacketWrapper.PacketHolder.wrap(packet, PlayerActionPacket.class).getAction() == PlayerActionPacket.Action.STAB)
+        {
+            ItemStack mainItem = player.getInventory().getItemInMainHand();
+            Object nmsItem = Var.toNmsItemStack(mainItem);
+
+            Object component = Var.getComponent(nmsItem, Var.DataComponents.ATTACK_RANGE);
+
+            boolean obfuscated = Versions.isCurrentVersionSmallerThan(Versions.V26_1);
+            float minRange = (float) Reflections.invokeMethod(component, obfuscated ? "a" : "minReach").get();
+            float maxRange = (float) Reflections.invokeMethod(component, obfuscated ? "b" : "maxReach").get();
+            float hitboxMargin = (float) Reflections.invokeMethod(component, obfuscated ? "e" : "hitboxMargin").get();
+
+            NPC targetNpc = NpcHitboxUtil.getHitNpcAlongStab(player, minRange, maxRange, hitboxMargin);
+            if(targetNpc != null)
+            {
+                callNpc(player, targetNpc, ClickActionType.LEFT);
+                cancelUseUntilTick.put(player.getUniqueId(), currentTick + 10);
+            }
             return;
         }
 

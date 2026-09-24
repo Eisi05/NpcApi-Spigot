@@ -1,5 +1,6 @@
 package de.eisi05.npc.api.utils;
 
+import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcOption;
 import de.eisi05.npc.api.wrapper.objects.WrappedEntity;
@@ -8,6 +9,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -184,5 +186,79 @@ public class NpcHitboxUtil
             return false;
 
         return true;
+    }
+
+    /**
+     * Finds the closest NPC intersected by a ray originating from the attacker's eye position.
+     *
+     * @param attacker the player performing the attack
+     * @param minRange the minimum distance at which an NPC can be hit
+     * @param maxRange the maximum distance the attack can reach
+     * @param margin   additional margin added to the NPC's bounding box
+     * @return the closest NPC hit by the stab, or {@code null} if no NPC is hit
+     */
+    public static NPC getHitNpcAlongStab(Player attacker, double minRange, double maxRange, double margin)
+    {
+        Location eyeLoc = attacker.getEyeLocation();
+        Vector look = eyeLoc.getDirection().normalize();
+        Vector origin = eyeLoc.toVector();
+
+        Vector velocity = attacker.getVelocity();
+        double movementComponent = velocity.dot(look);
+        double effectiveMaxRange = maxRange + Math.max(0.0, movementComponent);
+
+        RayTraceResult blockHit = attacker.getWorld().rayTraceBlocks(eyeLoc, look, effectiveMaxRange, FluidCollisionMode.NEVER, true);
+
+        double maxAllowedDistance = effectiveMaxRange;
+
+        if(blockHit != null && blockHit.getHitPosition() != null)
+        {
+            double blockDistance = blockHit.getHitPosition().distance(origin);
+
+            if(blockDistance < minRange)
+                return null;
+
+            maxAllowedDistance = blockDistance;
+        }
+
+        NPC closestNpc = null;
+        double closestDistance = maxAllowedDistance;
+
+        for(NPC npc : NpcManager.getList())
+        {
+            if(!npc.getLocation().getWorld().equals(attacker.getWorld()))
+                continue;
+
+            WrappedEntity.BoundingBox box = npc.entity.getBoundingBox();
+            double scale = npc.getOption(NpcOption.SCALE);
+            double width = box.getXSize() * scale;
+            double height = box.getYSize() * scale;
+
+            Location loc = npc.getLocation();
+            double halfWidth = width / 2.0;
+
+            BoundingBox npcBox = new BoundingBox(
+                    loc.getX() - halfWidth - margin,
+                    loc.getY() - margin,
+                    loc.getZ() - halfWidth - margin,
+                    loc.getX() + halfWidth + margin,
+                    loc.getY() + height + margin,
+                    loc.getZ() + halfWidth + margin
+            );
+
+            RayTraceResult hitResult = npcBox.rayTrace(origin, look, maxAllowedDistance);
+            if(hitResult != null)
+            {
+                double hitDistance = hitResult.getHitPosition().distance(origin);
+
+                if(hitDistance >= minRange && hitDistance < closestDistance)
+                {
+                    closestDistance = hitDistance;
+                    closestNpc = npc;
+                }
+            }
+        }
+
+        return closestNpc;
     }
 }

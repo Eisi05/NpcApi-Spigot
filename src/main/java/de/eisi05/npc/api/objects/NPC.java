@@ -10,6 +10,7 @@ import de.eisi05.npc.api.events.NpcPostShowEvent;
 import de.eisi05.npc.api.events.NpcPreShowEvent;
 import de.eisi05.npc.api.events.NpcStartWalkingEvent;
 import de.eisi05.npc.api.interfaces.NpcClickAction;
+import de.eisi05.npc.api.manager.NpcCombatManager;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.manager.NpcVisibilityManager;
 import de.eisi05.npc.api.pathfinding.AbstractPathfinder;
@@ -529,6 +530,16 @@ public class NPC extends NpcHolder
     public @NotNull NpcVisibilityManager getVisibilityManager()
     {
         return getOption(NpcOption.VISIBILITY_MANAGER, GLOBAL_UUID);
+    }
+
+    /**
+     * Gets the combat manager for this NPC.
+     *
+     * @return the {@link NpcCombatManager} for this NPC. Will not be null.
+     */
+    public @NotNull NpcCombatManager getCombatManager()
+    {
+        return getOption(NpcOption.COMBAT_MANAGER, GLOBAL_UUID);
     }
 
     /**
@@ -1418,7 +1429,11 @@ public class NPC extends NpcHolder
             if(teleport2 != null)
                 serverPlayer1.sendPacket(teleport2);
 
-            if(rotPacket != null)
+            Double distance = getOption(NpcOption.LOOK_AT_PLAYER, viewer);
+            if(distance != null && getOption(NpcOption.POSE, viewer) != org.bukkit.entity.Pose.SLEEPING &&
+                    getLocation().distanceSquared(viewer.getLocation()) <= distance * distance)
+                lookAtPlayer(viewer);
+            else if(rotPacket != null)
                 serverPlayer1.sendPacket(rotPacket);
         }
     }

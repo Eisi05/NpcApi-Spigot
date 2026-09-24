@@ -10,6 +10,9 @@ public class NpcInteractListener implements Listener
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onClick(NpcInteractEvent event)
     {
+        if(event.getNpc().getCombatManager().isEnabled())
+            return;
+        
         if(event.getNpc().getClickEvent() != null)
             event.getNpc().getClickEvent().call(event);
     }

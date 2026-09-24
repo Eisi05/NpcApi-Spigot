@@ -297,6 +297,18 @@ public class Var
         return flags;
     }
 
+    /**
+     * Retrieves a data component from an NMS item.
+     *
+     * @param nmsItem   the NMS item to retrieve the component from
+     * @param component the data component to retrieve
+     * @return the value of the specified component
+     */
+    public static Object getComponent(Object nmsItem, DataComponents component)
+    {
+        return Reflections.invokeMethod(nmsItem, "get", component.getHandle()).get();
+    }
+
     @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "net.minecraft.network.chat.ResolutionContext$Builder")
     private static class ResolutionContextBuilder extends Wrapper
     {
@@ -326,6 +338,24 @@ public class Var
         public @NotNull Object build()
         {
             return invokeWrappedMethod();
+        }
+    }
+
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V26_3), path = "net.minecraft.core.component.DataComponents")
+    public static class DataComponents extends Wrapper
+    {
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V26_3), path = "WEAPON")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "E")
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_5, to = Versions.V1_21_9), path = "B")
+        public static final DataComponents WEAPON = new DataComponents(getStaticWrappedFieldValue("WEAPON").orElseThrow());
+
+        @Mapping(range = @Mapping.Range(from = Versions.V1_21_11, to = Versions.V26_3), path = "ATTACK_RANGE")
+        @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "F")
+        public static final DataComponents ATTACK_RANGE = new DataComponents(getStaticWrappedFieldValue("ATTACK_RANGE").orElseThrow());
+
+        private DataComponents(Object handle)
+        {
+            super(handle);
         }
     }
 }
