@@ -25,6 +25,8 @@ import de.eisi05.npc.api.wrapper.objects.WrappedEntity;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
 import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import de.eisi05.npc.api.wrapper.packets.*;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
@@ -826,14 +828,35 @@ public class NPC extends NpcHolder
      */
     public void lookAtPlayer(@NotNull Player viewer)
     {
-        if(entity == null)
+        Pair<Float, Float> values = getLookAtPlayerValues(viewer);
+        if(values == null)
             return;
+
+        byte yawByte = (byte) (values.getLeft() * 256 / 360);
+        byte pitchByte = (byte) (values.getRight() * 256 / 360);
+
+        WrappedServerPlayer player = WrappedServerPlayer.fromPlayer(viewer);
+
+        player.sendPacket(new RotateHeadPacket(entity, yawByte));
+        player.sendPacket(new MoveEntityPacket.Rot(entity.getId(), yawByte, pitchByte, serverPlayer.isOnGround()));
+    }
+
+    /**
+     * Calculates the yaw and pitch values needed for the NPC to look at a specific player.
+     *
+     * @param viewer the player the NPC should look at. Must not be null.
+     * @return a pair of yaw and pitch values, or null if the NPC or player is null
+     */
+    private @Nullable Pair<Float, Float> getLookAtPlayerValues(@NotNull Player viewer)
+    {
+        if(entity == null)
+            return null;
 
         Location npcLoc = location;
         Location playerLoc = viewer.getLocation();
 
         if(npcLoc.getWorld() != playerLoc.getWorld())
-            return;
+            return null;
 
         double dx = playerLoc.getX() - npcLoc.getX();
 
@@ -846,14 +869,7 @@ public class NPC extends NpcHolder
 
         if(getOption(NpcOption.POSE, viewer) == org.bukkit.entity.Pose.SLEEPING)
             yaw = 180.0F - yaw + 90.0F;
-
-        byte yawByte = (byte) (yaw * 256 / 360);
-        byte pitchByte = (byte) (pitch * 256 / 360);
-
-        WrappedServerPlayer player = WrappedServerPlayer.fromPlayer(viewer);
-
-        player.sendPacket(new RotateHeadPacket(entity, yawByte));
-        player.sendPacket(new MoveEntityPacket.Rot(entity.getId(), yawByte, pitchByte, serverPlayer.isOnGround()));
+        return ImmutablePair.of(yaw, pitch);
     }
 
     /**
@@ -1384,6 +1400,12 @@ public class NPC extends NpcHolder
         Set<UUID> excluded = excludedPlayers == null ? Collections.emptySet() :
                 Arrays.stream(excludedPlayers).filter(Objects::nonNull).map(Player::getUniqueId).collect(Collectors.toSet());
 
+        if(getOption(NpcOption.LOOK_AT_PLAYER) != null && getOption(NpcOption.POSE) != org.bukkit.entity.Pose.SLEEPING)
+        {
+            changeRealLocationWithLookAt(location, excluded);
+            return;
+        }
+
         float baseYaw = location.getYaw() + 360F;
         float pitch = location.getPitch();
 
@@ -1429,12 +1451,55 @@ public class NPC extends NpcHolder
             if(teleport2 != null)
                 serverPlayer1.sendPacket(teleport2);
 
+            if(rotPacket != null)
+                serverPlayer1.sendPacket(rotPacket);
+        }
+    }
+
+    /**
+     * Changes the NPC's location and ensures it looks at the viewer.
+     *
+     * @param location the new location of the NPC
+     * @param excluded a set of UUIDs of players who should not be affected by this change
+     */
+    private void changeRealLocationWithLookAt(@NotNull Location location, @Nullable Set<UUID> excluded)
+    {
+        for(UUID uuid : viewers)
+        {
+            Player viewer = Bukkit.getPlayer(uuid);
+            if(viewer == null)
+                continue;
+
+            if(excluded.contains(viewer.getUniqueId()))
+                continue;
+
+            Pair<Float, Float> values = null;
             Double distance = getOption(NpcOption.LOOK_AT_PLAYER, viewer);
             if(distance != null && getOption(NpcOption.POSE, viewer) != org.bukkit.entity.Pose.SLEEPING &&
                     getLocation().distanceSquared(viewer.getLocation()) <= distance * distance)
-                lookAtPlayer(viewer);
-            else if(rotPacket != null)
-                serverPlayer1.sendPacket(rotPacket);
+                values = getLookAtPlayerValues(viewer);
+
+            if(values == null)
+                values = ImmutablePair.of(location.getYaw() + 360F, location.getPitch());
+
+            PacketWrapper teleport1 = new TeleportEntityPacket(serverPlayer, new TeleportEntityPacket.PositionMoveRotation(location.toVector(),
+                    new Vector(0, 0, 0), values.getLeft(), values.getRight()), Set.of(), true);
+
+            WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(viewer);
+            serverPlayer1.sendPacket(teleport1);
+
+            TeleportEntityPacket teleport2 = entity.equals(serverPlayer) ? null : new TeleportEntityPacket(entity,
+                    new TeleportEntityPacket.PositionMoveRotation(location.toVector(), new Vector(0, 0, 0), values.getLeft(), values.getRight()),
+                    Set.of(), true);
+
+            if(teleport2 != null)
+                serverPlayer1.sendPacket(teleport2);
+
+            byte yawByte = (byte) (values.getLeft() * 256 / 360);
+            byte pitchByte = (byte) (values.getRight() * 256 / 360);
+
+            serverPlayer1.sendPacket(new RotateHeadPacket(entity, yawByte));
+            serverPlayer1.sendPacket(new MoveEntityPacket.Rot(entity.getId(), yawByte, pitchByte, serverPlayer.isOnGround()));
         }
     }
 

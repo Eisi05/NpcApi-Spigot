@@ -328,6 +328,80 @@ public class NpcDamageListener implements Listener
         return closestNpc;
     }
 
+    private static boolean tryPopTotem(NPC npc)
+    {
+        Map<EquipmentSlot, ItemStack> equipment = npc.getOption(NpcOption.EQUIPMENT);
+        if(equipment == null || equipment.isEmpty())
+            return false;
+
+        EquipmentSlot totemSlot = null;
+
+        ItemStack offHand = equipment.get(EquipmentSlot.OFF_HAND);
+        ItemStack mainHand = equipment.get(EquipmentSlot.HAND);
+
+        if(offHand != null && offHand.getType() == Material.TOTEM_OF_UNDYING)
+            totemSlot = EquipmentSlot.OFF_HAND;
+        else if(mainHand != null && mainHand.getType() == Material.TOTEM_OF_UNDYING)
+            totemSlot = EquipmentSlot.HAND;
+
+        if(totemSlot == null)
+            return false;
+
+        ItemStack totem = equipment.get(totemSlot);
+        if(totem.getAmount() > 1)
+            totem.setAmount(totem.getAmount() - 1);
+        else
+            equipment.put(totemSlot, new ItemStack(Material.AIR));
+
+        npc.setOption(NpcOption.EQUIPMENT, equipment);
+
+        Location loc = npc.getLocation();
+        World world = loc.getWorld();
+        if(world != null)
+        {
+            world.playSound(loc, Sound.ITEM_TOTEM_USE, 1.0F, 1.0F);
+            world.spawnParticle(Particle.TOTEM_OF_UNDYING, loc.clone().add(0, 1.0, 0), 150, 0.3, 0.5, 0.3, 0.15);
+        }
+
+        if (npc.entity != null && npc.entity.getBukkitPlayer() != null)
+            npc.entity.getBukkitPlayer().playEffect(EntityEffect.TOTEM_RESURRECT);
+
+        CombatState state = states.computeIfAbsent(npc, n -> new CombatState());
+        int currentTick = WrappedMinecraftServer.getCurrentTick();
+
+        state.absorption = 8.0;
+        state.absorptionExpireTick = currentTick + 100;
+
+        if (state.regenTask != null)
+            state.regenTask.cancel();
+
+        state.regenTask = new BukkitRunnable()
+        {
+            int ticksPassed = 0;
+
+            @Override
+            public void run()
+            {
+                ticksPassed += 25;
+                if (ticksPassed > 900)
+                {
+                    cancel();
+                    state.regenTask = null;
+                    return;
+                }
+
+                NpcCombatManager combatManager = npc.getCombatManager();
+                double currentHp = combatManager.getCurrentHealth();
+                double maxHp = combatManager.getMaxHealth();
+
+                if (currentHp > 0 && currentHp < maxHp)
+                    combatManager.setCurrentHealth(Math.min(maxHp, currentHp + 1.0), npc);
+            }
+        }.runTaskTimer(NpcApi.plugin, 25L, 25L);
+
+        return true;
+    }
+
     private static void handleProjectileHit(NPC npc, Projectile projectile)
     {
         if(!(projectile.getShooter() instanceof Player attacker))
@@ -360,6 +434,24 @@ public class NpcDamageListener implements Listener
             return;
 
         double damage = damageEvent.getDamage();
+
+        if(currentTick > state.absorptionExpireTick)
+            state.absorption = 0;
+
+        if(state.absorption > 0)
+        {
+            if(damage <= state.absorption)
+            {
+                state.absorption -= damage;
+                damage = 0;
+            }
+            else
+            {
+                damage -= state.absorption;
+                state.absorption = 0;
+            }
+        }
+
         NpcCombatManager combatManager = npc.getCombatManager();
         double currentHealth = combatManager.getCurrentHealth();
 
@@ -368,13 +460,21 @@ public class NpcDamageListener implements Listener
 
         if(dying)
         {
-            NpcDeathEvent deathEvent = new NpcDeathEvent(npc, attacker);
-            Bukkit.getPluginManager().callEvent(deathEvent);
-
-            if(deathEvent.isCancelled())
+            if(tryPopTotem(npc))
             {
                 dying = false;
                 newHealth = 1.0;
+            }
+            else
+            {
+                NpcDeathEvent deathEvent = new NpcDeathEvent(npc, attacker);
+                Bukkit.getPluginManager().callEvent(deathEvent);
+
+                if(deathEvent.isCancelled())
+                {
+                    dying = false;
+                    newHealth = 1.0;
+                }
             }
         }
 
@@ -389,7 +489,9 @@ public class NpcDamageListener implements Listener
 
         if(dying)
         {
-            states.remove(npc);
+            CombatState removedState = states.remove(npc);
+            if (removedState != null && removedState.regenTask != null)
+                removedState.regenTask.cancel();
             combatManager.setCurrentHealth(0, npc);
         }
         else
@@ -423,15 +525,30 @@ public class NpcDamageListener implements Listener
         if(!npc.getCombatManager().isEnabled())
             return;
 
-        boolean isCrit = attacker.getFallDistance() > 0.0F
+        ItemStack weapon = attacker.getInventory().getItemInMainHand();
+        boolean isMace = weapon != null && weapon.getType() == Material.MACE;
+        float fallDistance = attacker.getFallDistance();
+
+        boolean isSmashAttack = isMace
+                && fallDistance > 1.5F
+                && !attacker.isGliding()
                 && !((Entity) attacker).isOnGround()
                 && !attacker.isClimbing()
                 && !attacker.isInWater()
                 && !attacker.hasPotionEffect(PotionEffectType.BLINDNESS)
                 && !attacker.isInsideVehicle();
+
+        boolean isCrit = !isSmashAttack
+                && attacker.getFallDistance() > 0.0F
+                && !((Entity) attacker).isOnGround()
+                && !attacker.isClimbing()
+                && !attacker.isInWater()
+                && !attacker.hasPotionEffect(PotionEffectType.BLINDNESS)
+                && !attacker.isInsideVehicle();
+
         boolean isMagic = isMagicHit(attacker, npc);
 
-        DamageResult incoming = computeIncomingDamage(attacker, npc, isCrit);
+        DamageResult incoming = computeIncomingDamage(attacker, npc, isCrit, isSmashAttack);
 
         NpcDamageEvent damageEvent = new NpcDamageEvent(npc, attacker, incoming.damage(), isCrit, isMagic);
         Bukkit.getPluginManager().callEvent(damageEvent);
@@ -449,6 +566,23 @@ public class NpcDamageListener implements Listener
             return;
         }
 
+        if(currentTick > state.absorptionExpireTick)
+            state.absorption = 0;
+
+        if(state.absorption > 0)
+        {
+            if(damage <= state.absorption)
+            {
+                state.absorption -= damage;
+                damage = 0;
+            }
+            else
+            {
+                damage -= state.absorption;
+                state.absorption = 0;
+            }
+        }
+
         state.lastHurt = damage;
         state.invulnerableUntilTick = currentTick + INVULNERABLE_DURATION_TICKS;
 
@@ -460,25 +594,35 @@ public class NpcDamageListener implements Listener
 
         if(dying)
         {
-            NpcDeathEvent deathEvent = new NpcDeathEvent(npc, attacker);
-            Bukkit.getPluginManager().callEvent(deathEvent);
-
-            if(deathEvent.isCancelled())
+            if(tryPopTotem(npc))
             {
                 dying = false;
                 newHealth = 1.0;
             }
+            else
+            {
+                NpcDeathEvent deathEvent = new NpcDeathEvent(npc, attacker);
+                Bukkit.getPluginManager().callEvent(deathEvent);
+
+                if(deathEvent.isCancelled())
+                {
+                    dying = false;
+                    newHealth = 1.0;
+                }
+            }
         }
 
-        ItemStack weapon = attacker.getInventory().getItemInMainHand();
         boolean hasKnockbackEnchant = weapon.getEnchantmentLevel(Enchantment.KNOCKBACK) > 0;
         boolean isSprintingHit = attacker.isSprinting();
         boolean isKnockbackHit = isSprintingHit || hasKnockbackEnchant;
         boolean isSword = EnchantmentTarget.WEAPON.includes(weapon.getType());
         boolean isSweepHit = isSword && incoming.attackStrength > 0.9F && ((Entity) attacker).isOnGround() && !isSprintingHit;
+        boolean targetOnGround = state.grounded;
 
         Sound attackSound;
-        if(incoming.attackStrength <= 0.2F)
+        if(isSmashAttack)
+            attackSound = targetOnGround ? fallDistance >= 5.0F ? Sound.ITEM_MACE_SMASH_GROUND_HEAVY : Sound.ITEM_MACE_SMASH_GROUND : Sound.ITEM_MACE_SMASH_AIR;
+        else if(incoming.attackStrength <= 0.2F)
             attackSound = Sound.ENTITY_PLAYER_ATTACK_WEAK;
         else if(isCrit)
             attackSound = Sound.ENTITY_PLAYER_ATTACK_CRIT;
@@ -500,17 +644,110 @@ public class NpcDamageListener implements Listener
         if(isMagic)
             npc.playAnimation(attacker, AnimatePacket.Animation.MAGIC_CRITICAL_HIT);
 
+        if(isSmashAttack)
+        {
+            attacker.setFallDistance(0.0F);
+
+            Location impactLoc = npc.getLocation();
+            int windBurstLevel = weapon.getEnchantmentLevel(Enchantment.WIND_BURST);
+            if(windBurstLevel > 0)
+            {
+                double upwardVelocity = 0.7 + (windBurstLevel * 0.35);
+                attacker.setVelocity(attacker.getVelocity().setY(upwardVelocity));
+                impactLoc.getWorld().playSound(impactLoc, Sound.ENTITY_WIND_CHARGE_WIND_BURST, 1.0F, 1.0F);
+                impactLoc.getWorld().spawnParticle(Particle.GUST_EMITTER_SMALL, impactLoc.clone().add(0, 0.5, 0), 1);
+            }
+            else
+                attacker.setVelocity(attacker.getVelocity().setY(0.01));
+
+            triggerMaceSmashAoE(impactLoc, attacker, npc, fallDistance);
+        }
+
         applyWeaponDurability(attacker, weapon);
 
         if(dying)
         {
-            states.remove(npc);
+            CombatState removedState = states.remove(npc);
+            if (removedState != null && removedState.regenTask != null)
+                removedState.regenTask.cancel();
             combatManager.setCurrentHealth(0, npc);
         }
         else
         {
             applyKnockback(npc, attacker, state, incoming.knockbackResistance(), combatManager.getKnockbackMultiplier());
             combatManager.setCurrentHealth(newHealth, npc);
+        }
+
+        event.setDamage(damage);
+    }
+
+    private static void triggerMaceSmashAoE(Location center, Player attacker, NPC targetNpc, float fallDistance)
+    {
+        double radius = 3.5;
+        World world = center.getWorld();
+        if(world == null)
+            return;
+
+        world.spawnParticle(Particle.DUST_PLUME, center.clone().add(0, 0.2, 0), 10, 0.5, 0.1, 0.5, 0.05);
+
+        double heavyMultiplier = fallDistance > 5.0F ? 2.0 : 1.0;
+        for(NPC otherNpc : NpcManager.getList())
+        {
+            if(otherNpc.equals(targetNpc))
+                continue;
+
+            if(!otherNpc.getLocation().getWorld().equals(world))
+                continue;
+
+            double dist = otherNpc.getLocation().distance(center);
+            if (dist <= radius && dist > 1.0E-4)
+            {
+                CombatState state = states.computeIfAbsent(otherNpc, n -> new CombatState());
+                Vector dir = otherNpc.getLocation().toVector().subtract(center.toVector()).setY(0);
+                if(dir.lengthSquared() < 1.0E-4)
+                    dir = new Vector(1, 0, 0);
+                dir.normalize();
+
+                double power = (radius - dist) * 0.7 * heavyMultiplier;
+                Vector push = dir.multiply(power);
+
+                state.vx += push.getX();
+                state.vz += push.getZ();
+                state.vy = 0.7;
+
+                if (state.task == null) startPhysicsTask(otherNpc, state);
+            }
+        }
+
+        Collection<Entity> nearby = world.getNearbyEntities(center, radius, radius, radius);
+        for(Entity entity : nearby)
+        {
+            if(entity.equals(attacker) || (targetNpc.entity != null && entity.getEntityId() == targetNpc.entity.getId()))
+                continue;
+
+            if(entity instanceof LivingEntity living)
+            {
+                double dist = living.getLocation().distance(center);
+                if(dist <= radius && dist > 1.0E-4)
+                {
+                    Vector dir = living.getLocation().toVector().subtract(center.toVector()).setY(0);
+                    if(dir.lengthSquared() < 1.0E-4)
+                        dir = new Vector(1, 0, 0);
+                    dir.normalize();
+
+                    Attribute knockbackResistanceAttribute = Registry.ATTRIBUTE.match("KNOCKBACK_RESISTANCE");
+                    if(knockbackResistanceAttribute == null)
+                        knockbackResistanceAttribute = Attribute.GENERIC_KNOCKBACK_RESISTANCE;
+
+                    double kbRes = living.getAttribute(knockbackResistanceAttribute) != null
+                            ? living.getAttribute(knockbackResistanceAttribute).getValue() : 0.0;
+
+                    double power = (radius - dist) * 0.7 * heavyMultiplier * (1.0 - kbRes);
+                    Vector push = dir.multiply(power);
+
+                    living.setVelocity(living.getVelocity().add(new Vector(push.getX(), 0.7, push.getZ())));
+                }
+            }
         }
     }
 
@@ -535,7 +772,7 @@ public class NpcDamageListener implements Listener
             startPhysicsTask(npc, state);
     }
 
-    private DamageResult computeIncomingDamage(Player attacker, NPC npc, boolean isCrit)
+    private DamageResult computeIncomingDamage(Player attacker, NPC npc, boolean isCrit, boolean isSmashAttack)
     {
         AttributeInstance attackDamage;
         try
@@ -553,9 +790,35 @@ public class NpcDamageListener implements Listener
         float damage = (attackDamage != null ? (float) attackDamage.getValue() : FALLBACK_DAMAGE);
         damage *= (0.2F + attackStrength * attackStrength * 0.8F);
 
-        int sharpness = attacker.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.SHARPNESS);
-        if(sharpness > 0)
-            damage += (sharpness * 0.5F + 0.5F) * attackStrength;
+        ItemStack weapon = attacker.getInventory().getItemInMainHand();
+        if(isSmashAttack)
+        {
+            double fallDistance = attacker.getFallDistance();
+            double smashBonus;
+
+            if (fallDistance <= 3.0)
+                smashBonus = 4.0 * fallDistance;
+            else if (fallDistance <= 8.0)
+                smashBonus = 12.0 + 2.0 * (fallDistance - 3.0);
+            else
+                smashBonus = 22.0 + (fallDistance - 8.0);
+
+            if (weapon != null && weapon.getType() == Material.MACE)
+            {
+                int densityLevel = weapon.getEnchantmentLevel(Enchantment.DENSITY);
+                if (densityLevel > 0)
+                    smashBonus += densityLevel * 0.5 * fallDistance;
+            }
+
+            damage += (float) (smashBonus * attackStrength);
+        }
+
+        if(weapon != null && weapon.getType() != Material.AIR)
+        {
+            int sharpness = weapon.getEnchantmentLevel(Enchantment.SHARPNESS);
+            if(sharpness > 0)
+                damage += (sharpness * 0.5F + 0.5F) * attackStrength;
+        }
 
         if(isCrit)
             damage *= 1.5F;
@@ -584,7 +847,11 @@ public class NpcDamageListener implements Listener
         int currentTick = WrappedMinecraftServer.getCurrentTick();
         int lastTick = lastAttackTicks.getOrDefault(player.getUniqueId(), currentTick - 100);
 
-        AttributeInstance speedAttr = player.getAttribute(Attribute.GENERIC_ATTACK_SPEED);
+        Attribute speedAttribute = Registry.ATTRIBUTE.match("ATTACK_SPEED");
+        if(speedAttribute == null)
+            speedAttribute = Attribute.GENERIC_ATTACK_SPEED;
+
+        AttributeInstance speedAttr = player.getAttribute(speedAttribute);
         double attackSpeed = (speedAttr != null) ? speedAttr.getValue() : 4.0;
 
         float cooldownPeriod = (float) (20.0 / attackSpeed);
@@ -623,11 +890,23 @@ public class NpcDamageListener implements Listener
 
             if(modifiers != null)
             {
-                for(AttributeModifier mod : modifiers.get(Attribute.GENERIC_ARMOR))
+                Attribute armorAttribute = Registry.ATTRIBUTE.match("ARMOR");
+                if(armorAttribute == null)
+                    armorAttribute = Attribute.GENERIC_ARMOR;
+
+                Attribute armorToughnessAttribute = Registry.ATTRIBUTE.match("ARMOR_TOUGHNESS");
+                if(armorToughnessAttribute == null)
+                    armorToughnessAttribute = Attribute.GENERIC_ARMOR_TOUGHNESS;
+
+                Attribute knockbackResistanceAttribute = Registry.ATTRIBUTE.match("KNOCKBACK_RESISTANCE");
+                if(knockbackResistanceAttribute == null)
+                    knockbackResistanceAttribute = Attribute.GENERIC_KNOCKBACK_RESISTANCE;
+
+                for(AttributeModifier mod : modifiers.get(armorAttribute))
                     points += (float) mod.getAmount();
-                for(AttributeModifier mod : modifiers.get(Attribute.GENERIC_ARMOR_TOUGHNESS))
+                for(AttributeModifier mod : modifiers.get(armorToughnessAttribute))
                     toughness += (float) mod.getAmount();
-                for(AttributeModifier mod : modifiers.get(Attribute.GENERIC_KNOCKBACK_RESISTANCE))
+                for(AttributeModifier mod : modifiers.get(knockbackResistanceAttribute))
                     knockbackResistance += (float) mod.getAmount();
             }
 
@@ -755,5 +1034,9 @@ public class NpcDamageListener implements Listener
 
         double lastHurt = -1;
         int invulnerableUntilTick = 0;
+
+        double absorption = 0;
+        int absorptionExpireTick = 0;
+        BukkitTask regenTask;
     }
 }

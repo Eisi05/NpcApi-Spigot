@@ -19,7 +19,24 @@ public class NpcInteractEvent extends Event implements Serializable, Cancellable
     private final Player player;
     private final NPC npc;
     private final ClickActionType action;
+    private double damage;
     private boolean cancelled;
+
+    /**
+     * Creates a new NpcInteractEvent.
+     *
+     * @param player the player who interacted with the NPC
+     * @param npc    the NPC that was interacted with
+     * @param action the type of click action performed
+     * @param damage the damage dealt to the NPC
+     */
+    public NpcInteractEvent(@NotNull Player player, @NotNull NPC npc, @NotNull ClickActionType action, double damage)
+    {
+        this.player = player;
+        this.npc = npc;
+        this.action = action;
+        this.damage = damage;
+    }
 
     /**
      * Creates a new NpcInteractEvent.
@@ -30,9 +47,7 @@ public class NpcInteractEvent extends Event implements Serializable, Cancellable
      */
     public NpcInteractEvent(@NotNull Player player, @NotNull NPC npc, @NotNull ClickActionType action)
     {
-        this.player = player;
-        this.npc = npc;
-        this.action = action;
+        this(player, npc, action, -1);
     }
 
     /**
@@ -73,6 +88,26 @@ public class NpcInteractEvent extends Event implements Serializable, Cancellable
     public @NotNull ClickActionType getAction()
     {
         return action;
+    }
+
+    /**
+     * Returns the damage dealt to the NPC.
+     *
+     * @return the damage amount, -1 if no damage was dealt
+     */
+    public double getDamage()
+    {
+        return damage;
+    }
+
+    /**
+     * Sets the damage dealt to the NPC.
+     *
+     * @param damage the damage amount, -1 if no damage was dealt
+     */
+    public void setDamage(double damage)
+    {
+        this.damage = damage;
     }
 
     @Override
