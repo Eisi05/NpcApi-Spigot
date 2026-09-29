@@ -25,7 +25,7 @@ public class WrappedPlayerTeam extends Wrapper
     public static @NotNull WrappedPlayerTeam getPlayersTeam(@NotNull Player player)
     {
         return new WrappedPlayerTeam(Reflections.invokeMethod(player.getScoreboard(), "getHandle")
-                .thanInvoke(switch(Versions.getVersion())
+                .thenInvoke(switch(Versions.getVersion())
                 {
                     case V1_20_6, V1_21, V1_21_2, V1_21_4, V1_21_5, V1_21_6, V1_21_9, V1_21_11 -> "e";
                     case V26_1, V26_2, V26_3 -> "getPlayersTeam";

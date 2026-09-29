@@ -165,7 +165,10 @@ public class PathTask extends BukkitRunnable
             Vector movement = calculateHorizontalMovement(toTarget, target);
 
             if(movement.lengthSquared() < 1e-6 && index < pathPoints.size() && currentPos.equals(target))
+            {
+                index++;
                 return;
+            }
 
             PhysicsResult physics = applyPhysics(movement);
             movement.setY(physics.yChange);

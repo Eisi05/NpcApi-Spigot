@@ -6,6 +6,7 @@ import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcOption;
+import de.eisi05.npc.api.pathfinding.AStarPathfinder;
 import de.eisi05.npc.api.utils.*;
 import de.eisi05.npc.api.utils.serialize.NpcRegistry;
 import de.eisi05.npc.api.wrapper.enums.Pose;
@@ -20,6 +21,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -196,6 +198,27 @@ public class AttackEntityGoal extends Goal
     }
 
     /**
+     * Gets the current target location for this goal.
+     *
+     * @return the current target location, or null if no target is set
+     */
+    private @Nullable Location getTargetLocation()
+    {
+        if(target == null)
+            return null;
+
+        Location location = target.getLocation();
+        while(!AStarPathfinder.isSafeFloor(location.getBlock().getRelative(BlockFace.DOWN)))
+        {
+            if(location.getY() < 64)
+                return target.getLocation();
+            location = location.subtract(0, 1, 0);
+        }
+
+        return location;
+    }
+
+    /**
      * Checks if this goal can be used by the NPC.
      *
      * @param npc the NPC to check
@@ -266,7 +289,8 @@ public class AttackEntityGoal extends Goal
         if(lineOfSightCheckCooldown > 0)
             lineOfSightCheckCooldown--;
 
-        double distance = npcLoc.distance(target.getLocation());
+        Location targetLocation = getTargetLocation();
+        double distance = npcLoc.distance(targetLocation);
         double attackRange = getAttackRange(npc);
 
         if(distance > attackRange)
@@ -282,11 +306,11 @@ public class AttackEntityGoal extends Goal
             }
 
             if(movementGoal == null)
-                startMovement(npc, target.getLocation());
+                startMovement(npc, targetLocation);
             else
             {
                 Location currentTarget = movementGoal.getTargetLocation(npc.getLocation().getWorld());
-                boolean shouldRecalculate = currentTarget.distance(target.getLocation()) > 5.0;
+                boolean shouldRecalculate = currentTarget.distance(targetLocation) > 5.0;
 
                 if(!shouldRecalculate && pathRecalculationCooldown <= 0)
                 {
@@ -305,7 +329,7 @@ public class AttackEntityGoal extends Goal
                     pathRecalculationCooldown--;
                 }
 
-                distance = npc.getLocation().distance(target.getLocation());
+                distance = npc.getLocation().distance(targetLocation);
                 if(distance <= attackRange)
                     stopMovement(npc);
                 else
@@ -385,7 +409,7 @@ public class AttackEntityGoal extends Goal
             return false;
 
         Location npcLoc = npc.getLocation();
-        Location targetLoc = target.getLocation();
+        Location targetLoc = getTargetLocation();
 
         if(!npcLoc.getWorld().equals(targetLoc.getWorld()))
             return false;
@@ -510,7 +534,7 @@ public class AttackEntityGoal extends Goal
             try
             {
                 Object config = Reflections.invokeMethod("me.deecaad.weaponmechanics.WeaponMechanics", "getInstance")
-                        .thanInvoke("getWeaponConfigurations").get();
+                        .thenInvoke("getWeaponConfigurations").get();
                 if(config != null)
                 {
 
@@ -606,10 +630,10 @@ public class AttackEntityGoal extends Goal
             location.setDirection(direction);
 
             Object entityWrapper = Reflections.invokeMethod("me.deecaad.weaponmechanics.WeaponMechanics", "getInstance")
-                    .thanInvoke("getEntityWrapper", npcPlayer).get();
+                    .thenInvoke("getEntityWrapper", npcPlayer).get();
             Reflections.invokeMethod("me.deecaad.weaponmechanics.WeaponMechanics", "getInstance")
-                    .thanInvoke("getWeaponHandler").thanInvoke("getShootHandler")
-                    .thanInvoke("shoot", entityWrapper, weaponTitle, weaponStack, location, true, true, false);
+                    .thenInvoke("getWeaponHandler").thenInvoke("getShootHandler")
+                    .thenInvoke("shoot", entityWrapper, weaponTitle, weaponStack, location, true, true, false);
         }
         catch(NoClassDefFoundError | Exception e)
         {

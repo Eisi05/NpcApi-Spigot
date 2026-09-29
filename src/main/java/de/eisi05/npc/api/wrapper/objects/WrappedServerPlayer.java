@@ -206,7 +206,7 @@ public class WrappedServerPlayer extends WrappedEntity<Player>
         String path = getPath();
         String[] paths = path.split("-");
 
-        Reflections.invokeMethod(getHandle(), paths[0]).thanInvoke(paths[1]);
+        Reflections.invokeMethod(getHandle(), paths[0]).thenInvoke(paths[1]);
     }
 
     public @NotNull String getName()
