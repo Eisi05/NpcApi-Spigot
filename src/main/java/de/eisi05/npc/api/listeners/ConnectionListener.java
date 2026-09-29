@@ -8,6 +8,7 @@ import de.eisi05.npc.api.objects.NpcSkin;
 import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.PacketReader;
 import de.eisi05.npc.api.wrapper.objects.WrappedPlayerTeam;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -34,6 +35,10 @@ public class ConnectionListener implements Listener
             @Override
             public void run()
             {
+                Player player = event.getPlayer();
+                if(player == null || !player.isOnline())
+                    return;
+
                 for(NPC npc : new ArrayList<>(NpcManager.getList()))
                 {
                     if(!npc.getVisibilityManager().shouldShowToPlayer(event.getPlayer().getUniqueId()))
