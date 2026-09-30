@@ -320,7 +320,7 @@ public class AttackEntityGoal extends Goal
 
                 if(shouldRecalculate)
                 {
-                    startMovement(npc, target.getLocation());
+                    movementGoal.updateTargetLocation(target.getLocation(), npc);
                     pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;
                 }
                 else

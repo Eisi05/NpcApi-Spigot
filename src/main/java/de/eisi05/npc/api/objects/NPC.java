@@ -33,7 +33,6 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.ApiStatus;
@@ -964,9 +963,9 @@ public class NPC extends NpcHolder
      * @param walkSpeed          The walking speed of the NPC (clamped between 0.1 and 1).
      * @param changeRealLocation If true, the NPC's actual server-side location will be updated; otherwise only packets are sent.
      * @param onEnd              A {@link Runnable} to be executed when the NPC reaches the end of the path.
-     * @return The {@link BukkitTask} representing the movement task.
+     * @return The {@link de.eisi05.npc.api.scheduler.PathTask.WalkToResult} representing the walk-to task.
      */
-    public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed, boolean changeRealLocation,
+    public @NotNull PathTask.WalkToResult walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed, boolean changeRealLocation,
                                       @Nullable Consumer<WalkingResult> onEnd)
     {
         return walkTo(path, walkSpeed, changeRealLocation, onEnd, true, null);
@@ -981,9 +980,9 @@ public class NPC extends NpcHolder
      * @param changeRealLocation If true, the NPC's actual server-side location will be updated; otherwise only packets are sent.
      * @param onEnd              A {@link Runnable} to be executed when the NPC reaches the end of the path.
      * @param withRotation       If true, includes rotation packets in the movement; otherwise only position packets are sent.
-     * @return The {@link BukkitTask} representing the movement task.
+     * @return The {@link de.eisi05.npc.api.scheduler.PathTask.WalkToResult} representing the walk-to task.
      */
-    public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed, boolean changeRealLocation,
+    public @NotNull PathTask.WalkToResult walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed, boolean changeRealLocation,
                                       @Nullable Consumer<WalkingResult> onEnd, boolean withRotation)
     {
         return walkTo(path, walkSpeed, changeRealLocation, onEnd, withRotation, null);
@@ -999,11 +998,11 @@ public class NPC extends NpcHolder
      * @param onEnd              A {@link Runnable} to be executed when the NPC reaches the end of the path.
      * @param withRotation       If true, includes rotation packets in the movement; otherwise only position packets are sent.
      * @param viewers            The players who should see the NPC move. If null, updates all viewers in the `viewers` set.
-     * @return The {@link BukkitTask} representing the movement task.
+     * @return The {@link de.eisi05.npc.api.scheduler.PathTask.WalkToResult} representing the walk-to task.
      */
-    public @NotNull BukkitTask walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed,
-                                      boolean changeRealLocation, @Nullable Consumer<WalkingResult> onEnd,
-                                      boolean withRotation, @Nullable List<Player> viewers)
+    public @NotNull PathTask.WalkToResult walkTo(@NotNull de.eisi05.npc.api.pathfinding.Path path, double walkSpeed,
+                                                 boolean changeRealLocation, @Nullable Consumer<WalkingResult> onEnd,
+                                                 boolean withRotation, @Nullable List<Player> viewers)
     {
         boolean explicitViewers = viewers != null && !viewers.isEmpty();
 
@@ -1052,7 +1051,7 @@ public class NPC extends NpcHolder
         for(Player player : viewers)
             pathTasks.put(player.getUniqueId(), pathTask);
 
-        return pathTask.runTaskTimer(NpcApi.plugin, 1L, 1L);
+        return new PathTask.WalkToResult(pathTask, pathTask.runTaskTimer(NpcApi.plugin, 1L, 1L));
     }
 
     /**

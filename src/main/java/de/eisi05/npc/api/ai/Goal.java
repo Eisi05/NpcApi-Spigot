@@ -107,7 +107,8 @@ public abstract class Goal implements Serializable
      */
     protected boolean canUse(@NotNull NPC npc)
     {
-        return newCondition == null || newCondition.test(getLocation(), npc);
+        Location loc = getLocation();
+        return newCondition == null || newCondition.test(loc == null ? npc.getLocation() : loc, npc);
     }
 
     /**
@@ -149,7 +150,8 @@ public abstract class Goal implements Serializable
      */
     protected boolean canContinue(@NotNull NPC npc)
     {
-        return newCondition == null || newCondition.test(getLocation(), npc);
+        Location loc = getLocation();
+        return newCondition == null || newCondition.test(loc == null ? npc.getLocation() : loc, npc);
     }
 
     /**

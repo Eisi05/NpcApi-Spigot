@@ -7,6 +7,7 @@ import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcOption;
 import de.eisi05.npc.api.pathfinding.AStarPathfinder;
 import de.eisi05.npc.api.pathfinding.Path;
+import de.eisi05.npc.api.scheduler.PathTask;
 import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.SerializableConsumer;
 import de.eisi05.npc.api.wrapper.objects.WrappedEntity;
@@ -49,10 +50,10 @@ public class WalkToLocationGoal extends Goal
     private SerializableConsumer<WalkingResult> completionCallback;
     private boolean withRotation;
 
+    private transient PathTask activeTask;
     private transient Location targetLocation;
     private transient CompletableFuture<Path> pathfindingFuture;
     private transient Path currentPath;
-    private transient volatile boolean isWalking;
     private transient int pathRecalculationCooldown = 0;
     private transient boolean pathable = true;
     private transient long lastPathabilityCheckTime = 0;
@@ -203,7 +204,7 @@ public class WalkToLocationGoal extends Goal
     @Override
     public boolean canUse(@NotNull NPC npc)
     {
-        if(isWalking)
+        if(isWalking())
             return true;
 
         if(!super.canUse(npc))
@@ -238,7 +239,7 @@ public class WalkToLocationGoal extends Goal
     @Override
     public void start(@NotNull NPC npc)
     {
-        if(isWalking)
+        if(isWalking())
             return;
 
         if(targetLocation == null)
@@ -262,7 +263,7 @@ public class WalkToLocationGoal extends Goal
     @Override
     public void tick(@NotNull NPC npc)
     {
-        if(isWalking)
+        if(isWalking())
         {
             if(isPathInvalid(npc))
             {
@@ -336,7 +337,7 @@ public class WalkToLocationGoal extends Goal
         if(targetLocation == null && serializableLocation != null)
             targetLocation = serializableLocation.toLocation(npc.getLocation().getWorld());
 
-        if(isWalking)
+        if(isWalking())
             return true;
 
         return currentPath != null && targetLocation != null && npc.getLocation().distanceSquared(targetLocation) > 1.0 && super.canContinue(npc);
@@ -348,7 +349,7 @@ public class WalkToLocationGoal extends Goal
         if(super.canBeRemovedNow(npc))
             return true;
 
-        if(isWalking)
+        if(isWalking())
         {
             Location npcLoc = npc.getLocation();
             Location below = npcLoc.clone().subtract(0, 0.1, 0);
@@ -386,8 +387,23 @@ public class WalkToLocationGoal extends Goal
      */
     public void setTargetLocation(@NotNull Location targetLocation)
     {
-        this.targetLocation = targetLocation;
+        this.targetLocation = targetLocation.clone();
         this.serializableLocation = new Path.SerializablePath.SerializableLocation(targetLocation);
+    }
+
+    /**
+     * Updates the target location for this goal.
+     *
+     * @param newTarget the new target location
+     * @param npc the NPC to update the path for
+     */
+    void updateTargetLocation(Location newTarget, @NotNull NPC npc)
+    {
+        if (this.targetLocation != null && this.targetLocation.distanceSquared(newTarget) < 0.25)
+            return;
+
+        setTargetLocation(newTarget);
+        calculatePath(npc);
     }
 
     /**
@@ -424,7 +440,7 @@ public class WalkToLocationGoal extends Goal
      */
     private void calculatePath(@NotNull NPC npc)
     {
-        Location start = npc.getLocation();
+        Location start = (activeTask != null) ? activeTask.getCurrentLocation() : npc.getLocation();
         Location end = targetLocation.clone();
 
         if(end.getWorld() == null || start.getWorld() == null || !end.getWorld().equals(start.getWorld()))
@@ -435,16 +451,23 @@ public class WalkToLocationGoal extends Goal
             return;
         }
 
+        if (pathfindingFuture != null && !pathfindingFuture.isDone())
+            pathfindingFuture.cancel(true);
+
         pathfindingFuture = npc.findPathAsync(null, List.of(start, end), maxIterations, allowDiagonal, null);
         Tasks.trackFuture(pathfindingFuture);
         pathfindingFuture.thenAcceptAsync(path ->
                 {
-                    if(isWalking)
-                        return;
-
                     if(path != null)
                     {
                         currentPath = path;
+
+                        if(isWalking())
+                        {
+                            activeTask.updatePath(path);
+                            return;
+                        }
+
                         startWalking(npc);
                     }
                     else
@@ -457,14 +480,10 @@ public class WalkToLocationGoal extends Goal
                 }, task -> Bukkit.getScheduler().runTask(NpcApi.plugin, task))
                 .exceptionally(e ->
                 {
-                    if(isWalking)
-                        return null;
-
                     Bukkit.getScheduler().runTask(NpcApi.plugin, () ->
                     {
                         if(completionCallback != null)
                             completionCallback.accept(WalkingResult.CANCELLED);
-                        cancelWalking(npc);
                     });
                     return null;
                 });
@@ -482,21 +501,19 @@ public class WalkToLocationGoal extends Goal
                 .filter(Objects::nonNull)
                 .toList();
 
-        if(isWalking)
+        if(isWalking())
             return;
 
-        npc.walkTo(currentPath, speed, true, result ->
+        this.activeTask = npc.walkTo(currentPath, speed, true, result ->
         {
-            if(result == WalkingResult.SUCCESS)
-                npc.changeRealLocation(targetLocation);
+            if(result == WalkingResult.SUCCESS && activeTask != null)
+                npc.changeRealLocation(activeTask.getCurrentLocation());
 
             if(completionCallback != null)
                 completionCallback.accept(result);
 
             stop(npc);
-        }, withRotation, viewers);
-
-        isWalking = true;
+        }, withRotation, viewers).pathTask();
     }
 
     /**
@@ -510,14 +527,19 @@ public class WalkToLocationGoal extends Goal
         if(currentPath == null || currentPath.getWaypoints().isEmpty())
             return true;
 
-        Location npcLoc = npc.getLocation();
+        Location npcLoc = isWalking() ? activeTask.getCurrentLocation() : npc.getLocation();
         if(npcLoc.getWorld() == null)
             return true;
 
         WrappedEntity.BoundingBox boundingBox = npc.entity.getBoundingBox();
         double scale = npc.getOption(NpcOption.SCALE);
-        int checkAhead = Math.min(PATH_CHECK_AHEAD, currentPath.getWaypoints().size());
-        for(int i = 0; i < checkAhead; i++)
+
+        int startIndex = (activeTask != null) ? activeTask.getIndex() : 0;
+        int waypointsSize = currentPath.getWaypoints().size();
+        int checkAhead = Math.min(startIndex + PATH_CHECK_AHEAD, waypointsSize);
+
+        int startCheckIndex = (startIndex == 0) ? 1 : startIndex;
+        for(int i = startCheckIndex; i < checkAhead; i++)
         {
             Location waypoint = currentPath.getWaypoints().get(i);
             if(!waypoint.getWorld().equals(npcLoc.getWorld()))
@@ -538,7 +560,13 @@ public class WalkToLocationGoal extends Goal
      */
     private void cancelWalking(@NotNull NPC npc)
     {
-        isWalking = false;
+        if (activeTask != null)
+        {
+            PathTask task = activeTask;
+            activeTask = null;
+            npc.changeRealLocation(task.getCurrentLocation());
+            task.cancel();
+        }
 
         List<Player> viewers = npc.getViewers().stream()
                 .map(Bukkit::getPlayer)
@@ -550,6 +578,16 @@ public class WalkToLocationGoal extends Goal
             if(npc.isWalking(viewer))
                 npc.cancelWalking(viewer);
         }
+    }
+
+    /**
+     * Checks if the NPC is currently walking.
+     *
+     * @return true if the NPC is walking, false otherwise
+     */
+    public boolean isWalking()
+    {
+        return activeTask != null;
     }
 
     /**
