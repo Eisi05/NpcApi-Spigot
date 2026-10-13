@@ -16,8 +16,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.ArrayList;
-
 public class ConnectionListener implements Listener
 {
     @EventHandler(priority = EventPriority.LOWEST)
@@ -39,7 +37,7 @@ public class ConnectionListener implements Listener
                 if(player == null || !player.isOnline())
                     return;
 
-                for(NPC npc : new ArrayList<>(NpcManager.getList()))
+                for(NPC npc : NpcManager.getList())
                 {
                     if(!npc.getVisibilityManager().shouldShowToPlayer(event.getPlayer().getUniqueId()))
                         continue;
@@ -60,8 +58,8 @@ public class ConnectionListener implements Listener
     public void onLeave(PlayerQuitEvent event)
     {
         PacketReader.uninject(event.getPlayer());
-
         Tasks.placeholderCache.remove(event.getPlayer().getUniqueId());
+        NpcDamageListener.cleanUpAttack(event.getPlayer());
 
         for(NPC npc : NpcManager.getList())
         {

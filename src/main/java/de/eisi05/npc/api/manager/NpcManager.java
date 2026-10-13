@@ -5,6 +5,7 @@ import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.utils.serialize.ObjectSaver;
 import org.bukkit.Bukkit;
+import org.bukkit.Difficulty;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -16,6 +17,8 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 
 /**
  * Manages the collection and lifecycle of NPC instances.
@@ -28,7 +31,10 @@ public class NpcManager
      */
     private static final Map<UUID, List<NPC.SerializedNPC>> toLoadNPCs = new HashMap<>();
 
-    private static final Map<Integer, NPC> npcById = new HashMap<>();
+    private static final Map<Integer, NPC> npcById = new ConcurrentHashMap<>();
+    private static final Map<Long, Set<NPC>> npcsByChunk = new ConcurrentHashMap<>();
+
+    private static final Map<NPC.SerializedNPC, Location> monsterNPCs = new ConcurrentHashMap<>();
 
     /**
      * Map storing the file name and the exception that occurred during loading.
@@ -42,17 +48,19 @@ public class NpcManager
      */
     public static void addNPC(@NotNull NPC npc)
     {
+        npcById.values().removeIf(existing -> existing.getUUID().equals(npc.getUUID()));
         npcById.put(npc.getServerPlayer().getId(), npc);
+        registerNpcInChunk(npc, npc.getLocation());
     }
 
     /**
-     * Returns the set of all managed NPCs.
+     * Returns the collection of all managed NPCs.
      *
-     * @return the set of NPCs
+     * @return the collection of NPCs
      */
-    public static @NotNull Set<NPC> getList()
+    public static @NotNull Collection<NPC> getList()
     {
-        return new HashSet<>(npcById.values());
+        return Collections.unmodifiableCollection(npcById.values());
     }
 
     /**
@@ -62,8 +70,8 @@ public class NpcManager
      */
     public static void removeNPC(@NotNull NPC npc)
     {
-        npcById.remove(npc.getServerPlayer().getId());
-        npcById.remove(npc.entity.getId());
+        npcById.values().removeIf(value -> value.getUUID().equals(npc.getUUID()));
+        unregisterNpcFromChunk(npc, npc.getLocation());
     }
 
     public static void addID(int id, @NotNull NPC npc)
@@ -79,6 +87,8 @@ public class NpcManager
         npcById.clear();
         toLoadNPCs.clear();
         loadExceptions.clear();
+        npcsByChunk.clear();
+        monsterNPCs.clear();
     }
 
     /**
@@ -101,6 +111,93 @@ public class NpcManager
     public static @Nullable Optional<NPC> fromId(int id)
     {
         return Optional.ofNullable(npcById.get(id));
+    }
+
+    /**
+     * Creates a unique long key from the given chunk coordinates.
+     *
+     * @param chunkX the X coordinate of the chunk
+     * @param chunkZ the Z coordinate of the chunk
+     * @return a long representing the combined chunk coordinates
+     */
+    private static long getChunkKey(int chunkX, int chunkZ)
+    {
+        return (long) chunkX & 0xffffffffL | ((long) chunkZ & 0xffffffffL) << 32;
+    }
+
+    /**
+     * Returns the chunk key for the given location.
+     *
+     * @param loc the location
+     * @return the chunk key
+     */
+    private static long getChunkKey(@NotNull Location loc)
+    {
+        return getChunkKey(loc.getBlockX() >> 4, loc.getBlockZ() >> 4);
+    }
+
+    /**
+     * Registers an NPC in the chunk containing the given location.
+     *
+     * @param npc      the NPC to register
+     * @param location the location of the NPC
+     */
+    private static void registerNpcInChunk(@NotNull NPC npc, @NotNull Location location)
+    {
+        long key = getChunkKey(location);
+        npcsByChunk.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet()).add(npc);
+    }
+
+    /**
+     * Unregisters an NPC from the chunk containing the given location.
+     *
+     * @param npc the NPC to unregister
+     * @param loc the previous location of the NPC
+     */
+    private static void unregisterNpcFromChunk(NPC npc, Location loc)
+    {
+        long key = getChunkKey(loc);
+        Set<NPC> set = npcsByChunk.get(key);
+        if(set != null)
+        {
+            set.remove(npc);
+            if(set.isEmpty())
+                npcsByChunk.remove(key);
+        }
+    }
+
+    /**
+     * Updates the chunk registration of an NPC when its position changes. If the NPC remains in the same chunk, no update is performed.
+     *
+     * @param npc    the NPC whose position was updated
+     * @param oldLoc the NPC's previous location
+     * @param newLoc the NPC's new location
+     */
+    public static void updateNpcPosition(@NotNull NPC npc, @NotNull Location oldLoc, @NotNull Location newLoc)
+    {
+        int oldChunkX = oldLoc.getBlockX() >> 4;
+        int oldChunkZ = oldLoc.getBlockZ() >> 4;
+        int newChunkX = newLoc.getBlockX() >> 4;
+        int newChunkZ = newLoc.getBlockZ() >> 4;
+
+        if(oldChunkX != newChunkX || oldChunkZ != newChunkZ)
+        {
+            unregisterNpcFromChunk(npc, oldLoc);
+            registerNpcInChunk(npc, newLoc);
+        }
+    }
+
+    /**
+     * Gets all NPCs located in the specified chunk.
+     *
+     * @param chunkX the X coordinate of the chunk
+     * @param chunkZ the Z coordinate of the chunk
+     * @return a set containing the NPCs in the chunk, or an empty set if none are present
+     */
+    public static @NotNull Set<NPC> getNpcsInChunk(int chunkX, int chunkZ)
+    {
+        long key = getChunkKey(chunkX, chunkZ);
+        return Collections.unmodifiableSet(npcsByChunk.getOrDefault(key, Collections.emptySet()));
     }
 
     /**
@@ -144,7 +241,7 @@ public class NpcManager
                 if(!saver.isJson())
                 {
                     File backupFolder = new File(file, "backup");
-                    if (!backupFolder.exists())
+                    if(!backupFolder.exists())
                         backupFolder.mkdirs();
 
                     File backupFile = new File(backupFolder, file1.getName());
@@ -161,7 +258,6 @@ public class NpcManager
                     serializedNPC = saver.read(NPC.SerializedNPC.class);
 
                 Either<NPC, UUID> npcEither = serializedNPC.deserializedNPC();
-
                 if(npcEither.right().isPresent())
                 {
                     toLoadNPCs.computeIfAbsent(npcEither.right().get(), k -> new ArrayList<>()).add(serializedNPC);
@@ -171,7 +267,15 @@ public class NpcManager
                 if(npcEither.left().isEmpty())
                     continue;
 
-                loadNpc(npcEither.left().get());
+                NPC npc = npcEither.left().get();
+                if(npc.isMonster() && npc.getLocation().getWorld() != null && npc.getLocation().getWorld().getDifficulty() == Difficulty.PEACEFUL)
+                {
+                    removeNPC(npc);
+                    monsterNPCs.put(serializedNPC, npc.getLocation());
+                    continue;
+                }
+
+                loadNpc(npc);
                 successCounter++;
             }
             catch(Exception e)
@@ -194,6 +298,11 @@ public class NpcManager
             NpcApi.plugin.getLogger().warning("Failed to load " + failCounter + " NPC");
         else if(failCounter > 1)
             NpcApi.plugin.getLogger().warning("Failed to load " + failCounter + " NPC's");
+
+        if(monsterNPCs.size() == 1)
+            NpcApi.plugin.getLogger().warning("Failed to load " + monsterNPCs.size() + " Monster NPC, because the difficulty is set to peaceful!");
+        else if(monsterNPCs.size() > 1)
+            NpcApi.plugin.getLogger().warning("Failed to load " + monsterNPCs.size() + " Monster NPC's, because the difficulty is set to peaceful!");
 
         if(exception != null && NpcApi.config.debug())
             exception.printStackTrace();
@@ -221,7 +330,11 @@ public class NpcManager
                 if(either.left().isEmpty())
                     continue;
 
-                loadNpc(either.left().get());
+                NPC npc = either.left().get();
+                if(npc.isMonster() && world.getDifficulty() == Difficulty.PEACEFUL)
+                    throw new RuntimeException("NPC is a Monster entity, but the difficulty is set to peaceful!");
+
+                loadNpc(npc);
             }
             catch(Exception e)
             {
@@ -267,6 +380,9 @@ public class NpcManager
                 return false;
 
             NPC npc = either.left().get();
+            if(npc.isMonster() && location.getWorld() != null && location.getWorld().getDifficulty() == Difficulty.PEACEFUL)
+                throw new RuntimeException("NPC is a Monster entity, but the difficulty is set to peaceful!");
+
             npc.markChange();
             loadNpc(npc);
             return true;
@@ -281,18 +397,59 @@ public class NpcManager
     }
 
     /**
+     * Unloads all NPCs that are monsters
+     *
+     * @return the number of NPCs unloaded
+     */
+    public static long unloadMonsterNpcs(@NotNull World world)
+    {
+        long counter = 0;
+        for (NPC npc : new ArrayList<>(NpcManager.getList()))
+        {
+            if (npc.getLocation().getWorld() == null || !npc.getLocation().getWorld().equals(world))
+                continue;
+
+            if (npc.isMonster())
+            {
+                monsterNPCs.entrySet().removeIf(entry -> entry.getKey().getId().equals(npc.getUUID()));
+                monsterNPCs.put(NPC.SerializedNPC.serializedNPC(npc), npc.getLocation());
+
+                NpcManager.removeNPC(npc);
+                npc.hideNpcFromAllPlayers();
+                npc.stopGoals();
+                counter++;
+            }
+        }
+        return counter;
+    }
+
+    /**
+     * Loads all monster NPCs that were previously unloaded
+     */
+    public static void loadMonsterNpcs(BiConsumer<Location, Runnable> consumer)
+    {
+        new HashMap<>(monsterNPCs).forEach((key, value) ->
+                consumer.accept(value, () ->
+                {
+                    Either<NPC, UUID> npcEither = key.deserializedNPC();
+                    if(npcEither.right().isPresent())
+                        toLoadNPCs.computeIfAbsent(npcEither.right().get(), k -> new ArrayList<>()).add(key);
+
+                    if(npcEither.left().isEmpty())
+                        return;
+
+                    loadNpc(npcEither.left().get());
+                }));
+        monsterNPCs.clear();
+    }
+
+    /**
      * Initializes the given NPC, applying editability rules based on its creation time and making it visible to all online players.
      *
      * @param npc the NPC to load and display
      */
     private static void loadNpc(@NotNull NPC npc)
     {
-        LocalDate date = LocalDate.of(2025, 10, 22);
-        LocalTime time = LocalTime.of(22, 0);
-        Instant instant = LocalDateTime.of(date, time).atZone(ZoneId.of("UTC")).toInstant();
-        if(npc.getCreatedAt().isBefore(instant))
-            npc.setEditable(true);
-
         if(npc.getVisibilityManager().shouldShowToAllPlayers())
             npc.showNpcToAllPlayers();
         else

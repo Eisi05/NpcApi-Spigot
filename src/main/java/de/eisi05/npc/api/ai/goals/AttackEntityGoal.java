@@ -6,7 +6,6 @@ import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcOption;
-import de.eisi05.npc.api.pathfinding.AStarPathfinder;
 import de.eisi05.npc.api.utils.*;
 import de.eisi05.npc.api.utils.serialize.NpcRegistry;
 import de.eisi05.npc.api.wrapper.enums.Pose;
@@ -16,16 +15,14 @@ import de.eisi05.npc.api.wrapper.packets.AnimatePacket;
 import de.eisi05.npc.api.wrapper.packets.PacketWrapper;
 import de.eisi05.npc.api.wrapper.packets.RemoveEntityPacket;
 import de.eisi05.npc.api.wrapper.packets.SetEntityDataPacket;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.block.BlockFace;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,6 +30,8 @@ import org.jetbrains.annotations.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
 import java.io.Serial;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Type;
 import java.util.*;
@@ -48,7 +47,7 @@ import java.util.*;
  * Only activates when a valid target is in range and line of sight. Once a target is locked, the NPC continues attacking until the target becomes
  * unreachable or invalid.
  */
-public class AttackEntityGoal extends Goal
+public class AttackEntityGoal extends EntityTargetGoal
 {
     @Serial
     private static final long serialVersionUID = 1L;
@@ -63,30 +62,43 @@ public class AttackEntityGoal extends Goal
             Versions.isCurrentVersionSmallerThan(Versions.V1_21_2) ?
                     Attribute.GENERIC_ATTACK_KNOCKBACK : Reflections.getStaticField(Attribute.class, "ATTACK_KNOCKBACK");
 
-
     private static final double WEAPONMECHANICS_ATTACK_RANGE = 25.0;
     private static final double BOW_ATTACK_RANGE = 15.0;
     private static final double MELEE_ATTACK_RANGE = 3.0;
     private static final double LINE_OF_SIGHT_RANGE = 25.0;
     private static final int BOW_DRAW_DELAY_TICKS = 25;
-    private static final int WEAPONMECHANICS_SHOOT_DELAY_TICKS = 5;
     private static final double KITING_DISTANCE = 3.0;
     private static final double OPTIMAL_RANGED_DISTANCE = 6.0;
+    private static final int SEARCH_INTERVAL = 20;
+    private static final long LOS_CACHE_MS = 250;
+    private static final long RETRY_MOVEMENT_MS = 1500;
+
+    private static final double WEAPONMECHANICS_ATTACK_RANGE_SQ = WEAPONMECHANICS_ATTACK_RANGE * WEAPONMECHANICS_ATTACK_RANGE;
+    private static final double BOW_ATTACK_RANGE_SQ = BOW_ATTACK_RANGE * BOW_ATTACK_RANGE;
+    private static final double MELEE_ATTACK_RANGE_SQ = MELEE_ATTACK_RANGE * MELEE_ATTACK_RANGE;
+    private static final double LINE_OF_SIGHT_RANGE_SQ = LINE_OF_SIGHT_RANGE * LINE_OF_SIGHT_RANGE;
+    private static final double KITING_DISTANCE_SQ = KITING_DISTANCE * KITING_DISTANCE;
+    private static final double OPTIMAL_RANGED_DISTANCE_SQ = OPTIMAL_RANGED_DISTANCE * OPTIMAL_RANGED_DISTANCE;
 
     @JsonAdapter(TargetFilterAdapter.class)
     private SerializableBiPredicate<LivingEntity, NPC> targetFilter;
     private double customAttackRange;
     private double speed;
 
-    private transient LivingEntity target;
     private transient int attackCooldown;
     private transient boolean isAttacking;
     private transient WalkToLocationGoal movementGoal;
     private transient boolean isUsing;
     private transient List<WeakReference<Player>> cachedViewers;
-    private transient int lineOfSightCheckCooldown;
+    private transient LookController look;
+    private transient LivingEntity losTarget;
+    private transient boolean losResult;
+    private transient long losCheckedAt;
+    private transient long retryMovementAt;
     private transient int pathRecalculationCooldown;
     private transient boolean isKiting;
+
+    private transient long nextSearchAt;
 
     /**
      * Creates an AttackEntityGoal with a filter for valid targets.
@@ -131,7 +143,7 @@ public class AttackEntityGoal extends Goal
      */
     private AttackEntityGoal(@NotNull AttackEntityGoal goal)
     {
-        super(goal.getPriority());
+        super(goal);
         this.targetFilter = goal.targetFilter;
         this.customAttackRange = goal.customAttackRange;
         this.speed = goal.speed;
@@ -198,27 +210,6 @@ public class AttackEntityGoal extends Goal
     }
 
     /**
-     * Gets the current target location for this goal.
-     *
-     * @return the current target location, or null if no target is set
-     */
-    private @Nullable Location getTargetLocation()
-    {
-        if(target == null)
-            return null;
-
-        Location location = target.getLocation();
-        while(!AStarPathfinder.isSafeFloor(location.getBlock().getRelative(BlockFace.DOWN)))
-        {
-            if(location.getY() < 64)
-                return target.getLocation();
-            location = location.subtract(0, 1, 0);
-        }
-
-        return location;
-    }
-
-    /**
      * Checks if this goal can be used by the NPC.
      *
      * @param npc the NPC to check
@@ -256,8 +247,10 @@ public class AttackEntityGoal extends Goal
         this.isAttacking = true;
         movementGoal = null;
         isUsing = false;
-        lineOfSightCheckCooldown = 0;
+        losCheckedAt = 0;
+        retryMovementAt = 0;
         pathRecalculationCooldown = 0;
+        look().reset();
         isKiting = false;
         setUsingItemState(npc, false);
         updateCachedViewers(npc);
@@ -280,56 +273,47 @@ public class AttackEntityGoal extends Goal
 
         Location npcLoc = npc.getLocation();
 
-        if(cachedViewers == null || cachedViewers.size() != npc.getViewers().size())
-            updateCachedViewers(npc);
-
-        for(WeakReference<Player> viewer : cachedViewers)
-            npc.lookAtEntity(target, viewer.get(), true);
-
-        if(lineOfSightCheckCooldown > 0)
-            lineOfSightCheckCooldown--;
+        look().lookAt(npc, target);
 
         Location targetLocation = getTargetLocation();
-        double distance = npcLoc.distance(targetLocation);
+        double distance = npcLoc.distanceSquared(targetLocation);
         double attackRange = getAttackRange(npc);
 
         if(distance > attackRange)
         {
-            boolean checkLineOfSight = lineOfSightCheckCooldown <= 0;
-            if(checkLineOfSight)
-                lineOfSightCheckCooldown = 5;
-
-            if(distance > LINE_OF_SIGHT_RANGE || (checkLineOfSight && !hasLineOfSight(npc, target)))
+            if(distance > LINE_OF_SIGHT_RANGE_SQ || !hasLineOfSightCached(npc, target))
             {
                 stop(npc);
                 return;
             }
 
+            if(movementGoal != null && !movementGoal.isActive())
+            {
+                if(movementGoal.isUnreachable())
+                    retryMovementAt = System.currentTimeMillis() + RETRY_MOVEMENT_MS;
+                movementGoal = null;
+            }
+
+            Location ground = getTargetGround(npc);
             if(movementGoal == null)
-                startMovement(npc, targetLocation);
+            {
+                if(ground != null && System.currentTimeMillis() >= retryMovementAt)
+                    startMovement(npc, ground);
+            }
             else
             {
-                Location currentTarget = movementGoal.getTargetLocation(npc.getLocation().getWorld());
-                boolean shouldRecalculate = currentTarget.distance(targetLocation) > 5.0;
+                isKiting = false;
 
-                if(!shouldRecalculate && pathRecalculationCooldown <= 0)
+                if(ground != null)
                 {
-                    shouldRecalculate = true;
-                    pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;
+                    double tolerance = Math.clamp(Math.sqrt(distance) * 0.2, 1.0, 5.0);
+                    if(movementGoal.horizontalTargetDistanceSq(ground) > tolerance * tolerance || movementGoal.verticalTargetDistance(ground) > 1.5)
+                        movementGoal.updateTargetLocation(ground.clone(), npc);
                 }
 
-                if(shouldRecalculate)
-                {
-                    movementGoal.updateTargetLocation(target.getLocation(), npc);
-                    pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;
-                }
-                else
-                {
-                    movementGoal.tick(npc);
-                    pathRecalculationCooldown--;
-                }
+                movementGoal.tick(npc);
 
-                distance = npc.getLocation().distance(targetLocation);
+                distance = npc.getLocation().distanceSquared(targetLocation);
                 if(distance <= attackRange)
                     stopMovement(npc);
                 else
@@ -338,21 +322,17 @@ public class AttackEntityGoal extends Goal
         }
         else if(isUsingRangedWeapon(npc))
         {
-            if(distance < KITING_DISTANCE && !isKiting)
+            if(distance < KITING_DISTANCE_SQ && !isKiting)
                 startKiting(npc);
-            else if(isKiting && distance >= OPTIMAL_RANGED_DISTANCE)
+            else if(isKiting && distance >= OPTIMAL_RANGED_DISTANCE_SQ)
                 stopKiting(npc);
             else if(isKiting)
             {
-                if(movementGoal != null)
+                if(movementGoal != null && movementGoal.isActive())
                 {
                     movementGoal.tick(npc);
-                    pathRecalculationCooldown--;
-                    if(pathRecalculationCooldown <= 0)
-                    {
+                    if(--pathRecalculationCooldown <= 0)
                         startKiting(npc);
-                        pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;
-                    }
                 }
                 else
                     isKiting = false;
@@ -414,14 +394,13 @@ public class AttackEntityGoal extends Goal
         if(!npcLoc.getWorld().equals(targetLoc.getWorld()))
             return false;
 
-        boolean checkLineOfSight = lineOfSightCheckCooldown <= 0;
-        if(checkLineOfSight && !hasLineOfSight(npc, target))
+        if(!hasLineOfSightCached(npc, target))
             return false;
 
-        double distance = npcLoc.distance(targetLoc);
+        double distance = npcLoc.distanceSquared(targetLoc);
         double attackRange = getAttackRange(npc);
 
-        return distance <= Math.max(attackRange, LINE_OF_SIGHT_RANGE);
+        return distance <= Math.max(attackRange, LINE_OF_SIGHT_RANGE_SQ);
     }
 
     @Override
@@ -452,24 +431,63 @@ public class AttackEntityGoal extends Goal
      */
     private LivingEntity findTarget(@NotNull NPC npc)
     {
-        Location npcLoc = npc.getLocation();
+        long now = System.currentTimeMillis();
+        if(now < nextSearchAt)
+            return null;
+
+        nextSearchAt = now + SEARCH_INTERVAL * 50L;
+        Location loc = npc.getLocation();
+
         double searchRange = Math.max(getAttackRange(npc), LINE_OF_SIGHT_RANGE);
+        Collection<Entity> nearby = loc.getWorld().getNearbyEntities(
+                loc,
+                searchRange,
+                searchRange,
+                searchRange,
+                entity -> entity instanceof LivingEntity
+        );
 
-        for(Entity entity : npcLoc.getWorld().getNearbyEntities(npcLoc, searchRange, searchRange, searchRange))
+        List<LivingEntity> candidates = new ArrayList<>();
+        for(Entity entity : nearby)
         {
-            if(!(entity instanceof LivingEntity livingEntity))
-                continue;
+            if(targetFilter.test((LivingEntity) entity, npc))
+                candidates.add((LivingEntity) entity);
+        }
 
-            if(!targetFilter.test(livingEntity, npc))
-                continue;
+        if(candidates.isEmpty())
+            return null;
 
-            if(!hasLineOfSight(npc, livingEntity))
-                continue;
-
-            return livingEntity;
+        candidates.sort(Comparator.comparingDouble(candidate -> candidate.getLocation().distanceSquared(loc)));
+        for(LivingEntity candidate : candidates)
+        {
+            if(hasLineOfSight(npc, candidate))
+                return candidate;
         }
 
         return null;
+    }
+
+    private @NotNull LookController look()
+    {
+        if(look == null)
+            look = new LookController();
+        return look;
+    }
+
+    /**
+     * Line of sight with a short cache. {@code canUse}, {@code canContinue} and {@code tick} are all called every tick; without the cache this was up to two
+     * ray traces per tick while in melee range.
+     */
+    private boolean hasLineOfSightCached(@NotNull NPC npc, @NotNull LivingEntity entity)
+    {
+        long now = System.currentTimeMillis();
+        if(entity != losTarget || now - losCheckedAt >= LOS_CACHE_MS)
+        {
+            losResult = hasLineOfSight(npc, entity);
+            losTarget = entity;
+            losCheckedAt = now;
+        }
+        return losResult;
     }
 
     /**
@@ -480,18 +498,25 @@ public class AttackEntityGoal extends Goal
         Location npcLoc = npc.getLocation().clone().add(0, 1.6, 0);
         Location targetLoc = target.getLocation().clone().add(0, target.getEyeHeight(), 0);
 
-        Vector direction = targetLoc.toVector().subtract(npcLoc.toVector()).normalize();
-        double distance = npcLoc.distance(targetLoc);
-        int steps = (int) (distance * 2);
+        World world = npcLoc.getWorld();
+        if(world == null || targetLoc.getWorld() != world)
+            return false;
 
-        for(int i = 0; i < steps; i++)
-        {
-            Location checkLoc = npcLoc.clone().add(direction.clone().multiply(i * 0.5));
-            if(checkLoc.getBlock().getType().isSolid() && !checkLoc.getBlock().isPassable())
-                return false;
-        }
+        Vector direction = targetLoc.toVector().subtract(npcLoc.toVector());
+        double distance = direction.length();
 
-        return true;
+        if(distance == 0)
+            return true;
+
+        RayTraceResult result = world.rayTraceBlocks(
+                npcLoc,
+                direction.normalize(),
+                distance,
+                FluidCollisionMode.NEVER,
+                true
+        );
+
+        return result == null || result.getHitBlock() == null;
     }
 
     /**
@@ -500,21 +525,21 @@ public class AttackEntityGoal extends Goal
     private double getAttackRange(@NotNull NPC npc)
     {
         if(customAttackRange > 0)
-            return customAttackRange;
+            return customAttackRange * customAttackRange;
 
         Map<EquipmentSlot, ItemStack> equipment = npc.getOption(NpcOption.EQUIPMENT);
         ItemStack mainHand = equipment != null ? equipment.get(EquipmentSlot.HAND) : null;
 
         if(mainHand == null)
-            return MELEE_ATTACK_RANGE;
+            return MELEE_ATTACK_RANGE_SQ;
 
         if(getWeaponTitle(mainHand) != null)
-            return WEAPONMECHANICS_ATTACK_RANGE;
+            return WEAPONMECHANICS_ATTACK_RANGE_SQ;
 
         if(isRangedWeapon(mainHand.getType()))
-            return BOW_ATTACK_RANGE;
+            return BOW_ATTACK_RANGE_SQ;
         else
-            return MELEE_ATTACK_RANGE;
+            return MELEE_ATTACK_RANGE_SQ;
     }
 
     /**
@@ -862,55 +887,86 @@ public class AttackEntityGoal extends Goal
     }
 
     /**
-     * Starts movement towards the target location.
+     * Starts movement towards the target's ground location. The goal handles the look direction itself, so the walk does not send its own rotation.
      */
-    private void startMovement(@NotNull NPC npc, @NotNull Location targetLoc)
+    private void startMovement(@NotNull NPC npc, @NotNull Location ground)
     {
         stopMovement(npc);
 
-        OptionalInt safeY = LocationUtils.findSafeY(targetLoc, npc);
-        if(safeY.isPresent())
-            targetLoc = new Location(targetLoc.getWorld(), targetLoc.getX(), safeY.getAsInt(), targetLoc.getZ());
-        movementGoal = new WalkToLocationGoal.Builder(targetLoc).speed(speed).build();
+        movementGoal = new WalkToLocationGoal.Builder(ground.clone()).speed(speed).pathfinder(pathfinder).withRotation(false).build();
         movementGoal.start(npc);
     }
 
     /**
-     * Starts kiting by moving away from the target to optimal distance.
+     * Starts kiting by moving away from the target to optimal distance. If a kiting walk is already running it is simply retargeted (no stop/start), which
+     * keeps the retreat smooth.
      */
     private void startKiting(@NotNull NPC npc)
     {
         if(target == null || !target.isValid())
             return;
 
+        boolean retarget = isKiting && movementGoal != null && movementGoal.isActive();
+
         Location npcLoc = npc.getLocation();
         Location targetLoc = target.getLocation();
 
-        Vector direction = npcLoc.toVector().subtract(targetLoc.toVector()).normalize();
+        Vector away = npcLoc.toVector().subtract(targetLoc.toVector());
+        away.setY(0);
+        if(away.lengthSquared() < 1.0E-6)
+        {
+            double angle = Math.random() * Math.PI * 2;
+            away = new Vector(Math.cos(angle), 0, Math.sin(angle));
+        }
+        else
+            away.normalize();
 
-        Vector retreatPos = targetLoc.toVector().add(direction.multiply(OPTIMAL_RANGED_DISTANCE));
+        Location retreatLoc = null;
+        Location fallback = null;
+        for(double angle : new double[]{0, 0.7, -0.7, 1.4, -1.4})
+        {
+            Vector pos = targetLoc.toVector().add(away.clone().rotateAroundY(angle).multiply(OPTIMAL_RANGED_DISTANCE));
+            if(!retarget && angle == 0)
+            {
+                pos.setX(pos.getX() + (Math.random() - 0.5) * 3);
+                pos.setZ(pos.getZ() + (Math.random() - 0.5) * 3);
+            }
 
-        retreatPos.setX(retreatPos.getX() + (Math.random() - 0.5) * 3);
-        retreatPos.setZ(retreatPos.getZ() + (Math.random() - 0.5) * 3);
+            Location candidate = new Location(npcLoc.getWorld(), pos.getX(), npcLoc.getY(), pos.getZ());
+            if(fallback == null)
+                fallback = candidate.clone();
 
-        Location retreatLoc = new Location(npcLoc.getWorld(), retreatPos.getX(), npcLoc.getY(), retreatPos.getZ());
+            OptionalInt safeY = LocationUtils.findSafeY(candidate, npc);
+            if(safeY.isPresent())
+            {
+                candidate.setY(safeY.getAsInt());
+                retreatLoc = candidate;
+                break;
+            }
+        }
+        if(retreatLoc == null)
+            retreatLoc = fallback;
 
-        OptionalInt safeY = LocationUtils.findSafeY(retreatLoc, npc);
-        if(safeY.isPresent())
-            retreatLoc = new Location(retreatLoc.getWorld(), retreatLoc.getX(), safeY.getAsInt(), retreatLoc.getZ());
+        if(retarget)
+            movementGoal.updateTargetLocation(retreatLoc, npc);
+        else
+        {
+            stopMovement(npc);
 
-        stopMovement(npc);
+            WalkToLocationGoal newGoal = new WalkToLocationGoal.Builder(retreatLoc)
+                    .speed(speed + 0.5)
+                    .pathfinder(pathfinder)
+                    .maxIterations(5000)
+                    .allowDiagonal(true)
+                    .completionCallback(walkingResult ->
+                    {
+                        isKiting = false;
+                        movementGoal = null;
+                    }).withRotation(false).build();
 
-
-        WalkToLocationGoal newGoal = new WalkToLocationGoal.Builder(retreatLoc).speed(speed + 0.5).maxIterations(5000).allowDiagonal(true)
-                .completionCallback(walkingResult ->
-                {
-                    isKiting = false;
-                    movementGoal = null;
-                }).withRotation(false).build();
-
-        movementGoal = newGoal;
-        newGoal.start(npc);
+            movementGoal = newGoal;
+            newGoal.start(npc);
+        }
 
         isKiting = true;
         pathRecalculationCooldown = WalkToLocationGoal.RECALCULATION_COOLDOWN;

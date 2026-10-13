@@ -12,8 +12,9 @@ import de.eisi05.npc.api.events.NpcStartWalkingEvent;
 import de.eisi05.npc.api.interfaces.NpcClickAction;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.manager.NpcVisibilityManager;
-import de.eisi05.npc.api.pathfinding.AbstractPathfinder;
-import de.eisi05.npc.api.pathfinding.PathfindingUtils;
+import de.eisi05.npc.api.pathfinding.util.PathfindingUtils;
+import de.eisi05.npc.api.pathfinding.algorithm.AbstractPathfinder;
+import de.eisi05.npc.api.pathfinding.movement.NavCapabilities;
 import de.eisi05.npc.api.scheduler.PathTask;
 import de.eisi05.npc.api.utils.serialize.ObjectSaver;
 import de.eisi05.npc.api.utils.Var;
@@ -28,10 +29,10 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
@@ -59,6 +60,7 @@ public class NPC extends NpcHolder
     public transient final Map<UUID, String> nameCache = new HashMap<>();
     transient final Map<UUID, Map<String, Integer>> toDeleteEntities = new HashMap<>();
     private final Set<UUID> viewers = new HashSet<>();
+    private final Set<UUID> unmodifiableViewers = Collections.unmodifiableSet(viewers);
     private final Path npcPath;
     private final Map<UUID, PathTask> pathTasks = new HashMap<>();
     private final Set<PathTask> walkingTasks = new LinkedHashSet<>();
@@ -300,7 +302,7 @@ public class NPC extends NpcHolder
     public void reload()
     {
         boolean hasUnsavedChanges = hasUnsavedChanges();
-        final List<UUID> viewers = new ArrayList<>(this.viewers);
+        final List<UUID> viewers = List.copyOf(this.viewers);
         NpcVisibilityManager visibilityManager = getVisibilityManager();
         boolean shouldShowToAll = visibilityManager.shouldShowToAllPlayers();
         Set<UUID> specificPlayers = visibilityManager.getSpecificPlayers();
@@ -345,6 +347,8 @@ public class NPC extends NpcHolder
      */
     public void setLocation(@NotNull Location location)
     {
+        NpcManager.updateNpcPosition(this, this.location, location);
+
         this.location = location;
         markChange();
 
@@ -414,6 +418,17 @@ public class NPC extends NpcHolder
                 WrappedComponent.create(null));
 
         viewers.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).forEach(uuid -> updateName(Bukkit.getPlayer(uuid)));
+    }
+
+    /**
+     * Checks if this NPC is a monster.
+     *
+     * @return true if the NPC is a monster, false otherwise
+     */
+    public boolean isMonster()
+    {
+        Class<? extends org.bukkit.entity.Entity> entityClass = getOption(NpcOption.ENTITY).getType().getEntityClass();
+        return entityClass != null && Monster.class.isAssignableFrom(entityClass);
     }
 
     /**
@@ -587,9 +602,9 @@ public class NPC extends NpcHolder
     }
 
     @ApiStatus.Internal
-    public List<UUID> getViewers()
+    public Set<UUID> getViewers()
     {
-        return new ArrayList<>(viewers);
+        return unmodifiableViewers;
     }
 
     /**
@@ -902,7 +917,20 @@ public class NPC extends NpcHolder
     }
 
     /**
-     * Asynchronously calculates a path through the specified waypoints.
+     * Returns what this NPC can physically do while walking (climb ladders, swim, jump over gaps, open doors, swim pose, ...), based on its current
+     * {@link NpcOption#ENTITY entity type}. Used automatically by {@link #findPath} and by walking tasks. See
+     * {@link NavCapabilities#register} to customise the table.
+     *
+     * @return the capabilities of this NPC's entity type, never null
+     */
+    public @NotNull NavCapabilities getNavCapabilities()
+    {
+        return NavCapabilities.of(getOption(NpcOption.ENTITY).getType());
+    }
+
+    /**
+     * Asynchronously calculates a path through the specified waypoints, restricted to what this NPC's entity type can do (see
+     * {@link #getNavCapabilities()}).
      * <p>
      * This method executes the pathfinding logic off the main thread using the Bukkit scheduler.
      * </p>
@@ -920,21 +948,43 @@ public class NPC extends NpcHolder
                                                                                         boolean allowDiagonalMovement,
                                                                                         @Nullable BiConsumer<Double, Integer> progressListener)
     {
-        return CompletableFuture.supplyAsync(() ->
-        {
-            try
-            {
-                return findPath(pathfinderFactory, waypoints, maxIterations, allowDiagonalMovement, progressListener);
-            }
-            catch(PathfindingUtils.PathfindingException e)
-            {
-                throw new RuntimeException(e);
-            }
-        }, runnable -> Bukkit.getScheduler().runTaskAsynchronously(NpcApi.plugin, runnable));
+        return findPathAsync(pathfinderFactory, waypoints, maxIterations, allowDiagonalMovement, getNavCapabilities(), progressListener);
     }
 
     /**
-     * Synchronously calculates a path through the specified waypoints based on the entity's current bounding box and scale.
+     * Asynchronously calculates a path through the specified waypoints with explicit entity capabilities.
+     * <p>
+     * This method executes the pathfinding logic off the main thread using the Bukkit scheduler. The NPC's size is read on the calling thread, so call it from
+     * the main thread.
+     * </p>
+     *
+     * @param pathfinderFactory     the factory to create the pathfinder, if null the default factory {@link NpcConfig#pathfinderFactory()} will be used
+     * @param waypoints             the list of locations the path must pass through, must not be null
+     * @param maxIterations         the maximum number of iterations allowed for the pathfinding algorithm before giving up
+     * @param allowDiagonalMovement {@code true} to allow diagonal movement between nodes, {@code false} for straight lines only
+     * @param capabilities          what the NPC can do (ladders, swimming, gap jumps, doors, ...), or null for no restriction
+     * @param progressListener A listener that receives a completion percentage between 0.0 and 1.0 and the current iteration count
+     * @return a {@link CompletableFuture} that will complete with the calculated {@link de.eisi05.npc.api.pathfinding.Path}
+     * @throws RuntimeException if an underlying {@link PathfindingUtils.PathfindingException} occurs during execution
+     */
+    public @NotNull CompletableFuture<de.eisi05.npc.api.pathfinding.Path> findPathAsync(@Nullable AbstractPathfinder.PathfinderFactory<?> pathfinderFactory,
+                                                                                        @NotNull List<Location> waypoints, int maxIterations,
+                                                                                        boolean allowDiagonalMovement,
+                                                                                        @Nullable NavCapabilities capabilities,
+                                                                                        @Nullable BiConsumer<Double, Integer> progressListener)
+    {
+        WrappedEntity.BoundingBox boundingBox = entity.getBoundingBox();
+        double scale = getOption(NpcOption.SCALE);
+        double height = boundingBox.getYSize() * scale;
+        double width = boundingBox.getXSize() * scale;
+
+        return de.eisi05.npc.api.pathfinding.util.PathfindingUtils.findPathAsync(pathfinderFactory, waypoints, maxIterations, allowDiagonalMovement, height,
+                width, capabilities, progressListener);
+    }
+
+    /**
+     * Synchronously calculates a path through the specified waypoints based on the entity's current bounding box and scale, restricted to what this NPC's
+     * entity type can do (see {@link #getNavCapabilities()}).
      *
      * @param pathfinderFactory     the factory to create the pathfinder, if null the default factory {@link NpcConfig#pathfinderFactory()} will be used
      * @param waypoints             the list of locations the path must pass through, must not be null
@@ -942,17 +992,39 @@ public class NPC extends NpcHolder
      * @param allowDiagonalMovement {@code true} to allow diagonal movement between nodes, {@code false} for straight lines only
      * @param progressListener A listener that receives a completion percentage between 0.0 and 1.0 and the current iteration count
      * @return the calculated {@link de.eisi05.npc.api.pathfinding.Path}, must not be null
-     * @throws PathfindingUtils.PathfindingException if the pathfinding algorithm fails to find a valid path or encounters an error
+     * @throws de.eisi05.npc.api.pathfinding.util.PathfindingUtils.PathfindingException if the pathfinding algorithm fails to find a valid path or encounters an error
      */
     public @NotNull de.eisi05.npc.api.pathfinding.Path findPath(@Nullable AbstractPathfinder.PathfinderFactory<?> pathfinderFactory,
                                                                 @NotNull List<Location> waypoints, int maxIterations, boolean allowDiagonalMovement,
                                                                 @Nullable BiConsumer<Double, Integer> progressListener)
             throws PathfindingUtils.PathfindingException
     {
+        return findPath(pathfinderFactory, waypoints, maxIterations, allowDiagonalMovement, getNavCapabilities(), progressListener);
+    }
+
+    /**
+     * Synchronously calculates a path through the specified waypoints based on the entity's current bounding box and scale, with explicit entity
+     * capabilities.
+     *
+     * @param pathfinderFactory     the factory to create the pathfinder, if null the default factory {@link NpcConfig#pathfinderFactory()} will be used
+     * @param waypoints             the list of locations the path must pass through, must not be null
+     * @param maxIterations         the maximum number of iterations allowed for the pathfinding algorithm before giving up
+     * @param allowDiagonalMovement {@code true} to allow diagonal movement between nodes, {@code false} for straight lines only
+     * @param capabilities          what the NPC can do (ladders, swimming, gap jumps, doors, ...), or null for no restriction
+     * @param progressListener A listener that receives a completion percentage between 0.0 and 1.0 and the current iteration count
+     * @return the calculated {@link de.eisi05.npc.api.pathfinding.Path}, must not be null
+     * @throws de.eisi05.npc.api.pathfinding.util.PathfindingUtils.PathfindingException if the pathfinding algorithm fails to find a valid path or encounters an error
+     */
+    public @NotNull de.eisi05.npc.api.pathfinding.Path findPath(@Nullable AbstractPathfinder.PathfinderFactory<?> pathfinderFactory,
+                                                                @NotNull List<Location> waypoints, int maxIterations, boolean allowDiagonalMovement,
+                                                                @Nullable NavCapabilities capabilities,
+                                                                @Nullable BiConsumer<Double, Integer> progressListener)
+            throws de.eisi05.npc.api.pathfinding.util.PathfindingUtils.PathfindingException
+    {
         WrappedEntity.BoundingBox boundingBox = entity.getBoundingBox();
         double scale = getOption(NpcOption.SCALE);
-        return PathfindingUtils.findPath(pathfinderFactory, waypoints, maxIterations, allowDiagonalMovement, boundingBox.getYSize() * scale,
-                boundingBox.getXSize() * scale, progressListener);
+        return de.eisi05.npc.api.pathfinding.util.PathfindingUtils.findPath(pathfinderFactory, waypoints, maxIterations, allowDiagonalMovement,
+                boundingBox.getYSize() * scale, boundingBox.getXSize() * scale, capabilities, progressListener);
     }
 
     /**
@@ -1281,11 +1353,11 @@ public class NPC extends NpcHolder
         {
             for(UUID uuid : viewers)
             {
-                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
-                if(!offlinePlayer.isOnline())
+                Player player = Bukkit.getPlayer(uuid);
+                if(player == null || !player.isOnline())
                     continue;
 
-                WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(offlinePlayer.getPlayer());
+                WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(player);
                 if(moveEntityPacket != null)
                     serverPlayer1.sendPacket(moveEntityPacket);
             }
@@ -1320,11 +1392,11 @@ public class NPC extends NpcHolder
         {
             for(UUID uuid : viewers)
             {
-                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
-                if(!offlinePlayer.isOnline())
+                Player player = Bukkit.getPlayer(uuid);
+                if(player == null || !player.isOnline())
                     continue;
 
-                WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(offlinePlayer.getPlayer());
+                WrappedServerPlayer serverPlayer1 = WrappedServerPlayer.fromPlayer(player);
                 if(teleportEntityPacket != null)
                     serverPlayer1.sendPacket(teleportEntityPacket);
                 if(rotateHeadPacket != null)

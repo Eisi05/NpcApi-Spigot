@@ -12,7 +12,10 @@ import de.eisi05.npc.api.wrapper.packets.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Difficulty;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -73,6 +76,34 @@ public class PacketReader
 
                 super.channelRead(ctx, msg);
             }
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception
+            {
+                if(PacketWrapper.PacketHolder.is(msg, DifficultyPacket.class))
+                {
+                    DifficultyPacket difficultyPacket = PacketWrapper.PacketHolder.wrap(msg, DifficultyPacket.class);
+                    if(difficultyPacket.getDifficulty() == Difficulty.PEACEFUL)
+                    {
+                        Bukkit.getScheduler().runTask(NpcApi.plugin, () ->
+                        {
+                            long amount = NpcManager.unloadMonsterNpcs(player.getWorld());
+                            Bukkit.getOnlinePlayers().stream().filter(player1 -> player1.isOp() || player1.hasPermission("npc.admin"))
+                                    .forEach(player1 ->
+                                            player1.sendMessage(ChatColor.RED + "Unloaded " + amount + " NPCs because the difficulty changed to peaceful!"));
+                        });
+
+                        return;
+                    }
+
+                    NpcManager.loadMonsterNpcs((location, runnable) ->
+                    {
+                        if(location.getWorld().equals(player.getWorld()))
+                            Bukkit.getScheduler().runTask(NpcApi.plugin, runnable);
+                    });
+                }
+                super.write(ctx, msg, promise);
+            }
         };
 
         if(channel.pipeline().get("packet_handler") == null)
@@ -82,7 +113,7 @@ public class PacketReader
     }
 
     /**
-     * Checks if the given packet is a {@link UseEntityPacketWrapper} and, if so, processes the interaction to dispatch a {@link NpcInteractEvent}. This method
+     * Checks if the given packet is a {@link UseEntityPacket} and, if so, processes the interaction to dispatch a {@link NpcInteractEvent}. This method
      * is responsible for determining if a player has clicked or attacked an NPC.
      *
      * @param packet The raw packet object received from the Netty pipeline. Must not be {@code null}.
@@ -93,7 +124,7 @@ public class PacketReader
         if(!PacketWrapper.PacketHolder.is(packet, PacketWrapper.PacketHolder.class))
             return;
 
-        if(PacketWrapper.PacketHolder.is(packet, UseItemPacketWrapper.class))
+        if(PacketWrapper.PacketHolder.is(packet, UseItemPacket.class))
         {
             int currentTick = WrappedMinecraftServer.getCurrentTick();
             Integer until = cancelUseUntilTick.remove(player.getUniqueId());
@@ -144,12 +175,12 @@ public class PacketReader
             return;
         }
 
-        if(!PacketWrapper.PacketHolder.is(packet, UseEntityPacketWrapper.class))
+        if(!PacketWrapper.PacketHolder.is(packet, UseEntityPacket.class))
             return;
 
-        UseEntityPacketWrapper useEntityPacketWrapper = PacketWrapper.PacketHolder.wrap(packet, UseEntityPacketWrapper.class);
+        UseEntityPacket useEntityPacket = PacketWrapper.PacketHolder.wrap(packet, UseEntityPacket.class);
 
-        int id = useEntityPacketWrapper.getId();
+        int id = useEntityPacket.getId();
 
         NPC npc = NpcManager.fromId(id).orElse(null);
         if(npc == null)
@@ -157,7 +188,7 @@ public class PacketReader
 
         if(!Versions.isCurrentVersionSmallerThan(Versions.V26_1))
         {
-            if(useEntityPacketWrapper.usingSecondaryAction() || useEntityPacketWrapper.getHand() == InteractionHand.OFF_HAND)
+            if(useEntityPacket.usingSecondaryAction() || useEntityPacket.getHand() == InteractionHand.OFF_HAND)
                 return;
 
             callNpc(player, npc, ClickActionType.RIGHT);
@@ -165,13 +196,13 @@ public class PacketReader
             return;
         }
 
-        UseEntityPacketWrapper.Action action = useEntityPacketWrapper.getAction();
-        if(action.getActionType() == UseEntityPacketWrapper.ActionType.ATTACK)
+        UseEntityPacket.Action action = useEntityPacket.getAction();
+        if(action.getActionType() == UseEntityPacket.ActionType.ATTACK)
         {
             callNpc(player, npc, ClickActionType.LEFT);
             cancelUseUntilTick.put(player.getUniqueId(), currentTick + 10);
         }
-        else if(action.getActionType() == UseEntityPacketWrapper.ActionType.INTERACT && action.getHand() == InteractionHand.MAIN_HAND)
+        else if(action.getActionType() == UseEntityPacket.ActionType.INTERACT && action.getHand() == InteractionHand.MAIN_HAND)
         {
             callNpc(player, npc, ClickActionType.RIGHT);
             cancelUseUntilTick.put(player.getUniqueId(), currentTick + 10);
@@ -197,7 +228,7 @@ public class PacketReader
      */
     public static void uninject(@NotNull Player player)
     {
-        Channel channel = channels.get(player.getUniqueId());
+        Channel channel = channels.remove(player.getUniqueId());
 
         if(channel == null || NpcApi.plugin == null)
             return;

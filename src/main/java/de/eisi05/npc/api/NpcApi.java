@@ -6,7 +6,7 @@ import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NameDisplayOptions;
 import de.eisi05.npc.api.objects.NpcConfig;
 import de.eisi05.npc.api.objects.NpcHolder;
-import de.eisi05.npc.api.pathfinding.AbstractPathfinder;
+import de.eisi05.npc.api.pathfinding.algorithm.AbstractPathfinder;
 import de.eisi05.npc.api.pathfinding.Path;
 import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.Metrics;
@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
@@ -116,7 +117,7 @@ public final class NpcApi
      */
     public static void disable()
     {
-        List<NPC> npcsToSave = new ArrayList<>(NpcManager.getList());
+        Collection<NPC> npcsToSave = NpcManager.getList();
         for (NPC npc : npcsToSave)
         {
             npc.stopGoals();

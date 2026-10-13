@@ -1,5 +1,6 @@
 package de.eisi05.npc.api.pathfinding;
 
+import de.eisi05.npc.api.pathfinding.movement.MoveType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -22,6 +23,7 @@ public class Path implements ConfigurationSerializable
     private final List<Vector> vectors;
     private final List<Location> locations;
     private final List<Location> waypoints;
+    private final List<MoveType> moves;
 
     private String name;
 
@@ -33,9 +35,25 @@ public class Path implements ConfigurationSerializable
      */
     public Path(@NotNull List<Location> nodes, @Nullable List<Location> waypoints)
     {
+        this(nodes, waypoints, null);
+    }
+
+    /**
+     * Constructs a Path from {@link Location} nodes together with the way each node is reached.
+     *
+     * @param nodes     the ordered list of {@link Location} points
+     * @param waypoints the waypoints the path was calculated with, may be null
+     * @param moves     one {@link MoveType} per node (how the node is reached from the previous one), or null if unknown (all {@link MoveType#WALK})
+     */
+    public Path(@NotNull List<Location> nodes, @Nullable List<Location> waypoints, @Nullable List<MoveType> moves)
+    {
+        if(moves != null && moves.size() != nodes.size())
+            throw new IllegalArgumentException("moves must have the same size as nodes");
+
         this.locations = Collections.unmodifiableList(nodes);
         this.vectors = nodes.stream().map(Location::toVector).toList();
         this.waypoints = waypoints == null ? null : Collections.unmodifiableList(waypoints);
+        this.moves = moves == null ? null : List.copyOf(moves);
     }
 
     /**
@@ -50,6 +68,7 @@ public class Path implements ConfigurationSerializable
         this.vectors = Collections.unmodifiableList(nodes);
         this.locations = nodes.stream().map(vector -> new Location(world, vector.getX(), vector.getY(), vector.getZ())).toList();
         this.waypoints = waypoints == null ? null : Collections.unmodifiableList(waypoints);
+        this.moves = null;
     }
 
     public @NotNull Path setName(@Nullable String name)
@@ -66,7 +85,36 @@ public class Path implements ConfigurationSerializable
     @SuppressWarnings("unchecked")
     public static Path deserialize(Map<String, Object> map)
     {
-        return new Path((List<Location>) map.get("locations"), (List<Location>) map.get("waypoints"));
+        List<Location> locations = (List<Location>) map.get("locations");
+        List<MoveType> moves = null;
+
+        if(map.get("moves") instanceof List<?> raw && raw.size() == locations.size())
+            moves = raw.stream().map(entry -> parseMove(String.valueOf(entry))).toList();
+
+        return new Path(locations, (List<Location>) map.get("waypoints"), moves);
+    }
+
+    private static @NotNull MoveType parseMove(@Nullable String name)
+    {
+        try
+        {
+            return name == null ? MoveType.WALK : MoveType.valueOf(name);
+        }
+        catch(IllegalArgumentException e)
+        {
+            return MoveType.WALK;
+        }
+    }
+
+    /**
+     * Returns how each point of this path is reached from the previous one (walking, jumping, climbing, swimming, ...). Paths without this information
+     * (e.g. paths saved by older versions) report {@link MoveType#WALK} for every point.
+     *
+     * @return an unmodifiable list with one entry per point
+     */
+    public @NotNull List<MoveType> getMoves()
+    {
+        return moves != null ? moves : Collections.nCopies(locations.size(), MoveType.WALK);
     }
 
     /**
@@ -86,7 +134,17 @@ public class Path implements ConfigurationSerializable
      */
     public @NotNull Path reverse()
     {
-        return new Path(new ArrayList<>(locations).reversed(), new ArrayList<>(waypoints).reversed());
+        List<MoveType> reversedMoves = null;
+        if(moves != null)
+        {
+            int n = moves.size();
+            reversedMoves = new ArrayList<>(n);
+            for(int j = 0; j < n; j++)
+                reversedMoves.add(j == 0 ? MoveType.WALK : moves.get(n - j).reversed());
+        }
+
+        return new Path(new ArrayList<>(locations).reversed(), waypoints == null ? null : new ArrayList<>(waypoints).reversed(), reversedMoves)
+                .setName(name);
     }
 
     /**
@@ -144,7 +202,12 @@ public class Path implements ConfigurationSerializable
     @Override
     public @NotNull Map<String, Object> serialize()
     {
-        return Map.of("locations", new ArrayList<>(locations), "waypoints", new ArrayList<>(waypoints));
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("locations", new ArrayList<>(locations));
+        map.put("waypoints", waypoints == null ? new ArrayList<>() : new ArrayList<>(waypoints));
+        if(moves != null)
+            map.put("moves", moves.stream().map(Enum::name).toList());
+        return map;
     }
 
     /**
@@ -167,6 +230,7 @@ public class Path implements ConfigurationSerializable
 
         private final List<SerializableLocation> locations;
         private final List<SerializableLocation> waypoints;
+        private final List<String> moves;
 
         private final String name;
 
@@ -179,6 +243,7 @@ public class Path implements ConfigurationSerializable
         {
             locations = new ArrayList<>(path.locations.stream().map(SerializableLocation::new).toList());
             waypoints = path.waypoints == null ? null : new ArrayList<>(path.waypoints.stream().map(SerializableLocation::new).toList());
+            moves = path.moves == null ? null : new ArrayList<>(path.moves.stream().map(Enum::name).toList());
             name = path.getName();
         }
 
@@ -190,11 +255,24 @@ public class Path implements ConfigurationSerializable
          */
         public @NotNull Path toPath(World fallbackWorld)
         {
-            return new Path(locations.stream().map(serializableLocation -> serializableLocation.toLocation(fallbackWorld))
-                    .filter(location -> location.getWorld() != null).toList(),
-                    waypoints == null ? null : waypoints.stream().map(serializableLocation -> serializableLocation.toLocation(fallbackWorld))
-                            .filter(location -> location.getWorld() != null).toList())
-                    .setName(name);
+            List<Location> nodes = new ArrayList<>();
+            List<MoveType> nodeMoves = moves != null && moves.size() == locations.size() ? new ArrayList<>() : null;
+
+            for(int i = 0; i < locations.size(); i++)
+            {
+                Location location = locations.get(i).toLocation(fallbackWorld);
+                if(location.getWorld() == null)
+                    continue;
+
+                nodes.add(location);
+                if(nodeMoves != null)
+                    nodeMoves.add(parseMove(moves.get(i)));
+            }
+
+            List<Location> wp = waypoints == null ? null : waypoints.stream().map(serializableLocation -> serializableLocation.toLocation(fallbackWorld))
+                    .filter(location -> location.getWorld() != null).toList();
+
+            return new Path(nodes, wp, nodeMoves).setName(name);
         }
 
         /**

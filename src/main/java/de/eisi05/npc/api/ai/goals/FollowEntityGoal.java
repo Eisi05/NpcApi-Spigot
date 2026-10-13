@@ -2,29 +2,20 @@ package de.eisi05.npc.api.ai.goals;
 
 import de.eisi05.npc.api.ai.Goal;
 import de.eisi05.npc.api.objects.NPC;
-import de.eisi05.npc.api.objects.NpcOption;
-import de.eisi05.npc.api.pathfinding.BoundingBoxPathfinder;
-import de.eisi05.npc.api.utils.LocationUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.Serial;
-import java.lang.ref.WeakReference;
-import java.util.List;
-import java.util.Objects;
-import java.util.OptionalInt;
 import java.util.UUID;
 
 /**
  * A goal that makes the NPC follow a target entity. The NPC will maintain a specified distance from the target and pathfind to them if too far.
  */
-public class FollowEntityGoal extends Goal
+public class FollowEntityGoal extends EntityTargetGoal
 {
     @Serial
     private static final long serialVersionUID = 1L;
@@ -37,11 +28,18 @@ public class FollowEntityGoal extends Goal
     private double speed;
     private UUID targetEntityId;
 
+    private static final long RETRY_AFTER_FAILURE_MS = 500;
+
     private transient WalkToLocationGoal currentWalkGoal;
-    private transient LivingEntity target;
-    private transient int pathRecalculationCooldown;
-    private transient Location lastTargetLocation;
-    private transient List<WeakReference<Player>> cachedViewers;
+    private transient LookController look;
+    private transient long retryWalkAt;
+
+    private @NotNull LookController look()
+    {
+        if(look == null)
+            look = new LookController();
+        return look;
+    }
 
     /**
      * Creates a FollowEntityGoal with a fixed target entity ID and default distances.
@@ -77,7 +75,7 @@ public class FollowEntityGoal extends Goal
      */
     private FollowEntityGoal(@NotNull FollowEntityGoal goal)
     {
-        super(goal.getPriority());
+        super(goal);
         this.targetEntityId = goal.targetEntityId;
         this.followDistance = goal.followDistance;
         this.stopDistance = goal.stopDistance;
@@ -141,7 +139,7 @@ public class FollowEntityGoal extends Goal
      */
     public void setSpeed(double speed)
     {
-        this.speed = speed;
+        this.speed = Math.clamp(speed, 0.1, 1.0);
     }
 
     /**
@@ -162,40 +160,6 @@ public class FollowEntityGoal extends Goal
     public void setTargetEntityId(@NotNull UUID targetEntityId)
     {
         this.targetEntityId = targetEntityId;
-    }
-
-    /**
-     * Gets the current target location for this goal.
-     *
-     * @param npc the NPC to use for location calculations
-     * @return the current target location, or null if no target is set
-     */
-    private @Nullable Location getTargetLocation(@NotNull NPC npc)
-    {
-        if(target == null || target.getWorld() == null)
-            return null;
-
-        Location location = target.getLocation().clone();
-        World world = location.getWorld();
-        int minHeight = world.getMinHeight();
-
-        double scale = npc.getOption(NpcOption.SCALE);
-        double entityWidth = npc.entity.getBoundingBox().getXSize() * scale;
-
-        while (location.getY() >= minHeight)
-        {
-            BoundingBoxPathfinder.FootSupport support = BoundingBoxPathfinder.resolveGroundSupport(
-                    world, location.getX(), location.getY(), location.getZ(), entityWidth);
-
-            if (support.valid())
-            {
-                location.setY(support.feetY());
-                return location;
-            }
-            location.subtract(0, 0.5, 0);
-        }
-
-        return target.getLocation();
     }
 
     /**
@@ -231,8 +195,8 @@ public class FollowEntityGoal extends Goal
         if(!npcLoc.getWorld().equals(targetLoc.getWorld()))
             return false;
 
-        double distance = npcLoc.distance(targetLoc);
-        return distance <= followDistance && distance > stopDistance;
+        double distanceSq = npcLoc.distanceSquared(targetLoc);
+        return distanceSq <= followDistance * followDistance && distanceSq > stopDistance * stopDistance;
     }
 
     /**
@@ -245,27 +209,20 @@ public class FollowEntityGoal extends Goal
     {
         Entity entity = Bukkit.getEntity(targetEntityId);
 
-        if(!(entity instanceof LivingEntity le))
+        if(!(entity instanceof LivingEntity le) || !le.isValid())
             return;
 
         this.target = le;
-        this.pathRecalculationCooldown = 0;
-        Location targetLoc = getTargetLocation(npc);
-        if(targetLoc == null && target != null)
-            targetLoc = target.getLocation().clone();
+        this.retryWalkAt = 0;
+        look().reset();
 
-        if(target != null && target.isValid())
-        {
-            this.lastTargetLocation = targetLoc.clone();
-            currentWalkGoal = new WalkToLocationGoal.Builder(targetLoc).speed(speed).withRotation(false).build();
-            currentWalkGoal.start(npc);
-        }
-
-        updateCachedViewers(npc);
+        Location ground = getTargetGround(npc);
+        if(ground != null)
+            startWalking(npc, ground);
     }
 
     /**
-     * Ticks the follow goal, updating movement and path recalculation.
+     * Ticks the follow goal: keeps looking at the target and keeps one walk goal retargeted at the target's ground position.
      *
      * @param npc the NPC to update
      */
@@ -275,7 +232,7 @@ public class FollowEntityGoal extends Goal
         if(target == null || !target.isValid())
         {
             Entity entity = Bukkit.getEntity(targetEntityId);
-            if(entity instanceof LivingEntity newTarget && newTarget != null && newTarget.isValid())
+            if(entity instanceof LivingEntity newTarget && newTarget.isValid())
                 target = newTarget;
             else
             {
@@ -284,76 +241,39 @@ public class FollowEntityGoal extends Goal
             }
         }
 
-        Location targetLoc = getTargetLocation(npc);
-        if(targetLoc == null)
-            targetLoc = target.getLocation().clone();
+        look().lookAt(npc, target);
 
-        if(cachedViewers == null || cachedViewers.size() != npc.getViewers().size())
-            updateCachedViewers(npc);
+        Location ground = getTargetGround(npc);
+        if(ground == null)
+            return;
 
-        for(WeakReference<Player> viewer : cachedViewers)
-            npc.lookAtEntity(target, viewer.get(), true);
-
-        targetLoc.setYaw(npc.getLocation().getYaw());
-        targetLoc.setPitch(npc.getLocation().getPitch());
-
-        OptionalInt safeY = LocationUtils.findSafeY(targetLoc, npc);
-        targetLoc.setY(safeY.isPresent() ? safeY.getAsInt() : targetLoc.getY());
-
-        double distance = npc.getLocation().distance(targetLoc);
-        if(distance <= stopDistance)
+        double distanceSq = npc.getLocation().distanceSquared(ground);
+        if(distanceSq <= stopDistance * stopDistance)
         {
-            if(currentWalkGoal != null)
-            {
-                currentWalkGoal.stop(npc);
-                currentWalkGoal = null;
-            }
+            stopWalking(npc);
             return;
         }
 
-        double startWalkingThreshold = stopDistance + 0.75;
+        if(currentWalkGoal != null && !currentWalkGoal.isActive())
+        {
+            if(currentWalkGoal.isUnreachable())
+                retryWalkAt = System.currentTimeMillis() + RETRY_AFTER_FAILURE_MS;
+            currentWalkGoal = null;
+        }
+
         if(currentWalkGoal == null)
         {
-            if(distance < startWalkingThreshold)
-                return;
-
-            currentWalkGoal = new WalkToLocationGoal.Builder(targetLoc).speed(speed).withRotation(false).build();
-            currentWalkGoal.start(npc);
-            pathRecalculationCooldown = 10;
-            lastTargetLocation = targetLoc.clone();
+            double startWalkingThreshold = stopDistance + 0.75;
+            if(distanceSq >= startWalkingThreshold * startWalkingThreshold && System.currentTimeMillis() >= retryWalkAt)
+                startWalking(npc, ground);
+            return;
         }
-        else
-        {
-            Location currentTarget = currentWalkGoal.getTargetLocation(npc.getLocation().getWorld());
-            double horizontalDistSq = Math.pow(currentTarget.getX() - targetLoc.getX(), 2) + Math.pow(currentTarget.getZ() - targetLoc.getZ(), 2);
-            boolean shouldRecalculate = horizontalDistSq > 4.0;
 
-            if(!shouldRecalculate && lastTargetLocation != null)
-            {
-                double verticalChange = Math.abs(targetLoc.getY() - lastTargetLocation.getY());
-                if(verticalChange > 1.5)
-                    shouldRecalculate = true;
-            }
+        double tolerance = Math.clamp(Math.sqrt(distanceSq) * 0.2, 1.0, 4.0);
+        if(currentWalkGoal.horizontalTargetDistanceSq(ground) > tolerance * tolerance || currentWalkGoal.verticalTargetDistance(ground) > 1.5)
+            currentWalkGoal.updateTargetLocation(ground.clone(), npc);
 
-            boolean isMidAir = npc.getLocation().clone().subtract(0, 0.1, 0).getBlock().getType().isAir();
-            if(!shouldRecalculate && pathRecalculationCooldown <= 0)
-            {
-                if(!isMidAir && horizontalDistSq > 1.0)
-                    shouldRecalculate = true;
-                pathRecalculationCooldown = 15;
-            }
-
-            if(shouldRecalculate)
-            {
-                currentWalkGoal.updateTargetLocation(targetLoc, npc);
-                pathRecalculationCooldown = 15;
-                lastTargetLocation = targetLoc.clone();
-            }
-            else
-                pathRecalculationCooldown--;
-
-            currentWalkGoal.tick(npc);
-        }
+        currentWalkGoal.tick(npc);
     }
 
     /**
@@ -364,23 +284,12 @@ public class FollowEntityGoal extends Goal
     @Override
     public void stop(@NotNull NPC npc)
     {
-        if(currentWalkGoal != null)
-        {
-            currentWalkGoal.stop(npc);
-            currentWalkGoal = null;
-        }
-
-        if(cachedViewers == null || cachedViewers.size() != npc.getViewers().size())
-            updateCachedViewers(npc);
+        stopWalking(npc);
 
         if(target != null)
-        {
-            for(WeakReference<Player> viewer : cachedViewers)
-                npc.lookAtEntity(target, viewer.get(), true);
-        }
+            look().lookAt(npc, target);
 
         target = null;
-        lastTargetLocation = null;
     }
 
     /**
@@ -404,8 +313,9 @@ public class FollowEntityGoal extends Goal
         if(!npcLoc.getWorld().equals(targetLoc.getWorld()))
             return false;
 
-        double distance = npcLoc.distance(targetLoc);
-        return distance <= followDistance * 2 && distance > stopDistance;
+        double distanceSq = npcLoc.distanceSquared(targetLoc);
+        double maxDistance = followDistance * 2;
+        return distanceSq <= maxDistance * maxDistance && distanceSq > stopDistance * stopDistance;
     }
 
     @Override
@@ -431,15 +341,19 @@ public class FollowEntityGoal extends Goal
         return new FollowEntityGoal(this);
     }
 
-    /**
-     * Updates the cached viewers list.
-     */
-    private void updateCachedViewers(@NotNull NPC npc)
+    private void startWalking(@NotNull NPC npc, @NotNull Location ground)
     {
-        cachedViewers = npc.getViewers().stream()
-                .map(Bukkit::getPlayer)
-                .filter(Objects::nonNull)
-                .map(WeakReference::new)
-                .toList();
+        stopWalking(npc);
+        currentWalkGoal = new WalkToLocationGoal.Builder(ground.clone()).pathfinder(pathfinder).speed(speed).withRotation(false).build();
+        currentWalkGoal.start(npc);
+    }
+
+    private void stopWalking(@NotNull NPC npc)
+    {
+        if(currentWalkGoal != null)
+        {
+            currentWalkGoal.stop(npc);
+            currentWalkGoal = null;
+        }
     }
 }

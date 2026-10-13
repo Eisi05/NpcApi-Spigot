@@ -10,8 +10,8 @@ import de.eisi05.npc.api.manager.NpcCombatManager;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcOption;
-import de.eisi05.npc.api.pathfinding.AbstractPathfinder;
-import de.eisi05.npc.api.pathfinding.BoundingBoxPathfinder;
+import de.eisi05.npc.api.pathfinding.algorithm.AbstractPathfinder;
+import de.eisi05.npc.api.pathfinding.algorithm.BoundingBoxPathfinder;
 import de.eisi05.npc.api.utils.Reflections;
 import de.eisi05.npc.api.utils.Var;
 import de.eisi05.npc.api.utils.Versions;
@@ -40,9 +40,9 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class NpcDamageListener implements Listener
@@ -58,8 +58,13 @@ public class NpcDamageListener implements Listener
     private static final Map<NPC, CombatState> states = new WeakHashMap<>();
     private static final Map<UUID, Integer> lastAttackTicks = new HashMap<>();
 
-    private static final Map<Projectile, Location> activeProjectiles = new ConcurrentHashMap<>();
+    private static final Map<Projectile, Location> activeProjectiles = new HashMap<>();
     private static BukkitTask projectileTask;
+
+    public static void cleanUpAttack(@NotNull Player player)
+    {
+        lastAttackTicks.remove(player.getUniqueId());
+    }
 
     public static BukkitTask startProjectileTracker()
     {

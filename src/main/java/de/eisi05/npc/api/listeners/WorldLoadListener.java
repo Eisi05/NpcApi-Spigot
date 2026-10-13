@@ -9,7 +9,6 @@ import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 
-import java.util.ArrayList;
 import java.util.Collection;
 
 public class WorldLoadListener implements Listener
@@ -30,10 +29,9 @@ public class WorldLoadListener implements Listener
         int chunkZ = event.getChunk().getZ();
 
         Collection<Player> players = event.getWorld().getPlayers();
-        new ArrayList<>(NpcManager.getList())
+        NpcManager.getNpcsInChunk(chunkX, chunkZ)
                 .stream()
                 .filter(npc -> npc.getLocation().getWorld().getUID().equals(event.getWorld().getUID()))
-                .filter(npc -> (npc.getLocation().getBlockX() >> 4) == chunkX && ((npc.getLocation().getBlockZ() >> 4) == chunkZ))
                 .forEach(npc ->
                         players.forEach(player ->
                         {
@@ -55,10 +53,9 @@ public class WorldLoadListener implements Listener
         int chunkZ = event.getChunk().getZ();
 
         Collection<Player> players = event.getWorld().getPlayers();
-        new ArrayList<>(NpcManager.getList())
+        NpcManager.getNpcsInChunk(chunkX, chunkZ)
                 .stream()
                 .filter(npc -> npc.getLocation().getWorld().getUID().equals(event.getWorld().getUID()))
-                .filter(npc -> (npc.getLocation().getBlockX() >> 4) == chunkX && ((npc.getLocation().getBlockZ() >> 4) == chunkZ))
                 .forEach(npc -> players.forEach(npc::hideNpcFromPlayer));
     }
 }

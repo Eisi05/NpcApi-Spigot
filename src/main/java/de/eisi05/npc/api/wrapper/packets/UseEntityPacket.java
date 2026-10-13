@@ -9,12 +9,12 @@ import org.jetbrains.annotations.Nullable;
 
 @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "net.minecraft.network.protocol.game.ServerboundInteractPacket")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayInUseEntity")
-public class UseEntityPacketWrapper extends PacketWrapper.PacketHolder
+public class UseEntityPacket extends PacketWrapper.PacketHolder
 {
     @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "e")
     public final static Action ATTACK_ACTION = new Action(getStaticWrappedFieldValue("ATTACK_ACTION").orElse(null));
 
-    protected UseEntityPacketWrapper(Object handle)
+    protected UseEntityPacket(Object handle)
     {
         super(handle);
     }

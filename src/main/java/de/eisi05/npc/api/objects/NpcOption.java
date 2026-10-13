@@ -13,6 +13,7 @@ import de.eisi05.npc.api.enums.SkinParts;
 import de.eisi05.npc.api.manager.NpcCombatManager;
 import de.eisi05.npc.api.manager.NpcManager;
 import de.eisi05.npc.api.manager.NpcVisibilityManager;
+import de.eisi05.npc.api.movement.MovementReplayer;
 import de.eisi05.npc.api.scheduler.Tasks;
 import de.eisi05.npc.api.utils.*;
 import de.eisi05.npc.api.utils.serialize.ItemSerializer;
@@ -422,7 +423,7 @@ public class NpcOption<T, S extends Serializable>
                         data.set(WrappedEntityData.EntityDataSerializers.BYTE.create(8), (byte) (handFlag & ~0x04));
                 }
 
-                if(pose == Pose.SLEEPING)
+                if(pose == Pose.SLEEPING && !MovementReplayer.isReplaying(npc))
                 {
                     new BukkitRunnable()
                     {
@@ -442,7 +443,7 @@ public class NpcOption<T, S extends Serializable>
                         }
                     }.runTaskTimer(NpcApi.plugin, 10, 5);
                 }
-                else
+                else if(!MovementReplayer.isReplaying(npc))
                 {
                     new BukkitRunnable()
                     {
@@ -961,10 +962,24 @@ public class NpcOption<T, S extends Serializable>
      */
     public @NotNull Optional<PacketWrapper> getPacket(@NotNull NPC npc, @NotNull Player player)
     {
+        return getPacket(npc, player, npc.getOption(this, player));
+    }
+
+    /**
+     * Generates the network packet(s) needed to apply this option's value to an NPC for a specific player. The method checks for version compatibility before
+     * generating the packet.
+     *
+     * @param npc    The {@link NPC} to apply the option to. Must not be null.
+     * @param player The {@link Player} who will receive the update. Must not be null.
+     * @param value  The value to apply to the option.
+     * @return An {@link Optional} containing the {@link PacketWrapper} if one is generated and the option is compatible, otherwise an empty Optional.
+     */
+    public @NotNull Optional<PacketWrapper> getPacket(@NotNull NPC npc, Player player, T value)
+    {
         if(packet == null || !isCompatible())
             return Optional.empty();
 
-        return Optional.ofNullable(packet.apply(npc.getOption(this, player), npc, player));
+        return Optional.ofNullable(packet.apply(value, npc, player));
     }
 
     @Override

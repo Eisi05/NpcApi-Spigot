@@ -5,9 +5,9 @@ import de.eisi05.npc.api.wrapper.Mapping;
 
 @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "net.minecraft.network.protocol.game.ServerboundUseItemPacket")
 @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21_11), path = "net.minecraft.network.protocol.game.PacketPlayInUseItem")
-public class UseItemPacketWrapper extends PacketWrapper.PacketHolder
+public class UseItemPacket extends PacketWrapper.PacketHolder
 {
-    protected UseItemPacketWrapper(Object handle)
+    protected UseItemPacket(Object handle)
     {
         super(handle);
     }

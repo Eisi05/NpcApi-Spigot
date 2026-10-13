@@ -5,6 +5,7 @@ import de.eisi05.npc.api.objects.NPC;
 import de.eisi05.npc.api.objects.NpcOption;
 import de.eisi05.npc.api.wrapper.enums.Pose;
 import org.bukkit.Location;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
@@ -40,6 +41,12 @@ public class LookAroundGoal extends Goal
     private transient boolean isLooking;
     private transient float rotationSpeed;
     private transient LivingEntity staringEntity;
+    private transient float currentYaw;
+    private transient float currentPitch;
+    private transient int lastYawByte;
+    private transient int lastPitchByte;
+    private transient int sinceSend;
+    private transient boolean hasSent;
 
     /**
      * Creates a LookAroundGoal with default duration.
@@ -134,10 +141,14 @@ public class LookAroundGoal extends Goal
     @Override
     public void start(@NotNull NPC npc)
     {
-        ticksRemaining = minDuration + ThreadLocalRandom.current().nextInt(maxDuration - minDuration);
+        ticksRemaining = randomDuration();
+        Location startLoc = npc.getLocation();
+        currentYaw = startLoc.getYaw();
+        currentPitch = startLoc.getPitch();
+        hasSent = false;
         isLooking = true;
         rotationSpeed = 0.05f + ThreadLocalRandom.current().nextFloat() * 0.15f;
-        pickNewLookDirection(npc);
+        pickNewLookDirection();
     }
 
     /**
@@ -151,17 +162,13 @@ public class LookAroundGoal extends Goal
         if(ticksRemaining <= 0 && staringEntity == null)
         {
             decideNextAction(npc);
-            ticksRemaining = minDuration + ThreadLocalRandom.current().nextInt(maxDuration - minDuration);
+            ticksRemaining = randomDuration();
         }
 
         if(staringEntity != null && ticksRemaining > 0)
             lookAtEntity(npc, staringEntity);
         else if(staringEntity != null)
             staringEntity = null;
-
-        Location currentLoc = npc.getLocation();
-        float currentYaw = currentLoc.getYaw();
-        float currentPitch = currentLoc.getPitch();
 
         float newYaw, newPitch;
         if(staringEntity != null && ticksRemaining > 0)
@@ -177,11 +184,26 @@ public class LookAroundGoal extends Goal
 
         newPitch = Math.clamp(newPitch, -PITCH_MIN_MAX, PITCH_MIN_MAX);
 
-        currentLoc.setYaw(newYaw);
-        currentLoc.setPitch(newPitch);
+        currentYaw = newYaw;
+        currentPitch = newPitch;
 
-        npc.rotateHead(newYaw, newPitch);
-        npc.setLocation(currentLoc);
+        int yawByte = (byte) (newYaw * 256 / 360);
+        int pitchByte = (byte) (newPitch * 256 / 360);
+        sinceSend++;
+        if(!hasSent || yawByte != lastYawByte || pitchByte != lastPitchByte || sinceSend >= 20)
+        {
+            hasSent = true;
+            lastYawByte = yawByte;
+            lastPitchByte = pitchByte;
+            sinceSend = 0;
+
+            Location currentLoc = npc.getLocation();
+            currentLoc.setYaw(newYaw);
+            currentLoc.setPitch(newPitch);
+
+            npc.rotateHead(newYaw, newPitch);
+            npc.setLocation(currentLoc);
+        }
 
         ticksRemaining--;
     }
@@ -197,6 +219,14 @@ public class LookAroundGoal extends Goal
         isLooking = false;
         ticksRemaining = 0;
         staringEntity = null;
+
+        if(hasSent)
+        {
+            Location currentLoc = npc.getLocation();
+            currentLoc.setYaw(currentYaw);
+            currentLoc.setPitch(currentPitch);
+            npc.setLocation(currentLoc);
+        }
     }
 
     /**
@@ -239,7 +269,7 @@ public class LookAroundGoal extends Goal
             rotationSpeed = 0.02f + ThreadLocalRandom.current().nextFloat() * 0.03f;
         else
         {
-            pickNewLookDirection(npc);
+            pickNewLookDirection();
             rotationSpeed = 0.05f + ThreadLocalRandom.current().nextFloat() * 0.15f;
         }
     }
@@ -252,7 +282,7 @@ public class LookAroundGoal extends Goal
         Location npcLoc = npc.getLocation();
         for(Entity entity : npcLoc.getWorld().getNearbyEntities(npcLoc, ENTITY_LOOK_RANGE, ENTITY_LOOK_RANGE, ENTITY_LOOK_RANGE))
         {
-            if(entity instanceof LivingEntity livingEntity && !entity.equals(npc.entity.getBukkitPlayer()))
+            if(entity instanceof LivingEntity livingEntity && !(entity instanceof ArmorStand) && entity.isValid() && !entity.equals(npc.entity.getBukkitPlayer()))
                 return livingEntity;
         }
         return null;
@@ -284,12 +314,8 @@ public class LookAroundGoal extends Goal
     /**
      * Picks a new random look direction.
      */
-    private void pickNewLookDirection(@NotNull NPC npc)
+    private void pickNewLookDirection()
     {
-        Location currentLoc = npc.getLocation();
-        float currentYaw = currentLoc.getYaw();
-        float currentPitch = currentLoc.getPitch();
-
         float yawMultiplier = ThreadLocalRandom.current().nextDouble() < 0.3 ? 1.5f : 1.0f;
         targetYaw = currentYaw + (ThreadLocalRandom.current().nextFloat() * 2 - 1) * YAW_CHANGE_MAX * yawMultiplier;
 
@@ -303,6 +329,11 @@ public class LookAroundGoal extends Goal
             targetPitch = currentPitch + ThreadLocalRandom.current().nextFloat() * PITCH_CHANGE_MAX;
         else
             targetPitch = currentPitch + (ThreadLocalRandom.current().nextFloat() * 2 - 1) * maxPitchChange;
+    }
+
+    private int randomDuration()
+    {
+        return minDuration + ThreadLocalRandom.current().nextInt(Math.max(1, maxDuration - minDuration));
     }
 
     /**

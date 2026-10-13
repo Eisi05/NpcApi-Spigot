@@ -8,22 +8,55 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
 
 /**
- * Manages and selects goals for an NPC. The goal selector evaluates all available goals each tick and selects the highest priority goal that can be used.
+ * Manages and selects goals for an NPC. The goal selector evaluates the available goals and selects the highest priority goal that can be used.
+ * <p>
+ * Runs once per tick for <b>every</b> NPC with goals, so it is written to be cheap:
+ * <ul>
+ *     <li><b>No per-tick allocation</b>: the goal list is cached (rebuilt when it changes) and selection uses reusable buffers instead of copies and streams.</li>
+ *     <li><b>No pointless evaluation</b>: while the running goal cannot be interrupted, only {@link Goal.Priority#ALWAYS} goals can take over, so only those
+ *     are evaluated. {@code canUse} of all other goals - which can mean expression predicates, entity searches or pathfinding checks - is not called.</li>
+ *     <li><b>Idle throttling</b>: an NPC that has no goal running and that nobody can see only re-evaluates every {@link #getIdleSelectionInterval()} ticks,
+ *     and can optionally not start goals at all ({@link #setPauseWithoutViewers(boolean)}).</li>
+ *     <li><b>Error isolation</b>: a goal that throws is stopped and logged (rate limited) instead of breaking the selector or spamming the console every
+ *     tick.</li>
+ * </ul>
  */
 public class GoalSelector
 {
+    private static final int DEFAULT_IDLE_SELECTION_INTERVAL = 20;
+    private static final int FULL_REFRESH_TICKS = 100;
+    private static final int ERROR_COOLDOWN_TICKS = 40;
+    private static final long ERROR_LOG_INTERVAL_MS = 10_000;
+
     private final NPC npc;
     private final Set<Goal> removalQueue = new HashSet<>();
+    private final List<Goal> usableBuffer = new ArrayList<>();
+    private final Map<String, Long> lastErrorLog = new HashMap<>();
+
     private Goal currentGoal;
     private BukkitTask task;
     private boolean running;
     private long tickInterval;
+
+    private boolean pauseWithoutViewers = false;
+    private int idleSelectionInterval = DEFAULT_IDLE_SELECTION_INTERVAL;
+    private int idleCounter = DEFAULT_IDLE_SELECTION_INTERVAL;
+    private int errorCooldown;
+
+    private List<Goal> cachedSource;
+    private int cachedSize = -1;
+    private int refreshCounter;
+    private Goal[] goals = new Goal[0];
+    private Goal[] alwaysGoals = new Goal[0];
 
     /**
      * Creates a new GoalSelector for the specified NPC.
@@ -45,6 +78,7 @@ public class GoalSelector
     public @NotNull GoalSelector addGoal(@NotNull Goal goal)
     {
         npc.addGoal(goal);
+        invalidateGoalCache();
         return this;
     }
 
@@ -57,6 +91,7 @@ public class GoalSelector
     public @NotNull GoalSelector removeGoal(@NotNull Goal goal)
     {
         npc.removeGoal(goal);
+        invalidateGoalCache();
         return this;
     }
 
@@ -70,7 +105,7 @@ public class GoalSelector
     {
         if(currentGoal == goal)
         {
-            currentGoal.stop(npc);
+            safeStop(currentGoal);
             currentGoal = null;
         }
         return this;
@@ -142,6 +177,7 @@ public class GoalSelector
             return;
 
         running = true;
+        idleCounter = idleSelectionInterval;
         task = Bukkit.getScheduler().runTaskTimer(NpcApi.plugin, this::tick, 0L, tickInterval);
     }
 
@@ -162,7 +198,7 @@ public class GoalSelector
 
         if(currentGoal != null)
         {
-            currentGoal.stop(npc);
+            safeStop(currentGoal);
             currentGoal = null;
         }
     }
@@ -203,6 +239,47 @@ public class GoalSelector
     }
 
     /**
+     * @return whether the NPC does not start new goals while nobody can see it
+     */
+    public boolean isPauseWithoutViewers()
+    {
+        return pauseWithoutViewers;
+    }
+
+    /**
+     * If enabled, an NPC that has no goal running does not start one while it has no viewers (like entities in unloaded areas, it simply waits until someone
+     * can see it). Goals that are already running finish normally. Default: false.
+     * <p>
+     * This is the single biggest saving on servers with many NPCs in places where no player is around, at the price that unobserved NPCs do not wander,
+     * patrol or fight until a player comes near.
+     *
+     * @param pauseWithoutViewers true to pause goal selection for NPCs without viewers
+     */
+    public void setPauseWithoutViewers(boolean pauseWithoutViewers)
+    {
+        this.pauseWithoutViewers = pauseWithoutViewers;
+    }
+
+    /**
+     * @return how many ticks an idle NPC without viewers waits between goal evaluations
+     */
+    public int getIdleSelectionInterval()
+    {
+        return idleSelectionInterval;
+    }
+
+    /**
+     * Sets how many ticks an NPC that has no goal running and no viewers waits between goal evaluations (default 20). NPCs with viewers are always evaluated
+     * every tick.
+     *
+     * @param ticks the interval in ticks, at least 1
+     */
+    public void setIdleSelectionInterval(int ticks)
+    {
+        this.idleSelectionInterval = Math.max(1, ticks);
+    }
+
+    /**
      * Manually forces a specific goal to start, bypassing normal selection. This is useful for triggering goals based on external events.
      *
      * @param goal The goal to force start
@@ -213,10 +290,56 @@ public class GoalSelector
             return;
 
         if(currentGoal != null)
-            currentGoal.stop(npc);
+            safeStop(currentGoal);
 
-        currentGoal = goal;
-        currentGoal.start(npc);
+        currentGoal = null;
+        if(safeStart(goal))
+            currentGoal = goal;
+    }
+
+    private void invalidateGoalCache()
+    {
+        cachedSize = -1;
+    }
+
+    /**
+     * Rebuilds the cached goal arrays when the NPC's goal list changed (detected by identity and size, plus a periodic full refresh).
+     */
+    private void refreshGoals()
+    {
+        List<Goal> source = npc.getGoals();
+        int size = source == null ? 0 : source.size();
+
+        if(source == cachedSource && size == cachedSize && ++refreshCounter < FULL_REFRESH_TICKS)
+            return;
+
+        refreshCounter = 0;
+        cachedSource = source;
+        cachedSize = size;
+
+        if(source == null || size == 0)
+        {
+            goals = new Goal[0];
+            alwaysGoals = new Goal[0];
+            return;
+        }
+
+        goals = source.toArray(new Goal[0]);
+
+        int always = 0;
+        for(Goal goal : goals)
+        {
+            if(goal.getPriority() == Goal.Priority.ALWAYS)
+                always++;
+        }
+
+        alwaysGoals = new Goal[always];
+        int i = 0;
+        for(Goal goal : goals)
+        {
+            if(goal.getPriority() == Goal.Priority.ALWAYS)
+                alwaysGoals[i++] = goal;
+        }
     }
 
     /**
@@ -234,6 +357,7 @@ public class GoalSelector
             {
                 removalQueue.remove(goal);
                 npc.removeGoal(goal);
+                invalidateGoalCache();
 
                 if(goal == currentGoal)
                     currentGoal = null;
@@ -242,88 +366,258 @@ public class GoalSelector
     }
 
     /**
+     * Picks one of the usable {@link Goal.Priority#ALWAYS} goals. The running goal is kept if it is still usable, so two always-usable goals do not flip back
+     * and forth every tick.
+     */
+    private @Nullable Goal selectAlways(@Nullable Goal current)
+    {
+        List<Goal> usable = usableBuffer;
+        usable.clear();
+
+        for(Goal goal : alwaysGoals)
+        {
+            if(!removalQueue.contains(goal) && safeCanUse(goal))
+                usable.add(goal);
+        }
+
+        if(usable.isEmpty())
+            return null;
+
+        if(current != null && usable.contains(current))
+            return current;
+
+        return usable.get(ThreadLocalRandom.current().nextInt(usable.size()));
+    }
+
+    /**
+     * Evaluates every goal and picks one: an {@link Goal.Priority#ALWAYS} goal if one is usable, otherwise a weighted random choice by priority.
+     */
+    private @Nullable Goal selectAny(@Nullable Goal current)
+    {
+        Goal always = selectAlways(current);
+        if(always != null)
+            return always;
+
+        List<Goal> usable = usableBuffer;
+        usable.clear();
+
+        for(Goal goal : goals)
+        {
+            if(goal.getPriority() != Goal.Priority.ALWAYS && !removalQueue.contains(goal) && safeCanUse(goal))
+                usable.add(goal);
+        }
+
+        if(usable.isEmpty())
+            return null;
+
+        if(usable.size() == 1)
+            return usable.getFirst();
+
+        int totalWeight = 0;
+        for(Goal goal : usable)
+            totalWeight += goal.getPriority().weight;
+
+        if(totalWeight == 0)
+            return usable.get(ThreadLocalRandom.current().nextInt(usable.size()));
+
+        int randomWeight = ThreadLocalRandom.current().nextInt(totalWeight);
+        int currentWeight = 0;
+        for(Goal goal : usable)
+        {
+            currentWeight += goal.getPriority().weight;
+            if(randomWeight < currentWeight)
+                return goal;
+        }
+        return usable.getLast();
+    }
+
+    /**
+     * Whether an NPC without a running goal should skip evaluation this tick.
+     */
+    private boolean idleThrottled()
+    {
+        if(!npc.getViewers().isEmpty())
+        {
+            idleCounter = idleSelectionInterval;
+            return false;
+        }
+
+        if(pauseWithoutViewers)
+            return true;
+
+        if(++idleCounter < idleSelectionInterval)
+            return true;
+
+        idleCounter = 0;
+        return false;
+    }
+
+    /**
      * The main tick method that evaluates and executes goals.
      */
     private void tick()
     {
+        if(errorCooldown > 0)
+        {
+            errorCooldown--;
+            return;
+        }
+
         processRemovalQueue();
+        refreshGoals();
 
-        List<Goal> usableGoals = getGoals().stream()
-                .filter(goal -> goal.canUse(npc))
-                .toList();
+        Goal current = currentGoal;
 
-        List<Goal> alwaysGoals = usableGoals.stream()
-                .filter(goal -> goal.getPriority() == Goal.Priority.ALWAYS)
-                .toList();
+        Goal selected;
+        if(current == null)
+        {
+            if(goals.length == 0 || idleThrottled())
+                return;
 
-        Goal selectedGoal;
-        if(!alwaysGoals.isEmpty())
-            selectedGoal = alwaysGoals.get(ThreadLocalRandom.current().nextInt(alwaysGoals.size()));
+            selected = selectAny(null);
+        }
         else
         {
-            if(usableGoals.isEmpty())
-                selectedGoal = null;
-            else if(usableGoals.size() == 1)
-                selectedGoal = usableGoals.getFirst();
-            else
-            {
-                int totalWeight = usableGoals.stream()
-                        .mapToInt(goal -> goal.getPriority().weight)
-                        .sum();
-
-                if(totalWeight == 0)
-                    selectedGoal = usableGoals.get(ThreadLocalRandom.current().nextInt(usableGoals.size()));
-                else
-                {
-                    int randomWeight = ThreadLocalRandom.current().nextInt(totalWeight);
-                    int currentWeight = 0;
-
-                    selectedGoal = null;
-                    for(Goal goal : usableGoals)
-                    {
-                        currentWeight += goal.getPriority().weight;
-                        if(randomWeight < currentWeight)
-                        {
-                            selectedGoal = goal;
-                            break;
-                        }
-                    }
-
-                    if(selectedGoal == null)
-                        selectedGoal = usableGoals.getLast();
-                }
-            }
+            selected = selectAlways(current);
+            if(selected == null && safeCanBeInterrupted(current))
+                selected = selectAny(current);
         }
 
-        if(currentGoal != null)
+        if(current != null)
         {
-            if(selectedGoal != null && selectedGoal != currentGoal)
+            if(selected != null && selected != current && (selected.getPriority() == Goal.Priority.ALWAYS || safeCanBeInterrupted(current)))
             {
-                if(selectedGoal.getPriority() == Goal.Priority.ALWAYS || currentGoal.canBeInterrupted(npc))
-                {
-                    currentGoal.stop(npc);
-                    currentGoal = selectedGoal;
-                    currentGoal.start(npc);
-                    return;
-                }
-            }
-
-            if(currentGoal.canContinue(npc))
-            {
-                currentGoal.tick(npc);
+                safeStop(current);
+                currentGoal = null;
+                if(safeStart(selected))
+                    currentGoal = selected;
                 return;
             }
-            else
+
+            if(safeCanContinue(current))
             {
-                currentGoal.stop(npc);
-                currentGoal = null;
+                if(!safeTick(current))
+                {
+                    safeStop(current);
+                    currentGoal = null;
+                }
+                return;
             }
+
+            safeStop(current);
+            currentGoal = null;
+
+            if(selected == null)
+                selected = selectAny(null);
         }
 
-        if(selectedGoal != null)
+        if(selected != null && safeStart(selected))
+            currentGoal = selected;
+    }
+
+    private boolean safeCanUse(@NotNull Goal goal)
+    {
+        try
         {
-            currentGoal = selectedGoal;
-            currentGoal.start(npc);
+            return goal.canUse(npc);
+        }
+        catch(Throwable throwable)
+        {
+            report(goal, "canUse", throwable);
+            return false;
+        }
+    }
+
+    private boolean safeCanContinue(@NotNull Goal goal)
+    {
+        try
+        {
+            return goal.canContinue(npc);
+        }
+        catch(Throwable throwable)
+        {
+            report(goal, "canContinue", throwable);
+            return false;
+        }
+    }
+
+    private boolean safeCanBeInterrupted(@NotNull Goal goal)
+    {
+        try
+        {
+            return goal.canBeInterrupted(npc);
+        }
+        catch(Throwable throwable)
+        {
+            report(goal, "canBeInterrupted", throwable);
+            return false;
+        }
+    }
+
+    private boolean safeStart(@NotNull Goal goal)
+    {
+        try
+        {
+            goal.start(npc);
+            return true;
+        }
+        catch(Throwable throwable)
+        {
+            report(goal, "start", throwable);
+            safeStop(goal);
+            return false;
+        }
+    }
+
+    private boolean safeTick(@NotNull Goal goal)
+    {
+        try
+        {
+            goal.tick(npc);
+            return true;
+        }
+        catch(Throwable throwable)
+        {
+            report(goal, "tick", throwable);
+            return false;
+        }
+    }
+
+    private void safeStop(@NotNull Goal goal)
+    {
+        try
+        {
+            goal.stop(npc);
+        }
+        catch(Throwable throwable)
+        {
+            report(goal, "stop", throwable);
+        }
+    }
+
+    /**
+     * Logs a failing goal (at most once per goal type every few seconds) and pauses the selector briefly, so a broken goal cannot flood the console or be
+     * restarted every single tick.
+     */
+    private void report(@NotNull Goal goal, @NotNull String phase, @NotNull Throwable throwable)
+    {
+        errorCooldown = ERROR_COOLDOWN_TICKS;
+
+        String key = goal.getClass().getName() + "#" + phase;
+        long now = System.currentTimeMillis();
+        Long last = lastErrorLog.get(key);
+        if(last != null && now - last < ERROR_LOG_INTERVAL_MS)
+            return;
+
+        lastErrorLog.put(key, now);
+        try
+        {
+            NpcApi.plugin.getLogger().log(Level.WARNING, "Goal " + goal.getClass().getSimpleName() + " threw an exception in " + phase + "(); the goal was stopped",
+                    throwable);
+        }
+        catch(Throwable ignored)
+        {
+            // never let logging break the selector
         }
     }
 }

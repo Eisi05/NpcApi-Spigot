@@ -2,6 +2,8 @@ package de.eisi05.npc.api.movement;
 
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.objects.NPC;
+import de.eisi05.npc.api.objects.NpcOption;
+import de.eisi05.npc.api.wrapper.objects.WrappedServerPlayer;
 import de.eisi05.npc.api.wrapper.packets.RotateHeadPacket;
 import de.eisi05.npc.api.wrapper.packets.TeleportEntityPacket;
 import org.bukkit.Bukkit;
@@ -168,7 +170,7 @@ public class MovementReplayer
             }
 
             Location startLocation = firstMovement.toLocation(world);
-
+            npc.setOption(NpcOption.POSE, firstMovement.getPose());
             if(viewers != null)
             {
                 for(Player p : viewers)
@@ -241,6 +243,15 @@ public class MovementReplayer
             }
 
             Location targetLocation = movement.toLocation(world);
+
+            for(Player player : viewers)
+                NpcOption.POSE.getPacket(npc, player, movement.getPose()).ifPresent(o -> WrappedServerPlayer.fromPlayer(player).sendPacket(o));
+
+            if(movement.getAnimation() != null)
+            {
+                for(Player player : viewers)
+                    npc.playAnimation(player, movement.getAnimation());
+            }
 
             // Check if this is a teleport (large distance) or smooth movement
             RotateHeadPacket head = new RotateHeadPacket(npc.entity, (byte) (targetLocation.getYaw() * 256 / 360));
