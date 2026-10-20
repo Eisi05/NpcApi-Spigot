@@ -27,6 +27,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Transformation;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -556,9 +557,11 @@ public class NpcOption<T, S extends Serializable>
                 else
                     entity = npc.entity;
 
+                double npcScale = npc.getOption(NpcOption.SCALE, player);
+
                 Location location = npc.getLocation();
-                if(npc.getOption(NpcOption.POSE) == org.bukkit.entity.Pose.SITTING)
-                    location = location.clone().subtract(0, npc.getOption(NpcOption.SCALE) * (entity.getDefaultBoundingBox().getYSize() / 3D),0);
+                if(npc.getOption(NpcOption.POSE) == Pose.SITTING)
+                    location = location.clone().subtract(0, npcScale * (entity.getDefaultBoundingBox().getYSize() / 3D),0);
                 entity.moveTo(location);
                 npc.serverPlayer.getNameTag().moveTo(location.clone().add(0, 0.25 + npc.getNpcName().getDisplayOptions().getHeight(), 0));
 
@@ -596,33 +599,35 @@ public class NpcOption<T, S extends Serializable>
                 data.set(WrappedEntityData.EntityDataSerializers.OPTIONAL_CHAT_COMPONENT.create(2), Optional.of(WrappedComponent.create("NPC").getHandle()));
                 data.set(WrappedEntityData.EntityDataSerializers.BOOLEAN.create(3), false);
 
-                if(entity.getBukkitPlayer() instanceof BlockDisplay display)
-                {
-                    Vector3f translation = display.getTransformation().getTranslation();
-                    if(!display.getPersistentDataContainer().has(NpcApi.displayKey, PersistentDataType.BOOLEAN))
-                    {
-                        display.getPersistentDataContainer().set(NpcApi.displayKey, PersistentDataType.BOOLEAN, true);
-                        data.set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(11),
-                                new Vector3f(translation.x - 0.5f, translation.y, translation.z - 0.5f));
-                    }
-                }
-
-                if(entity.getBukkitPlayer() instanceof ItemDisplay display)
-                {
-                    Vector3f translation = display.getTransformation().getTranslation();
-                    if(!display.getPersistentDataContainer().has(NpcApi.displayKey, PersistentDataType.BOOLEAN))
-                    {
-                        display.getPersistentDataContainer().set(NpcApi.displayKey, PersistentDataType.BOOLEAN, true);
-                        data.set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(11), new Vector3f(translation.x, translation.y + 0.5f, translation.z));
-                    }
-                }
-
-                packets.add(SetEntityDataPacket.createNoneDefaults(entity.getId(), data));
-
                 List<WrappedEntity<?>> passengers = new ArrayList<>();
                 if(entity.getBukkitPlayer() instanceof Display display)
                 {
-                    Vector3f scale = display.getTransformation().getScale();
+                    Transformation transformation = display.getTransformation();
+                    Vector3f translation = transformation.getTranslation();
+                    Vector3f scale = transformation.getScale();
+
+                    if(!display.getPersistentDataContainer().has(NpcApi.displayKey, PersistentDataType.LIST.floats()))
+                        display.getPersistentDataContainer().set(NpcApi.displayKey, PersistentDataType.LIST.floats(),
+                                Arrays.asList(scale.x, scale.y, scale.z, translation.x, translation.y, translation.z));
+                    else
+                    {
+                        var displayData = display.getPersistentDataContainer().get(NpcApi.displayKey, PersistentDataType.LIST.floats());
+                        scale.set(displayData.get(0), displayData.get(1), displayData.get(2));
+                        translation.set(displayData.get(3), displayData.get(4), displayData.get(5));
+                    }
+
+                    scale.mul((float) npcScale);
+
+                    if(display instanceof BlockDisplay)
+                        data.set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(11),
+                                new Vector3f(translation.x - (0.5f * scale.y), translation.y, translation.z - (0.5f * scale.y)));
+                    else
+                        data.set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(11),
+                                new Vector3f(translation.x, translation.y + (0.5f * scale.y), translation.z));
+
+                    data.set(WrappedEntityData.EntityDataSerializers.VECTOR3.create(12), scale);
+
+                    packets.add(SetEntityDataPacket.createNoneDefaults(entity.getId(), data));
 
                     WrappedInteraction interaction = WrappedInteraction.create(npc.getLocation().getWorld());
                     interaction.moveTo(npc.getLocation());
@@ -639,7 +644,10 @@ public class NpcOption<T, S extends Serializable>
                     packets.add(SetEntityDataPacket.create(interaction.getId(), displayData));
                 }
                 else
+                {
+                    packets.add(SetEntityDataPacket.createNoneDefaults(entity.getId(), data));
                     npc.name.getDisplayOptions().setHeight(0);
+                }
 
                 if(!npc.getOption(NpcOption.HIDE_NAMETAG, player))
                 {

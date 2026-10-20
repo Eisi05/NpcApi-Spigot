@@ -1,8 +1,7 @@
 package de.eisi05.npc.api.pathfinding.algorithm;
 
 import de.eisi05.npc.api.NpcApi;
-import de.eisi05.npc.api.pathfinding.PathResult;
-import de.eisi05.npc.api.pathfinding.PathingResult;
+import de.eisi05.npc.api.pathfinding.*;
 import de.eisi05.npc.api.pathfinding.environment.BlockProfile;
 import de.eisi05.npc.api.pathfinding.environment.BlockView;
 import de.eisi05.npc.api.pathfinding.environment.ChunkSnapshotView;
@@ -10,6 +9,7 @@ import de.eisi05.npc.api.pathfinding.environment.PassableOverrides;
 import de.eisi05.npc.api.pathfinding.movement.MoveType;
 import de.eisi05.npc.api.pathfinding.movement.NavCapabilities;
 import de.eisi05.npc.api.pathfinding.movement.NavOptions;
+import de.eisi05.npc.api.pathfinding.util.PathVisualizer;
 import de.eisi05.npc.api.pathfinding.util.PathfindingUtils;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -41,7 +41,7 @@ public abstract class AbstractPathfinder
     private @Nullable BlockView blockView;
     private @Nullable NavCapabilities capabilities;
     private @Nullable BooleanSupplier cancellation;
-    private @Nullable Consumer<Location> visualizer;
+    private @Nullable PathVisualizer visualizer;
     private PathingResult lastResult = PathingResult.NO_PATH;
     private int lastIterations;
 
@@ -80,8 +80,8 @@ public abstract class AbstractPathfinder
     }
 
     /**
-     * Retrieves the collision boxes for a block. Backed by the global {@link BlockProfile} cache (one entry per block state, no per-call allocation of Bukkit
-     * voxel shapes).
+     * Retrieves the collision boxes for a block. Backed by the global {@link BlockProfile} cache (one entry per block state, no per-call allocation of
+     * Bukkit voxel shapes).
      *
      * @param block the block to check
      * @return bounding box collection (block-local coordinates) for the block's current state
@@ -114,8 +114,8 @@ public abstract class AbstractPathfinder
     }
 
     /**
-     * Makes this pathfinder read blocks from the given view instead of creating its own snapshots. Used to share one prefetched view across all segments of a
-     * path. The view must only be used by this pathfinder (and thread) while it is set.
+     * Makes this pathfinder read blocks from the given view instead of creating its own snapshots. Used to share one prefetched view across all segments of
+     * a path. The view must only be used by this pathfinder (and thread) while it is set.
      *
      * @param view the view, or null to go back to per-search snapshots
      * @return this pathfinder
@@ -153,14 +153,27 @@ public abstract class AbstractPathfinder
     }
 
     /**
-     * Sets a visualizer callback that receives the location of every node visited during pathfinding. This can be used to display particles or other visual
-     * feedback to show which blocks are being explored. The callback is called on the main thread for synchronous searches and on the pathfinding thread for
-     * async searches.
+     * Sets a visualizer callback that receives the location of every <b>block</b> the search visited (deduplicated, so a fine grid does not report the same
+     * block several times). The callback is called on the main thread for synchronous searches and on the pathfinding thread for async searches. For more
+     * detail (final path, jumps, search front) use {@link #usePathVisualizer(PathVisualizer)}.
      *
-     * @param visualizer a consumer that receives visited node locations, or null to disable visualization
+     * @param visualizer a consumer that receives visited block locations, or null to disable visualization
      * @return this pathfinder
      */
     public @NotNull AbstractPathfinder useVisualizer(@Nullable Consumer<Location> visualizer)
+    {
+        this.visualizer = visualizer == null ? null : PathVisualizer.ofVisited(visualizer);
+        return this;
+    }
+
+    /**
+     * Sets a {@link PathVisualizer} that receives only the relevant events of the search: visited blocks, the search front, special moves and the final
+     * path.
+     *
+     * @param visualizer the visualizer, or null to disable visualization
+     * @return this pathfinder
+     */
+    public @NotNull AbstractPathfinder usePathVisualizer(@Nullable PathVisualizer visualizer)
     {
         this.visualizer = visualizer;
         return this;
@@ -175,9 +188,9 @@ public abstract class AbstractPathfinder
     }
 
     /**
-     * @return the visualizer set with {@link #useVisualizer(Consumer)}, or null
+     * @return the visualizer set with {@link #useVisualizer(Consumer)} or {@link #usePathVisualizer(PathVisualizer)}, or null
      */
-    protected @Nullable Consumer<Location> visualizer()
+    protected @Nullable PathVisualizer visualizer()
     {
         return visualizer;
     }
@@ -191,8 +204,8 @@ public abstract class AbstractPathfinder
     }
 
     /**
-     * Returns the outcome of the most recent {@link #getPathResult} call on this instance: {@link PathingResult#SUCCESS}, or the reason why it returned null /
-     * threw. Pathfinder instances are created per calculation, so this is only meaningful on the instance that did the calculation.
+     * Returns the outcome of the most recent {@link #getPathResult} call on this instance: {@link PathingResult#SUCCESS}, or the reason why it returned
+     * null / threw. Pathfinder instances are created per calculation, so this is only meaningful on the instance that did the calculation.
      *
      * @return the last result
      */
@@ -280,8 +293,8 @@ public abstract class AbstractPathfinder
     }
 
     /**
-     * Calculates a path from start to end and returns the points together with the {@link MoveType} of every point (walking, jumping, climbing, swimming, gap
-     * jumps, ...). This is the method pathfinder implementations provide; {@link #getPath(Location, Location, BiConsumer)} is derived from it.
+     * Calculates a path from start to end and returns the points together with the {@link MoveType} of every point (walking, jumping, climbing, swimming,
+     * gap jumps, ...). This is the method pathfinder implementations provide; {@link #getPath(Location, Location, BiConsumer)} is derived from it.
      *
      * @param start            The starting location
      * @param end              The target location
@@ -293,7 +306,8 @@ public abstract class AbstractPathfinder
             throws PathfindingUtils.PathfindingException;
 
     /**
-     * Interface representing a factory that creates Pathfinder instances. This avoids thread-safety issues by providing fresh instances per calculation.
+     * Interface representing a factory that creates Pathfinder instances. This avoids thread-safety issues by providing fresh instances per
+     * calculation.
      */
     public interface PathfinderFactory<T extends AbstractPathfinder>
     {
