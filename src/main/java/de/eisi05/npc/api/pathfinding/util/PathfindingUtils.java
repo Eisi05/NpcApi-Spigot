@@ -61,6 +61,7 @@ public class PathfindingUtils
 
             try
             {
+                System.out.println("FIND PATH ASYNC");
                 future.complete(findPathInternal(builder.factory, builder.waypoints, builder.maxIterations, builder.allowDiagonalMovement,
                         builder.entityHeight, builder.entityWidth, builder.capabilities, builder.progressListener,
                         future::isCancelled, builder.visualizer));
@@ -142,6 +143,7 @@ public class PathfindingUtils
         if(world != null)
             pathfinder.useBlockView(ChunkSnapshotView.create(world, waypoints));
 
+        System.out.println("FIND PATH INTERNAL");
         for(int i = 0; i < totalSegments; i++)
         {
             if(cancelled != null && cancelled.getAsBoolean())
