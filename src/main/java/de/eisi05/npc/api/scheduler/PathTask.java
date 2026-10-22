@@ -19,11 +19,16 @@ import de.eisi05.npc.api.wrapper.packets.SetEntityDataPacket;
 import de.eisi05.npc.api.wrapper.packets.TeleportEntityPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
+import org.bukkit.SoundGroup;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.Openable;
+import org.bukkit.block.data.type.Door;
 import org.bukkit.block.data.type.TrapDoor;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -45,6 +50,11 @@ public class PathTask extends BukkitRunnable
     private static final double GRAVITY = -0.08;
     private static final double TERMINAL_VELOCITY = -3.92;
     private static final double STEP_HEIGHT = 0.55;
+    private static final double STEP_SOUND_DISTANCE = 1.25;
+    private static final double CLIMB_SOUND_DISTANCE = 1.5;
+    private static final double FALL_SOUND_MIN_DISTANCE = 3.0;
+    private static final double LANDING_SOUND_MIN_FALL = 0.6;
+    private static final double UPHILL_SPEED_FACTOR = 0.72;
     private static final int STUCK_DETECTION_TICKS = 10;
     private static final double STUCK_THRESHOLD = 0.05;
 
@@ -79,6 +89,11 @@ public class PathTask extends BukkitRunnable
     private float previousYaw;
     private double verticalVelocity = 0.0;
     private int viewerRefreshTicks = 0;
+
+    private double stepSoundDistance;
+    private double climbSoundDistance;
+    private boolean soundWasGrounded = true;
+    private double soundPeakY;
     private boolean isWaitingForChunkLoad = false;
     private int positionHistoryIndex = 0;
     private int stuckCounter = 0;
@@ -303,6 +318,14 @@ public class PathTask extends BukkitRunnable
                     specialMovement = BodyCollider.slide(world, currentPos.getX(), currentPos.getY(), currentPos.getZ(), specialMovement, bodyHeight,
                             entityWidth);
                 currentPos.add(specialMovement);
+
+                if(motion.isJumping() || special.onGround())
+                    updateMovementSounds(world, 0, special.onGround(), false);
+                else if(motion.isClimbing())
+                    updateClimbSounds(world, Math.abs(special.dy()) + Math.hypot(special.dx(), special.dz()));
+                else
+                    resetMovementSounds();
+
                 verticalVelocity = 0;
                 sendSpecialMovement(specialMovement, special.onGround());
                 return;
@@ -318,6 +341,8 @@ public class PathTask extends BukkitRunnable
                         entityWidth);
 
             currentPos.add(movement);
+
+            updateMovementSounds(world, Math.hypot(movement.getX(), movement.getZ()), physics.isGrounded, crouching());
 
             detectAndHandleStuck();
 
@@ -453,6 +478,51 @@ public class PathTask extends BukkitRunnable
     }
 
     /**
+     * A door consists of two blocks. All handling (opening, closing, the sound, the list of opened doors) works on the lower half only, otherwise the same door
+     * is opened twice, once per half, and its sound is played twice.
+     */
+    private @NotNull Block doorBase(@NotNull Block block)
+    {
+        if(block.getBlockData() instanceof Door door && door.getHalf() == Bisected.Half.TOP)
+        {
+            Block lower = block.getRelative(BlockFace.DOWN);
+            if(lower.getBlockData() instanceof Door)
+                return lower;
+        }
+        return block;
+    }
+
+    /**
+     * Opens or closes a door, trapdoor or gate and plays the sound once. For a door both halves are switched, the upper one silently.
+     */
+    private void setOpen(@NotNull Block block, boolean open)
+    {
+        if(!(block.getBlockData() instanceof Openable openable) || openable.isOpen() == open)
+            return;
+
+        boolean trapdoor = block.getBlockData() instanceof TrapDoor;
+        openable.setOpen(open);
+        block.setBlockData(openable);
+
+        if(block.getBlockData() instanceof Door)
+        {
+            Block upper = block.getRelative(BlockFace.UP);
+            if(upper.getBlockData() instanceof Door upperDoor && upperDoor.getHalf() == Bisected.Half.TOP && upperDoor.isOpen() != open)
+            {
+                upperDoor.setOpen(open);
+                upper.setBlockData(upperDoor);
+            }
+        }
+
+        org.bukkit.Sound sound = open
+                ? (trapdoor ? org.bukkit.Sound.BLOCK_WOODEN_TRAPDOOR_OPEN : org.bukkit.Sound.BLOCK_WOODEN_DOOR_OPEN)
+                : (trapdoor ? org.bukkit.Sound.BLOCK_WOODEN_TRAPDOOR_CLOSE : org.bukkit.Sound.BLOCK_WOODEN_DOOR_CLOSE);
+
+        for(Player viewer : getViewers())
+            viewer.playSound(block.getLocation(), sound, SoundCategory.BLOCKS, 1f, 1f);
+    }
+
+    /**
      * Opens the block if it is a door, fence gate or (when {@code allowTrapdoors}) trapdoor that can be operated by hand and is closed. Iron doors and iron
      * trapdoors react to redstone only and are never forced open.
      *
@@ -461,18 +531,15 @@ public class PathTask extends BukkitRunnable
      */
     private void checkAndOpenDoor(@NotNull Block block, boolean allowTrapdoors)
     {
-        BlockData data = block.getBlockData();
+        Block target = doorBase(block);
+        BlockData data = target.getBlockData();
         if(!BlockProfile.isHandOperable(data) || (data instanceof TrapDoor && !allowTrapdoors))
             return;
 
         if(data instanceof Openable openable && !openable.isOpen())
         {
-            openable.setOpen(true);
-            block.setBlockData(openable);
-            block.getWorld().playSound(block.getLocation(), data instanceof TrapDoor ? org.bukkit.Sound.BLOCK_WOODEN_TRAPDOOR_OPEN
-                    : org.bukkit.Sound.BLOCK_WOODEN_DOOR_OPEN, 1f, 1f);
-
-            openedDoors.add(block);
+            setOpen(target, true);
+            openedDoors.add(target);
         }
     }
 
@@ -488,22 +555,16 @@ public class PathTask extends BukkitRunnable
         while(iterator.hasNext())
         {
             Block door = iterator.next();
-            if(!(door.getBlockData() instanceof Openable openable))
+            if(!(door.getBlockData() instanceof Openable))
             {
                 iterator.remove();
                 continue;
             }
 
             double distSq = Math.pow(door.getX() + 0.5 - currentPos.getX(), 2) + Math.pow(door.getZ() + 0.5 - currentPos.getZ(), 2);
-            if(distSq > 2.56)
+            if(distSq > 9.0)
             {
-                if(openable.isOpen())
-                {
-                    openable.setOpen(false);
-                    door.setBlockData(openable);
-                    door.getWorld().playSound(door.getLocation(), door.getBlockData() instanceof TrapDoor ? org.bukkit.Sound.BLOCK_WOODEN_TRAPDOOR_CLOSE
-                            : org.bukkit.Sound.BLOCK_WOODEN_DOOR_CLOSE, 1f, 1f);
-                }
+                setOpen(door, false);
                 iterator.remove();
             }
         }
@@ -515,15 +576,7 @@ public class PathTask extends BukkitRunnable
     private void forceCloseAllDoors()
     {
         for(Block door : openedDoors)
-        {
-            if(door.getBlockData() instanceof Openable openable && openable.isOpen())
-            {
-                openable.setOpen(false);
-                door.setBlockData(openable);
-                door.getWorld().playSound(door.getLocation(), door.getBlockData() instanceof TrapDoor ? org.bukkit.Sound.BLOCK_WOODEN_TRAPDOOR_CLOSE
-                        : org.bukkit.Sound.BLOCK_WOODEN_DOOR_CLOSE, 1f, 1f);
-            }
-        }
+            setOpen(door, false);
         openedDoors.clear();
     }
 
@@ -583,7 +636,7 @@ public class PathTask extends BukkitRunnable
 
         double yDiff = targetPoint.getY() - currentPos.getY();
         if(yDiff > STEP_HEIGHT && currentPos.getY() < targetPoint.getY())
-            currentSpeed *= 0.6;
+            currentSpeed *= UPHILL_SPEED_FACTOR;
 
         if(!this.onGround)
             currentSpeed = Math.max(currentSpeed, 0.15);
@@ -642,7 +695,8 @@ public class PathTask extends BukkitRunnable
         }
 
         Location targetWaypoint = referenceWaypoint();
-        boolean walkRamp = !isDropAhead() && currentMoveType() == MoveType.WALK && targetWaypoint.getY() > currentPos.getY() + effectiveStepHeight;
+        boolean walkRamp = !isDropAhead() && ((currentMoveType() == MoveType.WALK && targetWaypoint.getY() > currentPos.getY() + effectiveStepHeight)
+                || currentMoveType() == MoveType.CLIMB);
 
         if(!walkRamp)
         {
@@ -726,6 +780,11 @@ public class PathTask extends BukkitRunnable
     /**
      * Ground height at the point {@code lookAhead} blocks ahead of the NPC along the remaining path (or along the current movement once the path ends).
      */
+    private static boolean isSpecialMove(@NotNull MoveType type)
+    {
+        return type == MoveType.CLIMB || type == MoveType.SWIM || type == MoveType.FLY || type == MoveType.GAP_JUMP;
+    }
+
     private double groundAhead(@NotNull World world, @NotNull Vector movement, double lookAhead)
     {
         double tracePosX = currentPos.getX();
@@ -735,6 +794,12 @@ public class PathTask extends BukkitRunnable
 
         for(int i = index; i < pathPointVectors.size(); i++)
         {
+            if(i < pathMoveTypes.size() && isSpecialMove(pathMoveTypes.get(i)))
+            {
+                remainingDist = 0;
+                break;
+            }
+
             Vector wp = pathPointVectors.get(i);
             double toWpX = wp.getX() - tracePosX;
             double toWpZ = wp.getZ() - tracePosZ;
@@ -1041,6 +1106,102 @@ public class PathTask extends BukkitRunnable
     {
         viewerIds.remove(player.getUniqueId());
         cachedViewers = null;
+    }
+
+    /**
+     * Plays the step sound while the NPC walks and the step or fall sound when it lands, at its current position and only for the viewers of this task.
+     *
+     * @param world           the world
+     * @param horizontalMoved horizontal distance moved this tick
+     * @param grounded        whether the NPC stands on the ground after this tick
+     * @param silent          no sound for this tick (crouching)
+     */
+    private void updateMovementSounds(@NotNull World world, double horizontalMoved, boolean grounded, boolean silent)
+    {
+        if(!grounded)
+        {
+            soundPeakY = soundWasGrounded ? currentPos.getY() : Math.max(soundPeakY, currentPos.getY());
+            soundWasGrounded = false;
+            return;
+        }
+
+        if(!soundWasGrounded)
+        {
+            double fallen = soundPeakY - currentPos.getY();
+            soundWasGrounded = true;
+
+            if(fallen >= LANDING_SOUND_MIN_FALL)
+            {
+                stepSoundDistance = 0;
+                if(!silent)
+                    playBlockSound(world, fallen >= FALL_SOUND_MIN_DISTANCE, false);
+            }
+        }
+
+        if(silent || horizontalMoved <= 1.0E-4)
+            return;
+
+        stepSoundDistance += horizontalMoved;
+        if(stepSoundDistance >= STEP_SOUND_DISTANCE)
+        {
+            stepSoundDistance -= STEP_SOUND_DISTANCE;
+            playBlockSound(world, false, false);
+        }
+    }
+
+    /**
+     * Plays the step sound of the block the NPC climbs (ladder, vine, scaffolding) every {@link #CLIMB_SOUND_DISTANCE} blocks while it climbs.
+     *
+     * @param world the world
+     * @param moved distance climbed this tick
+     */
+    private void updateClimbSounds(@NotNull World world, double moved)
+    {
+        soundWasGrounded = true;
+        stepSoundDistance = 0;
+
+        climbSoundDistance += moved;
+        if(climbSoundDistance >= CLIMB_SOUND_DISTANCE)
+        {
+            climbSoundDistance -= CLIMB_SOUND_DISTANCE;
+            playBlockSound(world, false, true);
+        }
+    }
+
+    private void resetMovementSounds()
+    {
+        soundWasGrounded = true;
+        stepSoundDistance = 0;
+        climbSoundDistance = 0;
+    }
+
+    /**
+     * Plays the step or fall sound of the block the NPC stands on at its position, for the viewers only (vanilla volume and pitch).
+     */
+    private void playBlockSound(@NotNull World world, boolean fall, boolean climbing)
+    {
+        Player[] viewers = getViewers();
+        if(viewers.length == 0)
+            return;
+
+        int bx = currentPos.getBlockX();
+        int bz = currentPos.getBlockZ();
+
+        Block block = world.getBlockAt(bx, (int) Math.floor(currentPos.getY() + 0.01), bz);
+        if(!climbing && (block.getType().isAir() || block.isLiquid() || block.isPassable()))
+            block = world.getBlockAt(bx, (int) Math.floor(currentPos.getY() - 0.2), bz);
+
+        if(block.getType().isAir() || block.isLiquid())
+            return;
+
+        SoundGroup group = block.getBlockData().getSoundGroup();
+        Sound sound = fall ? group.getFallSound() : group.getStepSound();
+        float volume = group.getVolume() * (fall ? 0.5f : 0.15f);
+        float pitch = fall ? group.getPitch() * 0.75f : group.getPitch();
+
+        Location at = currentPos.toLocation(world);
+        for(Player viewer : viewers)
+            viewer.playSound(at, sound, SoundCategory.PLAYERS, volume, pitch);
     }
 
     /**
