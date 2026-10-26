@@ -47,6 +47,16 @@ public class WrappedMinecraftServer extends Wrapper
         return (CommandDispatcher<Object>) Reflections.invokeMethod(commands().getHandle(), getPath()).get();
     }
 
+    @Mapping(range = @Mapping.Range(from = Versions.V26_1, to = Versions.V26_3), path = "createCommandSourceStack")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_11), path = "aG")
+    @Mapping(fixed = @Mapping.Fixed(Versions.V1_21_9), path = "aK")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_21_2, to = Versions.V1_21_6), path = "aH")
+    @Mapping(range = @Mapping.Range(from = Versions.V1_20_6, to = Versions.V1_21), path = "aI")
+    public @NotNull WrappedCommandSourceStack createCommandSourceStack()
+    {
+        return new WrappedCommandSourceStack(invokeWrappedMethod());
+    }
+
     public static Object vanillaRegistry() {
         return Reflections.invokeStaticMethod("net.minecraft.data.registries.VanillaRegistries",
                 Versions.isCurrentVersionSmallerThan(Versions.V26_1) ? "a" :
