@@ -266,6 +266,40 @@ public class Reflections
     }
 
     /**
+     * Invokes a static method of a class given its fully qualified name with explicit parameter types.
+     *
+     * @param classPath  fully qualified class name
+     * @param methodName name of the static method
+     * @param paramTypes explicit parameter types for method resolution
+     * @param args       method arguments
+     * @param <V>        return type of the method
+     * @return a ReflectionChain wrapping the method's return value
+     */
+    public static <V> @NotNull ReflectionChain<V> invokeStaticMethod(@NotNull String classPath, @NotNull String methodName, @NotNull Class<?>[] paramTypes, @Nullable Object... args)
+    {
+        try
+        {
+            Class<?> clazz = Class.forName(classPath);
+            MethodKey key = new MethodKey(clazz, methodName, paramTypes);
+            Method cached = METHOD_CACHE.get(key);
+            if(cached != null)
+            {
+                cached.setAccessible(true);
+                return new ReflectionChain<>((V) cached.invoke(null, args));
+            }
+
+            Method method = clazz.getDeclaredMethod(methodName, paramTypes);
+            method.setAccessible(true);
+            METHOD_CACHE.put(key, method);
+            return new ReflectionChain<>((V) method.invoke(null, args));
+        }
+        catch(Exception e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
      * Invokes a static method of a class given its fully qualified name.
      *
      * @param clazz      the class of the method

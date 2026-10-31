@@ -116,19 +116,19 @@ public class WrappedEntitySnapshot implements Serializable
         {
             data.putString("id", type.toLowerCase());
             handle = Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a",
-                            data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get();
+                    data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get();
         }
         else if(Versions.isCurrentVersionSmallerThan(Versions.V1_21_11))
             handle = Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()), data.getHandle(),
-                            Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get();
+                    Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(), Function.identity()).get();
         else if(Versions.isCurrentVersionSmallerThan(Versions.V26_1))
             handle = Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityTypes", "a", Var.toNmsEntityType(getType()),
-                            data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(),
-                            WrappedEntity.EntityProcessor.NOP).get();
+                    data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(),
+                    WrappedEntity.EntityProcessor.NOP).get();
         else
             handle = Reflections.invokeStaticMethod("net.minecraft.world.entity.EntityType", "loadEntityRecursive",
-                            Var.toNmsEntityType(getType()), data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(),
-                            WrappedEntity.EntityProcessor.NOP).get();
+                    Var.toNmsEntityType(getType()), data.getHandle(), Var.getNmsLevel(world), WrappedEntity.SpawnReason.LOAD.getHandle(),
+                    WrappedEntity.EntityProcessor.NOP).get();
 
         WrappedEntity<?> entity = getType() == EntityType.ENDER_DRAGON ? new WrappedEnderDragon(handle) : new WrappedEntity<>(handle);
         WrappedEntity<?> finalEntity = entityFunction == null ? entity :
@@ -177,7 +177,8 @@ public class WrappedEntitySnapshot implements Serializable
                 if(!Versions.isCurrentVersionSmallerThan(Versions.V26_1))
                     return new WrappedCompoundTag(Reflections.invokeStaticMethod("net.minecraft.nbt.TagParser", "parseCompoundFully", s).get());
 
-                return new WrappedCompoundTag(Reflections.invokeStaticMethod("net.minecraft.nbt.MojangsonParser", "a", s).get());
+                return new WrappedCompoundTag(Reflections.invokeStaticMethod("net.minecraft.nbt.MojangsonParser",
+                        "a", new Class<?>[]{String.class}, s).get());
             }
             catch(RuntimeException e1)
             {
@@ -274,7 +275,7 @@ public class WrappedEntitySnapshot implements Serializable
         @Override
         public JsonElement serialize(byte[] src, Type typeOfSrc, JsonSerializationContext context)
         {
-            if (src == null || src.length == 0)
+            if(src == null || src.length == 0)
                 return JsonNull.INSTANCE;
 
             return new JsonPrimitive(WrappedCompoundTag.parse(src).toString());
@@ -283,22 +284,22 @@ public class WrappedEntitySnapshot implements Serializable
         @Override
         public byte[] deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException
         {
-            if (json == null || json.isJsonNull())
+            if(json == null || json.isJsonNull())
                 return null;
 
-            if (json.isJsonPrimitive())
+            if(json.isJsonPrimitive())
             {
                 try
                 {
                     return WrappedCompoundTag.parse(json.getAsString()).getData();
                 }
-                catch (CommandSyntaxException e)
+                catch(CommandSyntaxException e)
                 {
                     throw new JsonParseException("Failed to parse SNBT string back to NBT byte array", e);
                 }
             }
 
-            if (json.isJsonArray())
+            if(json.isJsonArray())
                 return context.deserialize(json, byte[].class);
 
             return null;

@@ -164,6 +164,15 @@ public class NpcOption<T, S extends Serializable>
                             if(player != null && npc.getUUID() != null)
                                 WrappedServerPlayer.fromPlayer(player).sendPacket(new PlayerInfoRemovePacket(List.of(npc.getUUID())));
                         }
+                    }.runTaskLater(NpcApi.plugin, 1);
+                    new BukkitRunnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            if(player != null && npc.getUUID() != null)
+                                WrappedServerPlayer.fromPlayer(player).sendPacket(new PlayerInfoRemovePacket(List.of(npc.getUUID())));
+                        }
                     }.runTaskLater(NpcApi.plugin, 50);
                 }
                 return new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.ADD_PLAYER, npc.getServerPlayer());
