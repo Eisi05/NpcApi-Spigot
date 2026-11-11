@@ -21,9 +21,15 @@ public class ConnectionListener implements Listener
     @EventHandler(priority = EventPriority.LOWEST)
     public void onJoin(PlayerJoinEvent event)
     {
-        PacketReader.inject(event.getPlayer());
+        if(!BedrockConnectionListener.isBedrockPlayer(event.getPlayer()))
+            join(event.getPlayer(), 10L);
+    }
 
-        WrappedPlayerTeam.clear(event.getPlayer().getUniqueId());
+    static void join(Player player, long delay)
+    {
+        PacketReader.inject(player);
+
+        WrappedPlayerTeam.clear(player.getUniqueId());
 
         if(!NpcApi.config.autoManageVisibility())
             return;
@@ -33,25 +39,24 @@ public class ConnectionListener implements Listener
             @Override
             public void run()
             {
-                Player player = event.getPlayer();
                 if(player == null || !player.isOnline())
                     return;
 
                 for(NPC npc : NpcManager.getList())
                 {
-                    if(!npc.getVisibilityManager().shouldShowToPlayer(event.getPlayer().getUniqueId()))
+                    if(!npc.getVisibilityManager().shouldShowToPlayer(player.getUniqueId()))
                         continue;
 
-                    npc.showNPCToPlayer(event.getPlayer());
-                    npc.addWalkingViewer(event.getPlayer());
-                    NpcSkin npcSkin = npc.getOption(NpcOption.SKIN, event.getPlayer());
-                    if(npcSkin == null || npcSkin.isStatic() || npcSkin.getPlaceholder() == null || npc.getOption(NpcOption.USE_PLAYER_SKIN, event.getPlayer()))
+                    npc.showNPCToPlayer(player);
+                    npc.addWalkingViewer(player);
+                    NpcSkin npcSkin = npc.getOption(NpcOption.SKIN, player);
+                    if(npcSkin == null || npcSkin.isStatic() || npcSkin.getPlaceholder() == null || npc.getOption(NpcOption.USE_PLAYER_SKIN, player))
                         continue;
 
-                    Tasks.updateSkin(event.getPlayer(), npc, npcSkin);
+                    Tasks.updateSkin(player, npc, npcSkin);
                 }
             }
-        }.runTaskLater(NpcApi.plugin, 10L);
+        }.runTaskLater(NpcApi.plugin, delay);
     }
 
     @EventHandler
